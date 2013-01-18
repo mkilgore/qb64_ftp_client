@@ -1,0 +1,5 @@
+if(oldstr4323){
+if(oldstr4323->fixed)qbs_set(oldstr4323,_FUNC_DECOMPRESS_2_HUFF_STRING_A);
+qbs_free(_FUNC_DECOMPRESS_2_HUFF_STRING_A);
+}
+qbs_free(_FUNC_DECOMPRESS_2_HUFF_STRING_B);

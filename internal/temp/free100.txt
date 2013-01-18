@@ -1,0 +1,4 @@
+if(oldstr3884){
+if(oldstr3884->fixed)qbs_set(oldstr3884,_FUNC_IDEHLEN_STRING_A);
+qbs_free(_FUNC_IDEHLEN_STRING_A);
+}

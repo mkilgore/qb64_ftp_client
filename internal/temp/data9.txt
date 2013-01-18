@@ -1,0 +1,33 @@
+int32 *_SUB_HELP_PREVIEW_LONG_I=NULL;
+if(_SUB_HELP_PREVIEW_LONG_I==NULL){
+_SUB_HELP_PREVIEW_LONG_I=(int32*)mem_static_malloc(4);
+*_SUB_HELP_PREVIEW_LONG_I=0;
+}
+int64 fornext_value1814;
+int64 fornext_finalvalue1814;
+int64 fornext_step1814;
+uint8 fornext_step_negative1814;
+byte_element_struct *byte_element_1815=NULL;
+if (!byte_element_1815){
+if ((mem_static_pointer+=12)<mem_static_limit) byte_element_1815=(byte_element_struct*)(mem_static_pointer-12); else byte_element_1815=(byte_element_struct*)mem_static_malloc(12);
+}
+int32 *_SUB_HELP_PREVIEW_LONG_C=NULL;
+if(_SUB_HELP_PREVIEW_LONG_C==NULL){
+_SUB_HELP_PREVIEW_LONG_C=(int32*)mem_static_malloc(4);
+*_SUB_HELP_PREVIEW_LONG_C=0;
+}
+qbs *_SUB_HELP_PREVIEW_STRING_C=NULL;
+if (!_SUB_HELP_PREVIEW_STRING_C)_SUB_HELP_PREVIEW_STRING_C=qbs_new(0,0);
+int64 fornext_value1818;
+int64 fornext_finalvalue1818;
+int64 fornext_step1818;
+uint8 fornext_step_negative1818;
+byte_element_struct *byte_element_1819=NULL;
+if (!byte_element_1819){
+if ((mem_static_pointer+=12)<mem_static_limit) byte_element_1819=(byte_element_struct*)(mem_static_pointer-12); else byte_element_1819=(byte_element_struct*)mem_static_malloc(12);
+}
+int32 *_SUB_HELP_PREVIEW_LONG_COL=NULL;
+if(_SUB_HELP_PREVIEW_LONG_COL==NULL){
+_SUB_HELP_PREVIEW_LONG_COL=(int32*)mem_static_malloc(4);
+*_SUB_HELP_PREVIEW_LONG_COL=0;
+}

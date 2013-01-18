@@ -1,0 +1,4 @@
+if(oldstr4309){
+if(oldstr4309->fixed)qbs_set(oldstr4309,_SUB_HASHADD_STRING_A);
+qbs_free(_SUB_HASHADD_STRING_A);
+}
