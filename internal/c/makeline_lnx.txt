@@ -1,2 +1,0 @@
-g++ libqbx_lnx.o qbx.cpp `sdl-config --cflags --libs` -lSDL_mixer -lSDL_ttf -lSDL_net -lSDL_image -lX11 -o 
-

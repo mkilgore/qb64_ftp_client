@@ -1,4 +1,0 @@
-if(oldstr1785){
-if(oldstr1785->fixed)qbs_set(oldstr1785,_FUNC_BACK2BACKNAME_STRING_A);
-qbs_free(_FUNC_BACK2BACKNAME_STRING_A);
-}

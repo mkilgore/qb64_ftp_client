@@ -1,8 +1,0 @@
-if(oldstr2443){
-if(oldstr2443->fixed)qbs_set(oldstr2443,_FUNC_FINDID_STRING_N2);
-qbs_free(_FUNC_FINDID_STRING_N2);
-}
-qbs_free(_FUNC_FINDID_STRING_N);
-qbs_free(_FUNC_FINDID_STRING_SECONDARG);
-qbs_free(_FUNC_FINDID_STRING_SC);
-qbs_free(_FUNC_FINDID_STRING_INSF);

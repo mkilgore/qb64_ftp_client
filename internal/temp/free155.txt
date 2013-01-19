@@ -1,4 +1,0 @@
-if(oldstr4411){
-if(oldstr4411->fixed)qbs_set(oldstr4411,_FUNC_RIPPATH_STRING_A);
-qbs_free(_FUNC_RIPPATH_STRING_A);
-}

@@ -1,4 +1,0 @@
-if(oldstr4372){
-if(oldstr4372->fixed)qbs_set(oldstr4372,_FUNC_DECOMPRESS_STRING_A);
-qbs_free(_FUNC_DECOMPRESS_STRING_A);
-}
