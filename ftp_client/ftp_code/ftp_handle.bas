@@ -96,6 +96,7 @@ ELSE 'I guess I better add that Windows code at some point...
 
 END IF
 sort_dir_listing Local_files(), boxes(1).length
+print_files boxes(1), Local_files()
 END SUB
 
 SUB get_new_dir () 'Uses SHELL to get the current dir
@@ -330,6 +331,7 @@ SELECT CASE n$
     put_str Remote_files(1).nam, "FTP Server doesn't support NlST"
     put_str Remote_files(2).nam, "Try using the command line"
 END SELECT
+print_files boxes(2), Remote_files()
 update_scrn
 END SUB
 

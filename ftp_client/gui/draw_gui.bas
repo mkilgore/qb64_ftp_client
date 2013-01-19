@@ -213,15 +213,20 @@ ELSEIF b.multi_text_Box THEN
     COLOR b.c1 MOD 8, b.c2
     LOCATE b.row2, b.col1
     PRINT CHR$(192); STRING$(b.col2 - b.col1 - 1, 196); CHR$(217);
-    
-    for x = b.row1 + 1 to b.row2 - 1
-      locate x, b.col1 + 1
-      if sel and (b.text_position - b.text_offset) = (x - b.row1) then
+    'FOR x = 1 to b.multi_line.length
+    '  PRINT get_str_array$(b.multi_line, x)
+    '  sleep 
+    'next x
+    for x = 1 to b.row2 - b.row1 - 1
+      locate x + b.row1, b.col1 + 1
+      if (b.selected - b.offset) = (x) then
         color b.sc1, b.sc2
       else
         color b.c1, b.c2
       end if
-      print mid$(get_str_array$(b.multi_line, x + b.text_offset - b.row1), 1, b.row2 - b.row1 - 1);
+      print mid$(get_str_array$(b.multi_line, x + b.offset - 1), 1, b.col2 - b.col1 -1);
+      'print "LINE"; x ; ": "; mid$(get_str_array$(b.multi_line, x + b.text_offset - 1), 1, b.row2 - b.row1 - 1);
+      'sleep
     next x
 ELSEIF b.button THEN
   LOCATE b.row1, b.col1
@@ -275,6 +280,27 @@ IF but = 0 THEN EXIT FUNCTION
 butflag = -1
 FOR x = 1 TO boxnum
   IF b(x).text_box THEN
+    IF my <= b(x).row2 AND my >= b(x).row1 THEN
+      IF mx >= b(x).col1 AND mx <= b(x).col2 THEN
+        mouse_range = x
+        IF my = b(x).row1 + 1 THEN
+          IF mx > b(x).col1 + 1 AND mx < b(x).col2 - 1 THEN
+            b(x).text_position = b(x).text_offset + mx - b(x).col1 - 1
+            IF b(x).text_position > b(x).text.length THEN
+              b(x).text_position = b(x).text.length
+            END IF
+            b(x).updated = -1
+          END IF
+        END IF
+        EXIT FUNCTION
+      END IF
+    END IF
+  ELSEIF b(x).menu then
+    if my = b(x).row1 then
+      b(x).updated = -1
+      mouse_range = x
+    end if
+  ELSEIF b(x).multi_text_Box then
     IF my <= b(x).row2 AND my >= b(x).row1 THEN
       IF mx >= b(x).col1 AND mx <= b(x).col2 THEN
         mouse_range = x

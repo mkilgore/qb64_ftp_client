@@ -10,10 +10,24 @@ LOCATE _HEIGHT(0), 1
 PRINT SPACE$(_WIDTH(0));
 LOCATE _HEIGHT(0), 1
 PRINT "Status: "; status$;
-draw_box boxes(2), selected_box = 2
-print_files boxes(2), Remote_files(), selected_box = 2
+if selected_Box = 1 then
+  boxes(1).sc1 = main_gui_sel_c1
+  boxes(1).sc2 = main_gui_sel_c2
+  boxes(2).sc1 = file_non_sel
+  boxes(2).sc2 = main_gui_c2
+elseif selected_Box = 2 then
+  boxes(2).sc1 = main_gui_sel_c1
+  boxes(2).sc2 = main_gui_sel_c2
+  boxes(1).sc1 = file_non_sel
+  boxes(1).sc2 = main_gui_c2
+else
+  boxes(1).sc1 = file_non_sel
+  boxes(1).sc2 = main_gui_c2
+  boxes(2).sc1 = file_non_sel
+  boxes(2).sc2 = main_gui_c2
+end if
 draw_box boxes(1), selected_box = 1
-print_files boxes(1), Local_files(), selected_box = 1
+draw_box boxes(2), selected_box = 2
 COLOR main_gui_c1, main_gui_c2
 LOCATE _HEIGHT(0) - 1, 1
 PRINT SPACE$(_WIDTH(0));
@@ -92,21 +106,31 @@ END IF
 
 END SUB
 
-SUB print_files (b AS box_type, f() AS filedir_type, selected) 'Displays files f() in box b()
-DIM s as string_type
+SUB print_files (b AS box_type, f() AS filedir_type) 'Displays files f() in box b()
+'DIM s as string_type
 
-FOR x = 1 to b.row2 - b.row1 - 1
-  k$ = get_Str$(f(x + b.text_offset).nam)
-  if len(k$) > b.row2 - b.row1 - 4 then
-    k$ = mid$(k$, 1, b.row2 - b.row1 - 4)
+FOR x = 1 to b.multi_line.length 'b.row2 - b.row1 - 1
+  if x <= b.length then
+    k$ = get_Str$(f(x).nam)
+    if len(k$) > b.col2 - b.col1 - 4 then
+      k$ = mid$(k$, 1, b.col2 - b.col1 - 4)
+    else
+      k$ = k$ + space$((b.col2 - b.col1 - 4) - len(k$))
+    end if
+    if f(x).flag_cwd and f(x).flag_retr then
+      k$ = k$ + "LNK"
+    elseif f(x).flag_cwd then
+      k$ = k$ + "DIR"
+    else
+      k$ = k$ + "   "
+    end if
+    put_str_array b.multi_line, x - 1, k$
   else
-    k$ = k$ + space$((b.row2 - b.row1 - 4) - len(k$))
+    put_str_array b.multi_line, x - 1, ""
   end if
-  put_str s, k$
-  put_str_array b.multi_line, x + b.text_offset, s
 next x
 
-free_string s
+'free_string s
 'COLOR b.c1, b.c2
 'FOR x = 1 TO b.row2 - b.row1 - 1
 '  LOCATE x + b.row1, b.col1 + 1

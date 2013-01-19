@@ -87,6 +87,8 @@ TYPE box_type
   d_flag AS _BYTE 'if d_flag then dropdown box is drawn
 
   drop_row2 AS INTEGER 'bottom location of dropdown box
+  
+  menu as _byte
 
   updated AS INTEGER 'if set, then information about this box has been updated
 
@@ -110,7 +112,7 @@ CONST CANCEL_BUTTON = 4
 CONST CLOSE_BUTTON = 8
 CONST YES_BUTTON = 16
 
-COMMON SHARED scrnw, scrnh
+COMMON SHARED scrnw, scrnh, scrn&
 COMMON SHARED command_connect&, data_connect&, server$, username$, password$, port$
 COMMON SHARED Remote_dir$, Local_dir$, temp_dir$
 COMMON SHARED server_syst$
@@ -246,6 +248,9 @@ LOCATE , , 0
 butflag = 0
 
 setup_main_GUI
+dim s as string_type
+allocate_array boxes(1).multi_line, 120, LEN(s)
+allocate_array boxes(2).multi_line, 120, LEN(s)
 
 'setup menu
 '$include:'./menu/menu_gui.bas'
@@ -284,10 +289,13 @@ RESUME NEXT
 
 
 SUB main () 'main loop for GUI, etc.
+
 get_new_dir
 refresh_Local_files
 update = -1
 selected_box = 1
+print_files boxes(1), Local_files()
+print_files boxes(2), Remote_files()
 DO
   _LIMIT 200
   m = mouse_range(boxes(), BOXES) 'check key presses
