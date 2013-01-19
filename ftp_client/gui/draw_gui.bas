@@ -180,7 +180,7 @@ ELSEIF b.multi_text_Box THEN
         NEXT x
     END IF
     IF b.scroll THEN b.scroll_loc = INT((b.offset) / (b.length -  (b.row2 - b.row1 - 1)) * (b.row2 - b.row1 - 4) + b.row1 + 2)
-    n$ = RTRIM$(b.nam)
+    n$ = get_str$(b.nam)
     COLOR b.c1, b.c2
     LOCATE b.row1, b.col1
     PRINT CHR$(218); CHR$(196); n$; STRING$(b.col2 - b.col1 - 2 - LEN(n$), 196); CHR$(191);
@@ -216,7 +216,7 @@ ELSEIF b.multi_text_Box THEN
     
     for x = b.row1 + 1 to b.row2 - 1
       locate x, b.col1 + 1
-      if sel and (b.text_postion - b.text_offset) = (x - b.row1) then
+      if sel and (b.text_position - b.text_offset) = (x - b.row1) then
         color b.sc1, b.sc2
       else
         color b.c1, b.c2
