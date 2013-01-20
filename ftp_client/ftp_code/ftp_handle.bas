@@ -313,13 +313,13 @@ SELECT CASE n$
         x = boxes(2).length + 1
         put_str Remote_files(x).lin, di$
         k = FTP_Parse_Line(Remote_files(x))
-        IF Remote_files(x).flag_cwd AND Remote_files(x).flag_retr THEN
-          Remote_files(x).dir = "LNK"
-        ELSEIF NOT Remote_files(x).flag_retr AND Remote_files(x).flag_cwd THEN
-          Remote_files(x).dir = "DIR"
-        ELSE
-          Remote_files(x).dir = ""
-        END IF
+        'IF Remote_files(x).flag_cwd AND Remote_files(x).flag_retr THEN
+        '  Remote_files(x).dir = "LNK"
+        'ELSEIF NOT Remote_files(x).flag_retr AND Remote_files(x).flag_cwd THEN
+        '  Remote_files(x).dir = "DIR"
+        'ELSE
+        '  Remote_files(x).dir = ""
+        'END IF
         IF get_str$(Remote_files(x).nam) <> ".." AND get_str$(Remote_files(x).nam) <> "." THEN boxes(2).length = x
       LOOP UNTIL dirs$ = ""
       sort_dir_listing Remote_files(), boxes(2).length
@@ -535,6 +535,7 @@ DO: _LIMIT 100
   GET command_connect&, , a$
   a5$ = a5$ + a$
   IF INSTR(a5$, crlf$) AND MID$(a5$, 4, 1) = "-" THEN
+    if cmd_mode then PRINT "Extended response..."
     DO
       sto$ = sto$ + MID$(a5$, 1, INSTR(a5$, crlf$) + 1)
       a5$ = MID$(a5$, INSTR(a5$, crlf$) + 2)
@@ -543,10 +544,12 @@ DO: _LIMIT 100
   IF NOT _CONNECTED(command_connect&) OR TIMER - t# > 10 THEN a5$ = "421 Server Disconnected." + crlf$
 LOOP UNTIL INSTR(a5$, crlf$)
 IF sto$ = "" THEN
-  get_response_code$ = MID$(a5$, 1, INSTR(a5$, crlf$) - 1)
+  r$ = MID$(a5$, 1, INSTR(a5$, crlf$) - 1)
 ELSE
-  get_response_code$ = sto$ + MID$(a5$, 1, INSTR(a5$, crlf$) - 1)
+  r$ = sto$ + MID$(a5$, 1, INSTR(a5$, crlf$) - 1)
 END IF
+if cmd_mode then PRINT r$
+get_response_code$ = r$
 END FUNCTION
 
 SUB Rename_remote_file_dir (file$, newname$, file_dir) 'Renames a remote file

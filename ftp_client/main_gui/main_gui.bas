@@ -108,7 +108,9 @@ END SUB
 
 SUB print_files (b AS box_type, f() AS filedir_type) 'Displays files f() in box b()
 'DIM s as string_type
-
+if b.length > b.multi_line.length then
+  reallocate_array b.multi_line, b.length + 2
+end if
 FOR x = 1 to b.multi_line.length 'b.row2 - b.row1 - 1
   if x <= b.length then
     k$ = get_Str$(f(x).nam)

@@ -81,11 +81,8 @@ END SUB
 SUB put_str_array (a AS array_type, array_number, s$)
 '$CHECKING:OFF
 DIM st as string_type
-
 _MEMGET a.mem, a.mem.OFFSET + array_number * LEN(st), st
-
 put_str st, s$
-
 _MEMPUT a.mem, a.mem.OFFSET + array_number * LEN(st), st
 
 $CHECKING:ON
@@ -98,53 +95,6 @@ m = _MEM(f)
 _MEMCOPY a.mem, a.mem.OFFSET + array_number * LEN(f), LEN(f) TO m, m.OFFSET
 $CHECKING:ON
 END SUB
-
-
-'NOTE: -- NOT USED -- MEMORY LEAK
-SUB put_filedir_type_array (a AS array_type, array_number, f AS filedir_type)
-DIM m AS _MEM, t as filedir_type
-'$CHECKING:OFF
-m = _MEM(f)
-_MEMCOPY m, m.OFFSET, LEN(filedir_type) TO a.mem, a.mem.OFFSET + array_number * LEN(f)
-$CHECKING:ON
-END SUB
-
-FUNCTION get_file_name$ (a AS array_type, array_number)
-'If array of filedir, fast way to get filename info
-DIM f AS filedir_type, m AS _MEM
-'$CHECKING:OFF
-m = _MEM(f)
-_MEMCOPY a.mem, a.mem.OFFSET + array_number * LEN(filedir_type), LEN(filedir_type) TO m, m.OFFSET
-get_file_name$ = get_str$(f.nam)
-$CHECKING:ON
-END FUNCTION
-
-FUNCTION get_retr (a AS array_type, array_number)
-DIM f AS filedir_type, m AS _MEM
-'$CHECKING:OFF
-m = _MEM(f)
-_MEMCOPY a.mem, a.mem.OFFSET + array_number * LEN(filedir_type), LEN(filedir_type) TO m, m.OFFSET
-get_retr = f.flag_retr
-$CHECKING:ON
-END FUNCTION
-
-FUNCTION get_cwd (a AS array_type, array_number)
-DIM f AS filedir_type, m AS _MEM
-'$CHECKING:OFF
-m = _MEM(f)
-_MEMCOPY a.mem, a.mem.OFFSET + array_number * LEN(filedir_type), LEN(filedir_type) TO m, m.OFFSET
-get_cwd = f.flag_cwd
-$CHECKING:ON
-END FUNCTION
-
-FUNCTION get_dir$ (a AS array_type, array_number)
-DIM f AS filedir_type, m AS _MEM
-'$CHECKING:OFF
-m = _MEM(f)
-_MEMCOPY a.mem, a.mem.OFFSET + array_number * LEN(filedir_type), LEN(filedir_type) TO m, m.OFFSET
-get_dir$ = f.dir
-$CHECKING:ON
-END FUNCTION
 
 SUB allocate_array (a AS array_type, number_of_elements, element_size)
 '$CHECKING:OFF
