@@ -22,6 +22,7 @@
 '  FUNCTION GetLogicalDriveStringsA(BYVAL nBuff AS LONG, lpbuff AS STRING)
 'END DECLARE
 
+
 $SCREENHIDE
 $CONSOLE
 
