@@ -6,8 +6,6 @@
 'of the Do What You Want Public License, Version 1, as published by Matt Kilgore
 'See file COPYING that should have been included with this source.
 
-'stuff
-
 FUNCTION FTP_Parse_Line (f AS filedir_type)
 'Please see http://cr.yp.to/ftpparse.html
 'Implementatin of that C code in QB64 (With some modifications)
