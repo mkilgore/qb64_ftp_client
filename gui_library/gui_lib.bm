@@ -5,7 +5,7 @@
 'You are free to edit, copy, modify, and redistribute it under the terms
 'of the Do What You Want Public License, Version 1, as published by Matt Kilgore
 'See file COPYING that should have been included with this source.
-FUNCTION move_to_next_gui (movement$, current_selected, gui() AS box_type, gui_num)
+FUNCTION GUI_move_to_next_gui (movement$, current_selected, gui() AS gui_type, gui_num)
 'function moves to next gui based on
 selected_row = gui(current_selected).row1
 selected_col = gui(current_selected).col1
@@ -93,7 +93,8 @@ END SELECT
 move_to_next_gui = new_gui
 END FUNCTION
 
-FUNCTION update_input_boxes (gui() AS box_type, sel AS INTEGER, ch$)
+FUNCTION GUI_inkey$ (gui() AS gui_type, sel AS INTEGER)
+ch$ = INKEY$
 IF gui(sel).text_box THEN
   SELECT CASE ch$
     CASE " " TO "~"
@@ -120,155 +121,151 @@ IF gui(sel).text_box THEN
       END IF
   END SELECT
 END IF
+GUI_inkey$ = ch$
 END FUNCTION
 
-SUB draw_box (b AS box_type, sel) 'Draws box b -- this sub draws all the GUI parts
-'Draws a box
-IF b.text_box THEN
-  IF b.shadow THEN
-    FOR x = b.row1 + 1 TO b.row2 + 1
-      FOR y = b.col1 + 2 TO b.col2 + 2
-        chr = SCREEN(x, y)
-        colo = SCREEN(x, y, 1)
-        LOCATE x, y
-        COLOR colo MOD 8, 0
-        PRINT CHR$(chr);
-      NEXT y
-    NEXT x
-  END IF
-  IF b.scroll THEN b.scroll_loc = INT((b.offset) / (b.length - (b.row2 - b.row1 - 1)) * (b.row2 - b.row1 - 4) + b.row1 + 2)
-  n$ = get_str$(b.nam)
-  COLOR b.c1, b.c2
-  LOCATE b.row1, b.col1
-  PRINT CHR$(218); CHR$(196); n$; STRING$(b.col2 - b.col1 - 2 - LEN(n$), 196); CHR$(191);
-  FOR x = b.row1 + 1 TO b.row2 - 1
-    LOCATE x, b.col1
-    COLOR b.c1, b.c2
-    PRINT CHR$(179); SPACE$(b.col2 - b.col1 - 1);
-
-    IF b.scroll = 0 THEN
-      PRINT CHR$(179);
-    ELSE
-      COLOR 7
-      SELECT CASE x
-        CASE b.row1 + 1
-          COLOR 0, 7
-          PRINT CHR$(24);
-        CASE b.row2 - 1
-          COLOR 0, 7
-          PRINT CHR$(25);
-        CASE ELSE
-          COLOR 0, 7
-          IF b.scroll_loc = x THEN
-            PRINT CHR$(219);
-          ELSE
-            PRINT CHR$(176);
-          END IF
-      END SELECT
-    END IF
+SUB GUI_draw_box (b as gui_type)
+IF b.shadow THEN
+  FOR x = b.row1 + 1 TO b.row2 + 1
+    FOR y = b.col1 + 2 TO b.col2 + 2
+      chr = SCREEN(x, y)
+      colo = SCREEN(x, y, 1)
+      LOCATE x, y
+      COLOR colo MOD 8, 0
+      PRINT CHR$(chr);
+    NEXT y
   NEXT x
-  COLOR b.c1 MOD 8, b.c2
-  LOCATE b.row2, b.col1
-  PRINT CHR$(192); STRING$(b.col2 - b.col1 - 1, 196); CHR$(217);
-  'if sel then color b.sc1, b.sc2 else COLOR b.c1, b.c2
-  LOCATE b.row1 + 1, b.col1 + 1
-  s$ = MID$(get_str$(b.text), b.text_offset + 1, b.col2 - b.col1 - 1)
-  IF NOT b.hide THEN PRINT s$; ELSE PRINT STRING$(LEN(s$), "*");
-ELSEIF b.multi_text_Box THEN
-    IF b.shadow THEN
-        FOR x = b.row1 + 1 TO b.row2 + 1
-            FOR y = b.col1 + 2 TO b.col2 + 2
-                chr = SCREEN(x, y)
-                colo = SCREEN(x, y, 1)
-                LOCATE x, y
-                COLOR colo MOD 8, 0
-                PRINT CHR$(chr);
-            NEXT y
-        NEXT x
-    END IF
-    IF b.scroll THEN b.scroll_loc = INT((b.offset) / (b.length -  (b.row2 - b.row1 - 1)) * (b.row2 - b.row1 - 4) + b.row1 + 2)
-    n$ = get_str$(b.nam)
-    COLOR b.c1, b.c2
-    LOCATE b.row1, b.col1
-    PRINT CHR$(218); CHR$(196); n$; STRING$(b.col2 - b.col1 - 2 - LEN(n$), 196); CHR$(191);
-    FOR x = b.row1 + 1 TO b.row2 - 1
-        LOCATE x, b.col1
-        COLOR b.c1, b.c2
-        PRINT CHR$(179); SPACE$(b.col2 - b.col1 - 1);
-
-        IF b.scroll = 0 THEN
-            PRINT CHR$(179);
+END IF
+IF b.scroll THEN b.scroll_loc = INT((b.scroll_offset) / (b.length - (b.row2 - b.row1 - 1)) * (b.row2 - b.row1 - 4) + b.row1 + 2)
+n$ = get_str$(b.nam)
+COLOR b.c1, b.c2
+LOCATE b.row1, b.col1
+PRINT CHR$(218); CHR$(196); n$; STRING$(b.col2 - b.col1 - 2 - LEN(n$), 196); CHR$(191);
+FOR x = b.row1 + 1 TO b.row2 - 1
+  LOCATE x, b.col1
+  COLOR b.c1, b.c2
+  PRINT CHR$(179); SPACE$(b.col2 - b.col1 - 1);
+  IF b.scroll = 0 THEN
+    PRINT CHR$(179);
+  END IF
+  IF b.scroll AND 1 THEN
+    COLOR 7
+    SELECT CASE x
+      CASE b.row1 + 1
+        COLOR 0, 7
+        PRINT CHR$(24);
+      CASE b.row2 - 1
+        COLOR 0, 7
+        PRINT CHR$(25);
+      CASE ELSE
+        COLOR 0, 7
+        IF b.scroll_loc = x THEN
+          PRINT CHR$(219);
         ELSE
-            COLOR 7
-            SELECT CASE x
-                CASE b.row1 + 1
-                    COLOR 0, 7
-                    PRINT CHR$(24);
-                CASE b.row2 - 1
-                    COLOR 0, 7
-                    PRINT CHR$(25);
-                CASE ELSE
-                    COLOR 0, 7
-                    IF b.scroll_loc = x THEN
-                        PRINT CHR$(219);
-                    ELSE
-                        PRINT CHR$(176);
-                    END IF
-            END SELECT
+          PRINT CHR$(176);
         END IF
-    NEXT x
-    COLOR b.c1 MOD 8, b.c2
-    LOCATE b.row2, b.col1
-    PRINT CHR$(192); STRING$(b.col2 - b.col1 - 1, 196); CHR$(217);
-    'FOR x = 1 to b.multi_line.length
-    '  PRINT get_str_array$(b.multi_line, x)
-    '  sleep 
-    'next x
-    for x = 1 to b.row2 - b.row1 - 1
-      locate x + b.row1, b.col1 + 1
-      if (b.selected - b.offset) = (x) then
-        color b.sc1, b.sc2
-      else
-        color b.c1, b.c2
-      end if
-      print mid$(get_str_array$(b.multi_line, x + b.offset - 1), 1, b.col2 - b.col1 -1);
-      'print "LINE"; x ; ": "; mid$(get_str_array$(b.multi_line, x + b.text_offset - 1), 1, b.row2 - b.row1 - 1);
-      'sleep
-    next x
-ELSEIF b.button THEN
-  LOCATE b.row1, b.col1
-  IF sel THEN COLOR b.sc1, b.sc2 ELSE COLOR b.c1 MOD 8, b.c2
-  PRINT "<";
-  'IF sel THEN COLOR b.selcol, b.c2 ELSE COLOR b.c1 MOD 8, b.c2
-  'COLOR b.c1 MOD 8, b.c2
-  PRINT get_str$(b.nam);
-  IF sel THEN COLOR b.sc1, b.sc2 ELSE COLOR b.c1 MOD 8, b.c2
-  PRINT ">";
-ELSEIF b.checkbox THEN
-  LOCATE b.row1, b.col1
-  IF sel THEN COLOR b.sc1, b.sc2 ELSE COLOR b.c1 MOD 8, b.c2
-  PRINT "[";
-  IF b.checked THEN PRINT "X"; ELSE PRINT " ";
-  PRINT "]";
-  COLOR b.c1 MOD 8, b.c2
-  PRINT get_str$(b.nam);
-ELSEIF b.drop_down THEN
-  _CONTROLCHR OFF
+    END SELECT
+  END IF
+NEXT x
+COLOR b.c1 MOD 8, b.c2
+LOCATE b.row2, b.col1
+PRINT CHR$(192); STRING$(b.col2 - b.col1 - 1, 196); CHR$(217);
+END SUB
 
-  LOCATE b.row1, b.col1
-  COLOR b.c1, b.c2
-  IF b.d_flag THEN PRINT CHR$(218); ELSE PRINT "[";
-  IF sel THEN COLOR b.sc1, b.sc2
-  PRINT LEFT$(get_str$(b.nam) + SPACE$(b.col2 - b.col1), b.col2 - b.col1 - 2); CHR$(31);
-  COLOR b.c1, b.c2
-  IF b.d_flag THEN PRINT CHR$(191); ELSE PRINT "]";
+'sel indiciates whether that box is a selected GUI element
+'also -- as can be seen this is really just a wrapper around the real drawing SUB's
+'SUB's are split up to simplify the process
+SUB GUI_draw_element (b AS gui_type, sel) 'Draws box b -- this sub draws all the GUI parts
+'Draws a box
+IF b.element_type = 1 THEN 'Plain box
+  GUI_draw_box b, sel
+  
+ELSEIF b.element_type = 2 THEN 'Input box
+  GUI_draw_input_box b, sel
+  
+ELSEIF b.element_type = 3 THEN 'Multi-Line input box
+  GUI_draw_multi_line_input_box b, sel
+  
+ELSEIF b.element_type = 4 THEN 'list box
+  GUI_draw_list_box b, sel
+  
+ELSEIF b.element_type = 5 THEN 'Dropdown -- NOT DONE
+  GUI_draw_dropdown b, sel
+  
+ELSEIF b.element_type = 6 THEN 'Checkbox
+  GUI_draw_checkbox b, sel
+  
+ELSEIF b.element_type = 7 THEN
+  GUI_draw_menu b, sel
+  
+ELSEIF b.element_type = 8 THEN 'Button
+  GUI_draw_button b, sel
 
-  _CONTROLCHR ON
 END IF
 END SUB
 
+SUB GUI_draw_checkbox (b as gui_type, sel)
+LOCATE b.row1, b.col1
+IF sel THEN COLOR b.sc1, b.sc2 ELSE COLOR b.c1 MOD 8, b.c2
+PRINT "[";
+IF b.checked THEN PRINT "X"; ELSE PRINT " ";
+PRINT "]";
+COLOR b.c1 MOD 8, b.c2
+PRINT get_str$(b.nam);
+END SUB
 
-FUNCTION mouse_range (b() AS box_type, boxnum) 'Checks if mouse is in one of the boxes in b()
+SUB GUI_draw_button (b as gui_type, sel)
+LOCATE b.row1, b.col1
+IF sel THEN COLOR b.sc1, b.sc2 ELSE COLOR b.c1 MOD 8, b.c2
+PRINT "<";
+'IF sel THEN COLOR b.selcol, b.c2 ELSE COLOR b.c1 MOD 8, b.c2
+'COLOR b.c1 MOD 8, b.c2
+PRINT get_str$(b.nam);
+IF sel THEN COLOR b.sc1, b.sc2 ELSE COLOR b.c1 MOD 8, b.c2
+PRINT ">";
+END SUB
+
+SUB GUI_draw_input_box (b as gui_type, sel)
+GUI_draw_Box b
+LOCATE b.row1 + 1, b.col1 + 1
+s$ = MID$(get_str$(b.text), b.text_offset + 1, b.col2 - b.col1 - 1)
+IF NOT b.hide THEN PRINT s$; ELSE PRINT STRING$(LEN(s$), "*");
+END SUB
+
+SUB GUI_draw_dropdown (b as gui_type, sel)
+_CONTROLCHR OFF
+LOCATE b.row1, b.col1
+COLOR b.c1, b.c2
+IF b.d_flag THEN PRINT CHR$(218); ELSE PRINT "[";
+IF sel THEN COLOR b.sc1, b.sc2
+PRINT LEFT$(get_str$(b.nam) + SPACE$(b.col2 - b.col1), b.col2 - b.col1 - 2); CHR$(31);
+COLOR b.c1, b.c2
+IF b.d_flag THEN PRINT CHR$(191); ELSE PRINT "]";
+_CONTROLCHR ON
+END SUB
+
+SUB GUI_draw_menu (b as gui_type, sel)
+
+END SUB
+
+SUB GUI_draw_list_box (b as gui_type, sel)
+GUI_draw_box b
+for x = 1 to b.row2 - b.row1 - 1
+  locate x + b.row1, b.col1 + 1
+  if (b.selected - b.offset) = (x) then
+    color b.sc1, b.sc2
+  else
+    color b.c1, b.c2
+  end if
+  print mid$(get_str_array$(b.multi_line, x + b.offset - 1), 1, b.col2 - b.col1 -1);
+next x
+END SUB
+
+SUB GUI_draw_multi_line_input_box (b as gui_type, sel)
+
+END SUB
+
+FUNCTION mouse_range (b() AS gui_type, boxnum) 'Checks if mouse is in one of the boxes in b()
 'Returns the array number if it is in one of them
 mscroll = 0
 DO WHILE _MOUSEINPUT
