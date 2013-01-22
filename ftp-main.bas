@@ -1,5 +1,5 @@
 'FTP Client
-'Matt Kilgore -- 2011/2013
+'Copyright Matt Kilgore -- 2011/2013
 
 'This program is free software, without any warranty of any kind.
 'You are free to edit, copy, modify, and redistribute it under the terms
