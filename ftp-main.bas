@@ -9,14 +9,6 @@
 'Basically -- You just do what you want. It's fairly simple.
 'I wouldn't mind a mention if you use this code, but it's by no means required.
 
-'DECLARE LIBRARY "SDLNet_Temp_Header"
-'    FUNCTION bytes_left& (a AS LONG)
-'END DECLARE
-
-'DECLARE LIBRARY
-'  FUNCTION fopen%& (file_name as string, mode as string) 'Mode "w" will create an empty file for writing
-'END DECLARE
-
 'Thanks to DAV and the Wiki for this code
 'DECLARE LIBRARY
 '  FUNCTION GetLogicalDriveStringsA(BYVAL nBuff AS LONG, lpbuff AS STRING)
