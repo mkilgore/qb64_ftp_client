@@ -1,0 +1,5 @@
+TODO:
+Split FTP code from global variables as well as GUI code -- Eventually make it a stand-alone library
+Split GUI code as well -- Stand-alone library -- GUI is muchc closer to this right now
+Split each dialog and extra parts into seperate locations.
+

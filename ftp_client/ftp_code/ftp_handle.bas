@@ -301,19 +301,6 @@ SELECT CASE n$
     'PRINT #1, dirs$
     'CLOSE #1
     IF LEN(dirs$) > 1 THEN
-      'DO 'old NLST method
-      '  di$ = MID$(dirs$, 1, INSTR(dirs$, crlf$) - 1)
-      '  IF di$ <> "." AND di$ <> ".." THEN
-      '    boxes(2).length = boxes(2).length + 1
-      '    dirs$ = MID$(dirs$, INSTR(dirs$, crlf$) + 2)
-      '    IF INSTR(di$, ".") THEN
-      '      Remote_files(boxes(2).length).dir = ""
-      '    ELSE
-      '      Remote_files(boxes(2).length).dir = "DIR"
-      '    END IF
-      '    put_Str Remote_files(boxes(2).length).nam, di$
-      '  END IF
-      'LOOP UNTIL dirs$ = ""
       x = 0
       DO
         di$ = MID$(dirs$, 1, INSTR(dirs$, crlf$) - 1)
@@ -321,14 +308,7 @@ SELECT CASE n$
         x = boxes(2).length + 1
         put_str Remote_files(x).lin, di$
         k = FTP_Parse_Line(Remote_files(x))
-        'IF Remote_files(x).flag_cwd AND Remote_files(x).flag_retr THEN
-        '  Remote_files(x).dir = "LNK"
-        'ELSEIF NOT Remote_files(x).flag_retr AND Remote_files(x).flag_cwd THEN
-        '  Remote_files(x).dir = "DIR"
-        'ELSE
-        '  Remote_files(x).dir = ""
-        'END IF
-        IF get_str$(Remote_files(x).nam) <> ".." AND get_str$(Remote_files(x).nam) <> "." and git_str$(Remote_files(x).nam) > "" THEN boxes(2).length = x
+        IF get_str$(Remote_files(x).nam) <> ".." AND get_str$(Remote_files(x).nam) <> "." and get_str$(Remote_files(x).nam) > "" THEN boxes(2).length = x
       LOOP UNTIL dirs$ = ""
       sort_dir_listing Remote_files(), boxes(2).length
     END IF
