@@ -1,0 +1,95 @@
+
+SUB CLI_List_Local_Files (flags$) 'Lists the Local files in the current dir in the command line
+IF NOT CLI THEN
+  f$ = temp_dir$ + sep$ + "filetemp.tmp"
+  IF opper$ = "NIX" THEN
+    SHELL _HIDE "ls " + flags$ + " > " + f$
+  ELSEIF opper$ = "WIN" THEN
+    SHELL _HIDE "cmd /c DIR " + flags$ + " > " + f$
+  END IF
+  OPEN f$ FOR INPUT AS #1
+  c = 0
+  DO WHILE NOT EOF(1)
+    LINE INPUT #1, a$
+    PRINT a$
+    IF LEN(a$) > 0 THEN
+      c = c + (LEN(a$) - 1) \ _WIDTH(0) + 1
+    ELSE
+      c = c + 1
+    END IF
+    IF c MOD (_HEIGHT(0) - 2) = 0 THEN
+      PRINT "Press any key to continue...";
+      DO: LOOP UNTIL INKEY$ > ""
+      PRINT
+    END IF
+  LOOP
+  CLOSE #1
+ELSE
+  IF opper$ = "NIX" THEN
+    SHELL _HIDE "ls " + flags$ '+ " > " + f$
+  ELSEIF opper$ = "WIN" THEN
+    SHELL _HIDE "cmd /c DIR " '+ flags$ + " > " + f$
+  END IF
+END IF
+END SUB
+
+SUB CLI_List_Remote_Files (use_nlist, flags$) 'List files on remote directory
+IF NOT is_connected THEN PRINT "Please connect to a server first...": EXIT SUB
+
+start_PASV_mode
+IF data_connect& = 0 THEN PRINT "Could not start PASV mode...": EXIT SUB
+
+IF NOT use_nlist THEN upd$ = "LIST " + flags$ + crlf$
+IF use_nlist THEN upd$ = "NLST" + crlf$
+
+PUT command_connect&, , upd$
+a2$ = get_response_code$
+n$ = LEFT$(a2$, 3)
+SELECT CASE n$
+  CASE "450", "500", "501", "502", "530"
+    PRINT "Error, server doesn't support " + LEFT$(upd$, LEN(upd$) - 1)
+    EXIT SUB
+END SELECT
+
+t# = TIMER
+DO: _LIMIT 1000
+  GET data_connect&, , a$
+  dirs$ = dirs$ + a$
+  GET command_connect&, , b$
+  b2$ = b2$ + b$
+LOOP UNTIL INSTR(b2$, crlf$) OR TIMER - t# > 10 OR NOT _CONNECTED(data_connect&)
+
+CLOSE data_connect&
+IF TIMER - t# > 10 THEN
+  PRINT "Error: Server timed out when sending the Directory/Files list"
+  EXIT SUB
+END IF
+IF b2$ = "" THEN b2$ = get_response_code$
+n$ = LEFT$(b2$, 3)
+SELECT CASE n$
+  CASE "226", "250"
+    c = 0
+    d$ = dirs$
+    DO
+      a$ = MID$(d$, 1, INSTR(d$, crlf$) - 1)
+      d$ = MID$(d$, INSTR(d$, crlf$) + 2)
+
+      PRINT a$
+      IF LEN(a$) > 0 THEN
+        c = c + (LEN(a$) - 1) \ _WIDTH(0) + 1
+      ELSE
+        c = c + 1
+      END IF
+      IF c MOD (_HEIGHT(0) - 2) = 0 AND CLI = 0 THEN
+        PRINT "Press any key to continue...";
+        DO: LOOP UNTIL INKEY$ > ""
+        PRINT
+      END IF
+    LOOP UNTIL d$ = ""
+  CASE "425", "426", "451"
+    PRINT "Error, server doesn't support " + LEFT$(upd$, LEN(upd$) - 1)
+    EXIT SUB
+
+END SELECT
+
+END SUB

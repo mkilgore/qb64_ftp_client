@@ -1,0 +1,28 @@
+'setup command line help system
+RESTORE commands
+READ cmd_count
+DIM SHARED commands$(cmd_count), help$(cmd_count, 10), helplen(cmd_count)
+FOR x = 1 TO cmd_count
+  READ cm$
+  commands$(x) = cm$
+  DO
+    READ a$
+    IF a$ > "" THEN helplen(x) = helplen(x) + 1: help$(x, helplen(x)) = a$
+  LOOP UNTIL a$ = ""
+NEXT x
+y = cmd_count
+DO
+  flag = 0
+  FOR x = 1 TO y - 1
+    IF commands$(x) > commands$(x + 1) THEN
+      SWAP commands$(x), commands$(x + 1)
+      FOR m = 1 TO 6
+        SWAP help$(x, m), help$(x + 1, m)
+      NEXT m
+      SWAP helplen(x), helplen(x + 1)
+      flag = -1
+    END IF
+  NEXT x
+  y = y - 1
+LOOP UNTIL flag = 0
+

@@ -1,0 +1,33 @@
+
+SUB delete_file_GUI (local_or_remote AS INTEGER)
+'meaning of local_or_remote:
+'local_or_remote = 1 -- local
+'local_or_remote = 0 -- remote
+
+IF local_or_remote = 0 AND is_connected = 0 THEN
+  dialog_disp "Please connect to a server first."
+  EXIT SUB
+END IF
+
+IF local_or_remote = 0 THEN
+  file$ = RTRIM$(get_str$(Remote_files(boxes(2).selected).nam))
+ELSE
+  file$ = RTRIM$(get_str$(Local_files(boxes(1).selected).nam))
+END IF
+
+IF file$ = ".." THEN EXIT SUB 'we can't delete '..'
+
+prompt$ = "Do you really want to delete " + file$ + "?"
+response = prompt_dialog(prompt$, 0, YES_BUTTON OR NO_BUTTON, NO_BUTTON)
+
+IF response = YES_BUTTON THEN
+  IF local_or_remote = 1 THEN
+    delete_local_file file$
+  ELSE
+    delete_remote_file file$
+  END IF
+END IF
+
+
+END SUB
+

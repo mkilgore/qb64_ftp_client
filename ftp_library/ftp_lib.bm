@@ -1,0 +1,967 @@
+
+SUB change_remote_dir (dir$) 'Changes the remote directory to the selected dir
+IF is_connected THEN
+  ch$ = "CWD " + LTRIM$(RTRIM$(dir$)) + crlf$
+  PUT command_connect&, , ch$
+  a$ = get_response_code$
+  SELECT CASE LEFT$(a$, 3)
+    CASE "500", "501", "502", "550", "530"
+      dialog_disp "Error: The FTP server won't let you change the directory."
+    CASE "421"
+      dialog_disp "Error: FTP server disconnected."
+      is_connected = 0
+      CLOSE command_connect&
+  END SELECT
+ELSEIF cmd_mode THEN PRINT "Please connect to a FTP server first."
+END IF
+END SUB
+
+SUB refresh_Local_files () 'Refreshes the local file listing
+boxes(1).length = 1
+boxes(1).selected = 1
+boxes(1).offset = 0
+put_str Local_files(boxes(1).length).nam, ".."
+Local_files(boxes(1).length).dir = "DIR"
+Local_files(boxes(1).length).flag_cwd = -1
+Local_files(boxes(1).length).flag_retr = 0
+IF opper$ = "NIX" THEN
+  IF show_hidden_local THEN h$ = "a" ELSE h$ = ""
+  SHELL _HIDE "ls -F" + h$ + " > /tmp/dirtmp.tmp"
+  OPEN "/tmp/dirtmp.tmp" FOR INPUT AS #1
+  DO WHILE NOT EOF(1)
+    LINE INPUT #1, a$
+    IF a$ > "" THEN
+      IF RIGHT$(a$, 1) = "/" AND a$ <> "../" AND a$ <> "./" THEN
+        boxes(1).length = boxes(1).length + 1
+        put_str Local_files(boxes(1).length).nam, a$
+        Local_files(boxes(1).length).dir = "DIR"
+        Local_files(boxes(1).length).flag_cwd = -1
+        Local_files(boxes(1).length).flag_retr = 0
+      END IF
+      IF RIGHT$(a$, 1) = "@" THEN
+        boxes(1).length = boxes(1).length + 1
+        put_str Local_files(boxes(1).length).nam, LEFT$(a$, LEN(a$) - 1) + "/"
+        Local_files(boxes(1).length).dir = "DIR"
+        Local_files(boxes(1).length).flag_cwd = -1
+        Local_files(boxes(1).length).flag_retr = 0
+      END IF
+    END IF
+  LOOP
+  CLOSE #1
+
+  OPEN "/tmp/dirtmp.tmp" FOR INPUT AS #1
+  DO WHILE NOT EOF(1)
+    LINE INPUT #1, a$
+    IF a$ > "" THEN
+      IF RIGHT$(a$, 1) <> "/" AND RIGHT$(a$, 1) <> "@" THEN
+        IF RIGHT$(a$, 1) = "*" THEN a$ = LEFT$(a$, LEN(a$) - 1)
+        boxes(1).length = boxes(1).length + 1
+        put_str Local_files(boxes(1).length).nam, a$
+        Local_files(boxes(1).length).dir = ""
+        Local_files(boxes(1).length).flag_cwd = 0
+        Local_files(boxes(1).length).flag_retr = -1
+      END IF
+    END IF
+  LOOP
+  CLOSE #1
+  KILL "/tmp/dirtmp.tmp"
+ELSE 'I guess I better add that Windows code at some point...
+  SHELL _HIDE "cmd /c DIR " + CHR$(34) + Local_dir$ + CHR$(34) + " /A:D /B > " + temp_dir$ + sep$ + "dirtmp.tmp"
+  SHELL _HIDE "cmd /c DIR " + CHR$(34) + Local_dir$ + CHR$(34) + " /A:-D /B > " + temp_dir$ + sep$ + "filetmp.tmp"
+  OPEN temp_dir$ + sep$ + "filetmp.tmp" FOR INPUT AS #1
+  IF NOT EOF(1) THEN
+    DO
+      LINE INPUT #1, file$
+      boxes(1).length = boxes(1).length + 1
+      put_str Local_files(boxes(1).length).nam, file$
+      Local_files(boxes(1).length).dir = ""
+      Local_files(boxes(1).length).flag_cwd = 0
+      Local_files(boxes(1).length).flag_retr = -1
+    LOOP UNTIL EOF(1)
+  END IF
+  CLOSE #1
+  KILL temp_dir$ + sep$ + "filetmp.tmp"
+  OPEN temp_dir$ + sep$ + "dirtmp.tmp" FOR INPUT AS #1
+  IF NOT EOF(1) THEN
+    DO
+      LINE INPUT #1, dir$
+      boxes(1).length = boxes(1).length + 1
+      put_str Local_files(boxes(1).length).nam, dir$ + sep$
+      Local_files(boxes(1).length).dir = "DIR"
+      Local_files(boxes(1).length).flag_cwd = -1
+      Local_files(boxes(1).length).flag_retr = 0
+    LOOP UNTIL EOF(1)
+    CLOSE #1
+  END IF
+  KILL temp_dir$ + sep$ + "dirtmp.tmp"
+
+END IF
+sort_dir_listing Local_files(), boxes(1).length
+print_files boxes(1), Local_files()
+END SUB
+
+SUB get_new_dir () 'Uses SHELL to get the current dir
+IF opper$ = "NIX" THEN
+  SHELL _HIDE "pwd > /tmp/dirtmp.tmp"
+  OPEN "/tmp/dirtmp.tmp" FOR INPUT AS #1
+  LINE INPUT #1, Local_dir$
+  CLOSE #1
+  KILL "/tmp/dirtmp.tmp"
+ELSEIF opper$ = "WIN" THEN
+  SHELL _HIDE "cd > " + temp_dir$ + sep$ + "cdtemp.tmp"
+  OPEN temp_dir$ + sep$ + "cdtemp.tmp" FOR INPUT AS #1
+  LINE INPUT #1, Local_dir$
+  CLOSE #1
+  KILL temp_dir$ + sep$ + "cdtemp.tmp"
+END IF
+END SUB
+
+SUB send_file (file$) 'Sends local file to FTP server -- NOT IMPLEMENTED YET
+IF NOT cmd_mode THEN
+  DIM box AS box_type
+  'box.nam = "Send File"
+  put_str box.nam, "Send File"
+  box.row1 = _HEIGHT(0) \ 2 - 1
+  box.row2 = _HEIGHT(0) \ 2 + 1
+  box.col1 = _WIDTH(0) \ 2 - 25
+  box.col2 = _WIDTH(0) \ 2 + 25
+  box.shadow = -1
+  box.c1 = box_c1
+  box.c2 = box_c2
+  box.text_box = -1
+  draw_box box, 0
+END IF
+text$ = "Sending files is not yet possible, sorry."
+'IF is_connected THEN IF Local_files(boxes(1).selected).dir = "DIR" THEN text$ = "Error: Please select a file, not a directory." ELSE text$ = "Sending file..." ELSE text$ = "Please connect to a FTP Server first."
+IF NOT cmd_mode THEN LOCATE box.row1 + 1, _WIDTH(0) \ 2 - LEN(text$) \ 2
+PRINT text$
+IF NOT cmd_mode THEN _DISPLAY
+t# = TIMER
+IF NOT cmd_mode THEN DO: _LIMIT 100: LOOP UNTIL INKEY$ > "" OR TIMER - t# > 2
+EXIT SUB
+
+IF is_connected = 0 OR NOT Local_files(boxes(1).selected).flag_retr THEN
+  t# = TIMER
+  DO: _LIMIT 100: LOOP UNTIL INKEY$ > "" OR TIMER - t# > 1
+  EXIT SUB
+END IF
+start_PASV_mode
+typei$ = "TYPE I" + crlf$
+PUT command_connect&, , typei$
+DO: _LIMIT 1000
+  GET command_connect&, , b$
+  b2$ = b2$ + b$
+LOOP UNTIL INSTR(b2$, crlf$)
+stor$ = "STOR " + RTRIM$(get_str$(Local_files(boxes(1).selected).nam)) + crlf$
+PUT command_connect&, , stor$
+DO: _LIMIT 1000
+  GET command_connect&, , a$
+  a2$ = a2$ + a$
+  'IF LEFT$(a2$, 1) <> "2" AND INSTR(a2$, crlf$) THEN a2$ = MID$(a2$, INSTR(a2$, crlf$) + 2)
+LOOP UNTIL INSTR(a2$, crlf$)
+OPEN RTRIM$(get_str$(Local_files(boxes(1).selected).nam)) FOR BINARY AS #1
+dat$ = SPACE$(LOF(1))
+GET #1, , dat$
+
+PUT #data_connect&, , dat$
+
+CLOSE #1
+PRINT dat; LEN(dat$);
+DO
+  x = bytes_left&(data_connect&)
+  PRINT x;
+  _DISPLAY
+  _DELAY .05
+LOOP UNTIL x = 0
+CLOSE data_connect&
+PRINT dat;
+_DISPLAY
+SLEEP
+
+a2$ = ""
+draw_box box, 0
+text$ = "Waiting for Server to respond..."
+LOCATE box.row1 + 1, _WIDTH(0) \ 2 - LEN(text$) \ 2
+PRINT text$;
+_DISPLAY
+DO: _LIMIT 100
+  GET command_connect&, , a$
+  a2$ = a2$ + a$
+LOOP UNTIL INSTR(a2$, crlf$)
+IF LEFT$(a2$, 3) = "226" THEN
+  text$ = "Sucessfully transfered!"
+ELSE
+  text$ = "Transfer failed..."
+END IF
+SLEEP
+draw_box box, 0
+LOCATE box.row1 + 1, _WIDTH(0) \ 2 - LEN(text$) \ 2
+PRINT text$;
+t# = TIMER
+DO: _LIMIT 100: LOOP UNTIL INKEY$ > "" OR TIMER - t# > 1
+Update_Remote_Files
+END SUB
+
+SUB Update_Remote_Files () 'Refreshes the remote file listing
+
+IF NOT is_connected THEN boxes(2).length = 0: EXIT SUB
+IF NOT cmd_mode THEN
+  DIM box AS box_type
+  'box.nam = ""
+  put_str box.nam, ""
+  box.row1 = _HEIGHT(0) \ 2 - 1
+  box.row2 = _HEIGHT(0) \ 2 + 1
+  box.col1 = _WIDTH(0) \ 2 - 25
+  box.col2 = _WIDTH(0) \ 2 + 25
+  box.shadow = -1
+  box.c1 = 0
+  box.c2 = 7
+  box.text_box = -1
+  draw_box box, 0
+  text$ = "Updating remote files list..."
+  LOCATE box.row1 + 1, _WIDTH(0) \ 2 - LEN(text$) \ 2
+END IF
+PRINT text$;
+IF NOT cmd_mode THEN _DISPLAY
+upd$ = "PWD" + crlf$
+PUT command_connect&, , upd$
+a2$ = get_response_code$
+SELECT CASE LEFT$(a2$, 3)
+  CASE "500", "501", "502", "550"
+    Remote_dir$ = "FTP Serv doesn't support PWD"
+  CASE "421"
+    boxes(2).length = 0
+    is_connected = 0
+    CLOSE command_connect&
+    status$ = "Not Connected."
+    dialog_disp "Error: Server disconnected."
+    EXIT SUB
+END SELECT
+Remote_dir$ = MID$(a2$, INSTR(a2$, CHR$(34)) + 1)
+Remote_dir$ = MID$(Remote_dir$, 1, INSTR(Remote_dir$, CHR$(34)) - 1)
+a2$ = ""
+start_PASV_mode
+IF data_connect& = 0 THEN EXIT SUB
+IF show_hidden_remote THEN h$ = "a" ELSE h$ = ""
+IF server_syst$ = "UNIX" THEN upd$ = "LIST -l" + h$ + crlf$ 'NLST was origonally used
+
+PUT command_connect&, , upd$
+a2$ = get_response_code$
+n$ = LEFT$(a2$, 3)
+SELECT CASE n$
+  CASE "450", "500", "501", "502", "530"
+    boxes(2).length = 2
+    boxes(2).selected = 1
+    boxes(2).offset = 0
+    put_str Remote_files(1).nam, "FTP Server doesn't support LIST"
+    put_str Remote_files(2).nam, "Try using the command line"
+END SELECT
+
+t# = TIMER
+
+DO
+  _LIMIT 500
+  GET data_connect&, , a$
+  dirs$ = dirs$ + a$
+  GET command_connect&, , b$
+  b2$ = b2$ + b$
+  'a5$ = a5$ + a$
+LOOP UNTIL INSTR(b2$, crlf$) OR TIMER - t# > 10 OR NOT _CONNECTED(data_connect&)
+
+CLOSE data_connect&
+'IF TIMER - t# > 10 THEN
+'  boxes(2).length = 2
+'  boxes(2).selected = 1
+'  boxes(2).offset = 0
+'
+'  Remote_files(1).nam = "FTP Server doesn't support NLST"
+'  Remote_files(2).nam = "Try using the command line"
+'  dialog_disp "Error: Server timed out when sending the Directory/Files list"
+'  EXIT SUB
+'END IF
+IF b2$ = "" THEN b2$ = get_response_code$ 'we have to make sure we got a response code
+n$ = LEFT$(b2$, 3)
+SELECT CASE n$
+  CASE "226", "250", ""
+    boxes(2).length = 1
+    boxes(2).selected = 1
+    boxes(2).offset = 0
+    put_str Remote_files(1).nam, ".."
+    Remote_files(1).dir = "DIR"
+    Remote_files(1).flag_cwd = -1
+    Remote_files(1).flag_retr = 0
+    'OPEN temp_dir$ + sep$ + "temp.tmp" FOR OUTPUT AS #1
+    'PRINT #1, dirs$
+    'CLOSE #1
+    IF LEN(dirs$) > 1 THEN
+      x = 0
+      DO
+        di$ = MID$(dirs$, 1, INSTR(dirs$, crlf$) - 1)
+        dirs$ = MID$(dirs$, INSTR(dirs$, crlf$) + 2)
+        x = boxes(2).length + 1
+        put_str Remote_files(x).lin, di$
+        k = FTP_Parse_Line(Remote_files(x))
+        IF get_str$(Remote_files(x).nam) <> ".." AND get_str$(Remote_files(x).nam) <> "." and get_str$(Remote_files(x).nam) > "" THEN boxes(2).length = x
+      LOOP UNTIL dirs$ = ""
+      sort_dir_listing Remote_files(), boxes(2).length
+    END IF
+  CASE "425", "426", "451"
+    boxes(2).length = 2
+    boxes(2).selected = 1
+    boxes(2).offset = 0
+    put_str Remote_files(1).nam, "FTP Server doesn't support NlST"
+    put_str Remote_files(2).nam, "Try using the command line"
+END SELECT
+print_files boxes(2), Remote_files()
+update_scrn
+END SUB
+
+SUB start_PASV_mode () 'Call sub to start a PASV connect with FTP server on data_connect&
+pasv$ = "PASV" + crlf$
+PUT command_connect&, , pasv$
+'DO: _LIMIT 1000
+a2$ = get_response_code$
+SELECT CASE LEFT$(a2$, 3)
+  CASE "500", "501", "502", "421", "530"
+    dialog_disp "PASV Failed, disconnecting from server. Please try again."
+    is_connected = 0
+    status$ = "Not Connected."
+    CLOSE command_connect&
+    data_connect& = 0
+    EXIT SUB
+END SELECT
+por$ = MID$(a2$, INSTR(a2$, "(") + 1)
+DIM ip$(4)
+FOR x = 1 TO 4
+  ip$(x) = MID$(por$, 1, INSTR(por$, ",") - 1)
+  por$ = MID$(por$, INSTR(por$, ",") + 1)
+  ips$ = ips$ + ip$(x) + "."
+NEXT x
+ips$ = LEFT$(ips$, LEN(ips$) - 1)
+p1$ = MID$(por$, 1, INSTR(por$, ",") - 1)
+por$ = MID$(por$, INSTR(por$, ",") + 1)
+p2$ = MID$(por$, 1, INSTR(por$, ")") - 1)
+por$ = MID$(por$, INSTR(por$, ",") + 1)
+port$ = STR$(VAL(p1$) * 256 + VAL(p2$))
+data_connect& = _OPENCLIENT("TCP/IP:" + port$ + ":" + ips$)
+END SUB
+
+SUB get_file (file$) 'Gets a file from the FTP server and saves it in the local DIR
+'grab data in 1 MB chunks
+
+
+IF NOT cmd_mode THEN
+  DIM box AS box_type
+  'box.nam = n$
+  put_str box.nam, n$
+  box.row1 = _HEIGHT(0) \ 2 - 1
+  box.row2 = _HEIGHT(0) \ 2 + 1
+  box.col1 = _WIDTH(0) \ 2 - 25
+  box.col2 = _WIDTH(0) \ 2 + 25
+  box.shadow = -1
+  box.c1 = box_c1
+  box.c2 = box_c2
+  box.text_box = -1
+  draw_box box, 0
+END IF
+file$ = RTRIM$(file$)
+IF cmd_mode AND is_connected THEN PRINT "Getting file: "; Local_dir$ + sep$ + file$
+IF is_connected = 0 THEN text$ = "Please connect to a FTP Server first." ELSE text$ = "Recieving File...()"
+
+IF NOT cmd_mode THEN LOCATE box.row1 + 1, _WIDTH(0) \ 2 - LEN(text$) \ 2
+PRINT text$;
+IF NOT cmd_mode THEN _DISPLAY
+
+IF (is_connected = 0 AND NOT cmd_mode) THEN
+  t# = TIMER
+  DO: _LIMIT 100: LOOP UNTIL INKEY$ > "" OR TIMER - t# > 1
+  EXIT SUB
+ELSEIF is_connected = 0 AND cmd_mode THEN
+  EXIT SUB
+END IF
+
+file_size& = Remote_files(boxes(2).selected).size
+IF cmd_mode THEN PRINT "File size: "; file_size&
+start_PASV_mode
+
+IF data_connect& = 0 THEN EXIT SUB
+typei$ = "TYPE I" + crlf$
+PUT command_connect&, , typei$
+r$ = get_response_code$
+SELECT CASE LEFT$(r$, 3)
+  CASE "421"
+    dialog_disp "Error: FTP Server Disconnected."
+    is_connected = 0
+    CLOSE command_connect&, data_connect&
+    EXIT SUB
+END SELECT
+
+retr$ = "RETR " + LTRIM$(file$) + crlf$
+PUT command_connect&, , retr$
+r$ = get_response_code$
+SELECT CASE LEFT$(r$, 3)
+  CASE "450", "550"
+    dialog_disp "Error: FTP Server refused to send the file"
+    CLOSE data_connect&
+    EXIT SUB
+  CASE "500", "501", "530"
+    dialog_disp "Error: FTP Server didn't reconise RETR command."
+    CLOSE data_connect&
+    EXIT SUB
+END SELECT
+sto$ = ""
+'_AUTODISPLAY
+OPEN RTRIM$(Local_dir$ + sep$ + file$) FOR BINARY AS #1
+'OPEN is way way WAY to slow...
+'file_offset = fopen(local_dir$ + sep$ + file$, "w")
+'data_buffer = _MEMNEW(1024 * 1024 * 1024) '1 MB
+'data_buf$ = space$(1024 * 1024 * 1024)
+e_flag_1 = 0
+e_flag_2 = 0
+t# = 0
+f_downloaded = 0
+BUFFER_LEN = 10 * 1024 * 1024 * 1024 '10 MB
+DO
+  _LIMIT 100
+
+  GET data_connect&, , filedat$
+
+  IF filedat$ = "" AND e_flag_1 THEN e_flag_2 = -1
+  filef$ = filef$ + filedat$
+
+  GET command_connect&, , a$
+
+  a2$ = a2$ + a$
+  'IF (TIMER - t# > .1 AND NOT CLI) OR (TIMER - t# > .5) THEN
+  IF LEN(filef$) > BUFFER_LEN THEN
+    tsav# = TIMER - t#
+    f_downloaded = f_downloaded + LEN(filef$)
+    c = LEN(filef$)
+    PUT #1, , filef$
+    filef$ = ""
+    kbpers = (c) / 1024 / tsav# 'c is how much we downloaded in our last loop
+    
+    IF file_size& = 0 THEN s$ = STR$(c) + " Bytes," ELSE s$ = STR$(INT(c / file_size& * 100) / 100) + "%,"
+    
+    text$ = "Recieving File...(" + s$ + STR$(kbpers) + " KB/s)"
+    
+    IF NOT cmd_mode THEN
+      draw_box box, 0
+      IF NOT CLI THEN
+        LOCATE box.row1 + 1, _WIDTH(0) \ 2 - LEN(text$) \ 2
+      ELSE
+        LOCATE , 1
+      END IF
+    END IF
+    PRINT text$
+    IF NOT cmd_mode THEN _DISPLAY
+    'PRINT "got here!!!!"
+    'k = k + 1
+
+    't# = TIMER
+    'c = (LEN(filef$) - c1) * 10
+    'IF c > 0 THEN kbpers = c / 1024 \ 1 ' ELSE kbpers = 0
+    'c1 = LEN(filef$)
+    'IF file_size& = 0 THEN s$ = STR$(c1) + " Bytes," ELSE s$ = STR$(INT(c1 / file_size& * 100) / 100) + "%,"
+
+    'IF NOT cmd_mode THEN draw_box box, 0
+    'text$ = "Recieving File...(" + s$ + STR$(kbpers) + " KB/s)"
+
+    'IF NOT CLI THEN
+    '  IF NOT cmd_mode THEN LOCATE box.row1 + 1, _WIDTH(0) \ 2 - LEN(text$) \ 2 ELSE LOCATE , 1
+    'ELSE
+    '  PRINT CHR$(13); 'move cursor back
+    'END IF
+    'PRINT text$;
+    'if not cmd_mode then _DISPLAY
+    t# = TIMER
+  END IF
+  IF INSTR(a2$, crlf$) AND MID$(a2$, 4, 1) = "-" THEN
+    DO
+      sto$ = sto$ + MID$(a5$, 1, INSTR(a2$, crlf$) + 1)
+      a2$ = MID$(a2$, INSTR(a2$, crlf$) + 2)
+    LOOP UNTIL MID$(a2$, 4, 1) <> "-"
+  END IF
+  IF INSTR(a2$, crlf$) THEN e_flag_1 = -1
+LOOP UNTIL e_flag_2
+'PUT #1, , filef$
+CLOSE #1
+IF cmd_mode THEN PRINT
+SELECT CASE LEFT$(a2$, 3)
+  CASE "226", "250"
+    CLOSE data_connect&
+    IF NOT cmd_mode THEN draw_box box, 0
+    text$ = "File Sucessfully Recieved!"
+    IF NOT cmd_mode THEN LOCATE box.row1 + 1, _WIDTH(0) \ 2 - LEN(text$) \ 2
+    PRINT text$
+    IF NOT cmd_mode THEN _DISPLAY
+    IF NOT cmd_mode THEN
+      t# = TIMER
+      DO: _LIMIT 100: LOOP UNTIL INKEY$ > "" OR TIMER - t# > 1.5
+      refresh_Local_files
+    END IF
+  CASE "425", "426", "451"
+    CLOSE data_connect&
+    KILL Local_dir$ + sep$ + RTRIM$(get_str$(Remote_files(boxes(2).selected).nam))
+    dialog_disp "Error: File could not be recieved."
+
+END SELECT
+IF cmd_mode THEN PRINT "File Recieved"
+END SUB
+
+FUNCTION get_response_code$ () 'Get's a response code from the FTP server
+sto$ = ""
+t# = TIMER
+DO: _LIMIT 100
+  GET command_connect&, , a$
+  a5$ = a5$ + a$
+  IF INSTR(a5$, crlf$) AND MID$(a5$, 4, 1) = "-" THEN
+    if cmd_mode then PRINT "Extended response..."
+    DO
+      sto$ = sto$ + MID$(a5$, 1, INSTR(a5$, crlf$) + 1)
+      a5$ = MID$(a5$, INSTR(a5$, crlf$) + 2)
+    LOOP UNTIL MID$(a5$, 4, 1) <> "-"
+  END IF
+  IF NOT _CONNECTED(command_connect&) OR TIMER - t# > 10 THEN a5$ = "421 Server Disconnected." + crlf$
+LOOP UNTIL INSTR(a5$, crlf$)
+IF sto$ = "" THEN
+  r$ = MID$(a5$, 1, INSTR(a5$, crlf$) - 1)
+ELSE
+  r$ = sto$ + MID$(a5$, 1, INSTR(a5$, crlf$) - 1)
+END IF
+if cmd_mode then PRINT r$
+get_response_code$ = r$
+END FUNCTION
+
+SUB Rename_remote_file_dir (file$, newname$, file_dir) 'Renames a remote file
+'file_dir = -1 if a file
+'file_dir = 0 if a directory
+rf$ = "RNFR " + file$ + crlf$
+PUT #command_connect&, , rf$
+a2$ = get_response_code$
+SELECT CASE LEFT$(a2$, 3)
+  CASE "450", "550", "501", "502", "503"
+    dialog_disp "Error requesting name change..."
+    EXIT SUB
+  CASE "421"
+    dialog_disp "Error change name, server closed connection"
+    CLOSE #command_connect&
+    is_connected = 0
+    status$ = "Not Connected."
+    EXIT SUB
+END SELECT
+nf$ = "RNTO " + newname$ + crlf$
+PUT #command_connect&, , nf$
+a2$ = get_response_code$
+SELECT CASE LEFT$(a2$, 3)
+  CASE "552", "553", "500", "501", "502", "503", "530"
+    dialog_disp "Error requesting name chance..."
+    EXIT SUB
+  CASE "421"
+    dialog_disp "Error changing name, server closed connection"
+    CLOSE #command_connect&
+    is_connected = 0
+    status$ = "Not Connected."
+    EXIT SUB
+END SELECT
+dialog_disp "Name changed."
+END SUB
+
+SUB delete_remote_file (f$) 'Deletes remote file f$
+msg$ = "DELE " + RTRIM$(f$) + crlf$
+
+END SUB
+
+SUB delete_local_file (f$) 'Uses KILL. Deletes file f$
+err_flag = 0
+ON ERROR GOTO error_flag
+KILL RTRIM$(f$)
+ON ERROR GOTO 0
+IF err_flag THEN
+  dialog_disp "Error deleting local file."
+END IF
+END SUB
+
+SUB Start_ftp_connect () 'Starts a FTP connection
+IF server$ = "" THEN dialog_disp "Please give a server name.": EXIT SUB
+IF username$ = "" THEN username$ = "anonymous" 'dialog_disp "Please give a Username.": EXIT SUB
+IF password$ = "" THEN password$ = "" 'dialog_disp "Please give a password.": EXIT SUB
+IF port$ = "" THEN port$ = "21" 'dialog_disp "Please give a port number.": EXIT SUB
+IF NOT cmd_mode THEN
+  DIM disp_box AS box_type
+  disp_box.row1 = _HEIGHT(0) \ 2 - 1
+  disp_box.row2 = _HEIGHT(0) \ 2 + 1
+  disp_box.c1 = 0
+  disp_box.c2 = 7
+  disp_box.text_box = -1
+  'disp_box.nam = ""
+  put_str disp_box.nam, ""
+  disp_box.col1 = _WIDTH(0) \ 2 - 20
+  disp_box.col2 = disp_box.col1 + 40
+  disp_box.shadow = -1
+END IF
+text$ = "Connecting to FTP server..."
+IF NOT cmd_mode THEN
+  draw_box disp_box, 0
+  LOCATE disp_box.row1 + 1, disp_box.col1 + 20 - LEN(text$) \ 2
+END IF
+PRINT text$
+IF NOT cmd_mode THEN _DISPLAY
+is_connected = 0
+t# = TIMER
+IF command_connect& <> 0 THEN CLOSE command_connect&: command_connect& = 0
+command_connect& = _OPENCLIENT("TCP/IP:" + port$ + ":" + server$)
+IF command_connect& <> 0 THEN
+  a2$ = get_response_code$
+  SELECT CASE LEFT$(a2$, 3)
+    CASE "120"
+      text$ = MID$(a2$, 4)
+      GOTO exit_f
+    CASE "220" 'Good connection
+    CASE "421" 'Bad connection
+      text$ = "Error: FTP Service was closed by the Server"
+  END SELECT
+  a2$ = ""
+  user$ = "USER " + username$ + crlf$
+  pass$ = "PASS " + password$ + crlf$
+  PUT command_connect&, , user$
+  a2$ = get_response_code$
+  IF TIMER - t# > 10 THEN GOTO exit_f
+  n$ = LEFT$(a2$, 3)
+  SELECT CASE n$
+    CASE "530"
+      text$ = "Error: Not logged in."
+      GOTO exit_f
+    CASE "500", "501"
+      text$ = "Error: Server didn't reconize the syntax"
+      GOTO exit_f
+    CASE "421"
+      text$ = "Error: FTP Service was closed by the Server" '
+      GOTO exit_f
+  END SELECT
+  a2$ = ""
+  IF n$ = "331" THEN
+    PUT command_connect&, , pass$
+    a2$ = get_response_code$
+    n$ = LEFT$(a2$, 3)
+    SELECT CASE n$
+      CASE "202"
+        text$ = "Error: Password not needed or not supported."
+        GOTO exit_f
+      CASE "530"
+        text$ = "Error: Password or Username incorrect."
+        GOTO exit_f
+      CASE "500", "501", "503"
+        text$ = "Error: Server didn't reconize the syntax"
+        GOTO exit_f
+      CASE "421"
+        text$ = "Error: FTP Service was closed by the Server" '
+        GOTO exit_f
+      CASE "332"
+        text$ = "Error: Need account for login"
+        GOTO exit_f
+    END SELECT
+  END IF
+  a2$ = ""
+  is_connected = -1
+  text$ = "Connected!"
+  status$ = "Connected to " + server$
+  syst$ = "SYST" + crlf$
+  PUT command_connect&, , syst$
+  a2$ = get_response_code$
+  SELECT CASE LEFT$(a2$, 3)
+    CASE "215"
+      server_syst$ = MID$(a2$, INSTR(a2$, " ") + 1)
+      server_syst$ = MID$(server_syst$, 1, INSTR(server_syst$, " ") - 1)
+    CASE ELSE
+      server_syst$ = "UNIX" 'Default
+  END SELECT
+  status$ = status$ + ", " + server_syst$
+  IF NOT cmd_mode THEN Update_Remote_Files
+ELSE
+  text$ = "Error Connecting..."
+  exit_f:
+  status$ = "Not Connected."
+END IF
+IF NOT cmd_mode THEN
+  draw_box disp_box, 0
+  LOCATE disp_box.row1 + 1, disp_box.col1 + 20 - LEN(text$) \ 2
+END IF
+PRINT text$
+IF NOT cmd_mode THEN _DISPLAY ELSE IF is_connected THEN PRINT "Server type: "; server_syst$
+free_gui_element disp_box
+END SUB
+
+SUB Get_remote_dir () 'Get's the remote DIR
+upd$ = "PWD" + crlf$
+PUT command_connect&, , upd$
+a2$ = get_response_code$
+SELECT CASE LEFT$(a2$, 3)
+  CASE "500", "501", "502", "550"
+    Remote_dir$ = "FTP Serv doesn't support PWD"
+  CASE "421"
+    Remote_dir$ = ""
+    is_connected = 0
+    CLOSE command_connect&
+    status$ = "Not Connected."
+    dialog_disp "Error: Server disconnected."
+    EXIT SUB
+END SELECT
+Remote_dir$ = MID$(a2$, INSTR(a2$, CHR$(34)) + 1)
+Remote_dir$ = MID$(Remote_dir$, 1, INSTR(Remote_dir$, CHR$(34)) - 1)
+END SUB
+
+
+FUNCTION FTP_Parse_Line (f AS filedir_type)
+'Please see http://cr.yp.to/ftpparse.html
+'Implementatin of that C code in QB64 (With some modifications)
+f.flag_cwd = 0
+f.flag_retr = 0
+l$ = get_str$(f.lin)
+length = LEN(l$)
+IF LEN(l$) < 2 THEN EXIT FUNCTION 'Empty name
+a$ = LCASE$(LEFT$(l$, 1))
+SELECT CASE a$
+  CASE "+" 'assume EPLF
+  
+  CASE "b", "c", "d", "l", "p", "s", "-" 'UNIX style
+    'UNIX style is usually just a direct output from ls, which is meant to be human readable
+    IF a$ = "d" THEN f.flag_cwd = -1
+    IF a$ = "-" THEN f.flag_retr = -1
+    IF a$ = "l" THEN f.flag_cwd = -1: f.flag_retr = -1
+    
+    state = 1
+    i = 0
+    FOR j = 2 TO length
+      IF MID$(l$, j, 1) = " " AND MID$(l$, j - 1, 1) <> " " THEN
+        SELECT CASE state
+          CASE 1 'skip perm
+            state = 2
+          CASE 2 'skip nlink
+            state = 3
+            IF ((j - i) = 6) AND (MID$(l$, j, 1) = "f") THEN
+              state = 4
+            END IF
+          CASE 3 'skip uid
+
+            state = 4
+          CASE 4 'get size
+
+            f.size = VAL(MID$(l$, i, j - i))
+            state = 5
+          CASE 5 'find month
+
+            month_val = get_month(LCASE$(MID$(l$, i, j - i)))
+
+            IF month_val >= 0 THEN
+              state = 6
+            ELSE
+              f.size = VAL(MID$(l$, i, j - i))
+            END IF
+          CASE 6
+
+            mday = VAL(MID$(l$, i, j - i))
+            state = 7
+          CASE 7
+
+            'if ((j - i) = 4) and (mid$(l$, i + 1, 1) = ":") then
+            '  hours = val(mid$(l$, i, 1))
+            '  minutes = val(mid$(l$, i + 2, 2))
+            'elseif ((j - i) = 5) and (mid$(l$, 2, 1) = ":") then
+            '  hours = val(mid$(l$, i, 2))
+            '  minutes = val(mid$(l$, i + 3, 2))
+            'elseif (j - i) >= 3 then
+            '  year = val(mid$(l$, i, j - i))
+            'else
+            '  exit function
+            'end if
+            namelen = length - j
+            name_str$ = RIGHT$(l$, namelen)
+            put_str f.nam, name_str$
+            state = 8
+          CASE 8
+
+            ' uh...
+            ' Nothing left to do it seems. Not sure how we got here...
+        END SELECT
+        i = j + 1
+        DO WHILE ((i < length) AND (MID$(l$, i, 1) = " "))
+          i = i + 1
+        LOOP
+      END IF
+    NEXT j
+    IF state <> 8 THEN EXIT FUNCTION
+    
+    IF LEFT$(l$, 1) = "l" THEN
+      'for i = 0 to 3 + namelen
+      '  if left$(name_str$, 4) = " -> " then
+      '    namelen = i
+      '  end if
+      'next i
+      k = INSTR(name_str$, " -> ")
+      name_str$ = MID$(name_str$, 1, k - 1)
+      put_str f.nam, name_str$
+      namelen = LEN(name_str$)
+    END IF
+    
+    IF LEFT$(l$, 1) = " " OR LEFT$(l$, 1) = "[" THEN
+      IF namelen > 3 THEN
+        IF LEFT$(name_str$, 3) = "   " THEN
+          name_str$ = MID$(name_str$, 4)
+          put_str f.nam, name_str$
+          namelen = namelen - 3
+        END IF
+      END IF
+    END IF
+    
+    FTP_Parse_Line = -1
+    EXIT FUNCTION
+END SELECT
+
+'MultiNet... What? Weird format...
+FOR i = 1 TO length
+  IF MID$(l$, i, 1) = ";" THEN
+    EXIT FOR
+  END IF
+NEXT i
+
+IF i < length THEN
+  name_str$ = MID$(name_str$, 1, i)
+  namelen = i
+  put_str f.nam, name_str$
+  IF i > 4 THEN
+    IF MID$(l$, i - 4, 4) = ".DIR" THEN
+      name_str$ = MID$(name_str$, 1, namelen - 4)
+      namelen = namelen - 4
+      f.flag_cwd = -1
+      put_str f.nam, name_str$
+    END IF
+  END IF
+  IF NOT f.flag_cwd THEN
+    f.flag_retr = -1
+  END IF
+  put_str f.nam, name_str$
+  
+  FTP_Parse_Line = -1
+  EXIT FUNCTION
+END IF
+
+'MSDOS Format
+IF LEFT$(l$, 1) >= "0" AND LEFT$(l$, 1) <= "9" THEN
+  i = 0
+  j = 20
+  
+  'don't bother getting the date and time, I don't use it
+  DO WHILE MID$(l$, j, 1) = " "
+    j = j + 1
+    IF j = length THEN EXIT FUNCTION
+  LOOP
+  IF MID$(l$, j, 1) = "<" THEN
+    f.flag_cwd = -1
+    DO WHILE MID$(l$, j, 1) <> " "
+      j = j + 1
+      IF j = length THEN EXIT FUNCTION
+    LOOP
+  ELSE
+    i = j
+    DO WHILE MID$(l$, j, 1) <> " "
+      j = j + 1
+      IF j = length THEN EXIT FUNCTION
+    LOOP
+    f.size = VAL(MID$(l$, i, j - i))
+    f.flag_retr = -1
+  END IF
+  DO WHILE MID$(l$, j, 1) = " "
+    j = j + 1
+    IF j = length THEN EXIT FUNCTION
+  LOOP
+  namelen = length - j
+  name_str$ = MID$(l$, j, namelen)
+  put_str f.nam, name_str$
+  FTP_Parse_Line = -1
+  EXIT FUNCTION
+END IF
+
+FTP_Parse_Line = 0
+END FUNCTION
+
+FUNCTION get_month (m$)
+DIM months$(12)
+months$(1) = "jan"
+months$(2) = "feb"
+months$(3) = "mar"
+months$(4) = "apr"
+months$(5) = "may"
+months$(6) = "jun"
+months$(7) = "jul"
+months$(8) = "aug"
+months$(9) = "sep"
+months$(10) = "oct"
+months$(11) = "nov"
+months$(12) = "dec"
+IF LEN(m$) = 3 THEN
+  FOR i = 1 TO 12
+    IF m$ = months$(i) THEN get_month = i: EXIT FUNCTION
+  NEXT i
+END IF
+get_month = -1
+END FUNCTION
+
+SUB sort_dir_listing (f() AS filedir_type, file_num)
+'quicksort type of thing. First, move all of the DIR's to the top (Ignore listing 1, as it's always ".."
+nex = 1
+DO: nex = nex + 1: LOOP UNTIL NOT f(nex).flag_cwd OR nex = file_num 'loop until f(nex) is not a directory
+m = nex + 1
+IF m < file_num THEN
+  FOR x = m TO file_num 'loop through files
+    IF f(x).flag_cwd THEN 'found a directory
+      SWAP f(nex), f(x) 'swap the directory we found with the first entry that's not a directory, so we move the directory to the top
+      DO: nex = nex + 1: LOOP UNTIL NOT f(nex).flag_cwd OR nex > file_num 'find the next non-directory
+      x = nex + 1
+    END IF
+  NEXT x
+END IF
+'nex now equals the very last DIRectory
+'_AUTODISPLAY
+'cls
+'print "NEX="; nex
+'print "X  ="; x
+'sleep
+IF nex > 4 AND nex < file_num - 1 THEN
+  quick_sort_filedir_type f(), 2, nex - 1
+END IF
+IF nex < file_num - 1 THEN
+  quick_sort_filedir_type f(), nex, file_num
+END IF
+END SUB
+
+SUB quick_sort_filedir_type (f() AS filedir_type, low, high)
+IF low < high THEN
+  IF high - low = 1 THEN
+    IF LCASE$(get_str$(f(low).nam)) > LCASE$(get_str$(f(high).nam)) THEN
+      SWAP f(low), f(high)
+    END IF
+  ELSE
+    pivot = INT(RND * (high - low + 1)) + low
+    SWAP f(high), f(pivot)
+    p$ = LCASE$(get_str$(f(high).nam))
+    DO
+      l = low
+      h = high
+      DO WHILE (l < h) AND (LCASE$(get_str$(f(l).nam)) <= p$)
+        l = l + 1
+      LOOP
+      DO WHILE (h > l) AND (LCASE$(get_str$(f(h).nam)) >= p$)
+        h = h - 1
+      LOOP
+      IF l < h THEN
+        SWAP f(l), f(h)
+      END IF
+    LOOP WHILE l < h
+    SWAP f(l), f(high)
+    quick_sort_filedir_type f(), low, l - 1
+    quick_sort_filedir_type f(), l + 1, high
+  END IF
+END IF
+END SUB
+

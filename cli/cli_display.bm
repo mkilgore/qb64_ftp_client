@@ -1,0 +1,139 @@
+
+SUB command_line () 'Command line implimentation
+_AUTODISPLAY
+
+IF CLI THEN
+  _DEST _CONSOLE
+END IF
+
+cmd_mode = -1
+exit_key$ = CHR$(27)
+COLOR 7, 0
+CLS
+prompt$ = "FTP> "
+
+DIM f$(5)
+f$(1) = "FTP Command Line Ver:" + VER$
+f$(2) = "Written in QB64 by Matt Kilgore"
+f$(3) = "Type 'HELP' for a list of commands"
+f$(4) = "Type 'HELP command' for help on 'command'"
+FOR x = 1 TO UBOUND(f$)
+  PRINT f$(x)
+NEXT x
+get_new_dir
+DO
+  cmd$ = ""
+  PRINT prompt$;
+  row = CSRLIN
+  col = POS(0)
+  update = -1
+  cursor = 1
+  exit_flag = 0
+  IF NOT CLI THEN
+    DO
+      IF update THEN
+        update = 0
+        IF row + (LEN(cmd$) + col) \ _WIDTH(0) > _HEIGHT(0) - 1 THEN
+          LOCATE _HEIGHT(0)
+          DO
+            PRINT
+            row = row - 1
+          LOOP UNTIL row + (LEN(cmd$) + col) \ _WIDTH(0) <= _HEIGHT(0) - 1
+        END IF
+        LOCATE row, col
+        PRINT LEFT$(cmd$, _WIDTH(0) - col + 1);
+        IF LEN(cmd$) + col > _WIDTH(0) THEN
+          FOR x = 1 TO ((LEN(cmd$) + col) \ _WIDTH(0))
+            LOCATE row + x, 1
+            PRINT MID$(cmd$ + SPACE$(_WIDTH(0)), x * _WIDTH(0) - col + 2, _WIDTH(0));
+          NEXT x
+        END IF
+        IF LEN(cmd$) + col <= _WIDTH(0) THEN PRINT " ";
+        LOCATE row + (col + cursor - 2) \ (_WIDTH(0)), (col + cursor - 2) MOD _WIDTH(0) + 1, 1
+      END IF
+      a$ = INKEY$
+      SELECT CASE a$
+        CASE " " TO "~"
+          IF LEN(cmd$) < 300 THEN
+            cmd$ = MID$(cmd$, 1, cursor - 1) + a$ + MID$(cmd$, cursor)
+            cursor = cursor + 1
+            update = -1
+          END IF
+        CASE CHR$(8)
+          IF cursor > 1 THEN
+            cmd$ = MID$(cmd$, 1, cursor - 2) + MID$(cmd$, cursor)
+            cursor = cursor - 1
+            update = -1
+          END IF
+        CASE CHR$(0) + CHR$(75)
+          IF cursor > 1 THEN cursor = cursor - 1: update = -1
+        CASE CHR$(0) + CHR$(77)
+          IF cursor <= LEN(cmd$) THEN cursor = cursor + 1: update = -1
+        CASE CHR$(22)
+          cmd$ = MID$(cmd$, 1, cursor - 1) + _CLIPBOARD$ + MID$(cmd$, cursor)
+          cmd$ = LEFT$(cmd$, 300)
+          update = update + 1
+        CASE CHR$(13), exit_key$
+          exit_flag = -1
+          PRINT
+        CASE CHR$(9) 'Tab menu
+          'cmd$ = LTRIM$(RTRIM$(cmd$))
+          Ucmd$ = UCASE$(LTRIM$(RTRIM$(cmd$)))
+          PRINT
+          IF INSTR(Ucmd$, " ") THEN
+          ELSE
+            PRINT "Possible Commands:"
+            FOR x = 1 TO cmds
+              IF LEFT$(commands$(x), LEN(Ucmd$)) = Ucmd$ THEN
+                PRINT commands$(x),
+              END IF
+            NEXT x
+            PRINT
+          END IF
+          PRINT prompt$;
+          row = CSRLIN
+          col = POS(0)
+          update = -1
+      END SELECT
+    LOOP UNTIL exit_flag
+  ELSE
+    LINE INPUT ; cmd$
+  END IF
+  IF cmd$ > "" THEN
+    cmd$ = LTRIM$(RTRIM$(cmd$))
+    Ucmd$ = UCASE$(cmd$)
+    'do something based on cmd$, or Ucmd$
+    IF LEFT$(Ucmd$, 7) = "SCRIPT " THEN
+      echo_flag = -1
+      ON ERROR GOTO error_flag
+      err_flag = 0
+      OPEN MID$(cmd$, 8) FOR INPUT AS #1
+      IF err_flag THEN
+        CLOSE #1
+        PRINT "Error opening script file."
+      ELSE
+        IF LOF(1) > 0 THEN
+          DO
+            LINE INPUT #1, cmd$
+            'Ucmd$ = UCASE$(cmd$)
+            IF UCASE$(cmd$) <> "@ECHO ON" AND UCASE$(cmd$) <> "@ECHO OFF" THEN
+              IF echo_flag THEN PRINT prompt$; cmd$
+              Run_Cmd cmd$
+            ELSEIF UCASE$(cmd$) = "@ECHO ON" THEN
+              echo_flag = -1
+            ELSEIF UCASE$(cmd$) = "@ECHO OFF" THEN
+              echo_flag = 0
+            END IF
+          LOOP UNTIL EOF(1) OR cmd_mode = 0
+          CLOSE #1
+        END IF
+      END IF
+    ELSE
+      Run_Cmd cmd$
+    END IF
+  END IF
+LOOP UNTIL a$ = exit_key$ OR cmd_mode = 0
+IF NOT CLI THEN _DISPLAY
+cmd_mode = 0
+LOCATE , , 0
+END SUB

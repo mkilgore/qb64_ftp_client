@@ -1,0 +1,24 @@
+SUB dialog_disp (dialog$) 'Displays a dialog box with the text dialog$ inside
+IF NOT cmd_mode THEN
+  DIM box AS box_type
+  'box.nam = ""
+  put_str box.nam, ""
+  box.row1 = _HEIGHT(0) \ 2 - 1
+  box.row2 = _HEIGHT(0) \ 2 + 1
+  box.col1 = _WIDTH(0) \ 2 - (LEN(dialog$) + 2) \ 2
+  box.col2 = _WIDTH(0) \ 2 + (LEN(dialog$) + 2) \ 2
+  box.shadow = -1
+  box.c1 = box_c1
+  box.c2 = box_c2
+  box.text_box = -1
+  draw_box box, 0
+  LOCATE box.row1 + 1, _WIDTH(0) \ 2 - LEN(dialog$) \ 2
+END IF
+PRINT dialog$
+IF NOT cmd_mode THEN
+  _DISPLAY
+  t# = TIMER
+  DO: _LIMIT 100: LOOP UNTIL INKEY$ > "" OR TIMER - t# > 1.5
+  free_gui_element box
+END IF
+END SUB

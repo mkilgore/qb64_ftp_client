@@ -1,0 +1,155 @@
+
+SUB rename_file_GUI (local_or_remote) 'Renames a local or remote file
+'local_or_remote = 0 -- local file rename
+'local_or_remote = 1 -- remote file rename
+
+IF local_or_remote = 0 AND is_connected = 0 THEN
+  dialog_disp "Please connect to a server first."
+  EXIT SUB
+END IF
+
+gui_num = 3 '1 text box, 3 buttons
+DIM box AS box_type, gui(gui_num) AS box_type
+'box.nam = "Rename file"
+put_str box.nam, "Rename file"
+box.row1 = _HEIGHT(0) \ 2 - 3
+box.row2 = box.row1 + 6
+box.col1 = _WIDTH(0) \ 2 - 30
+box.col2 = box.col1 + 60
+box.shadow = -1
+box.c1 = box_c1
+box.c2 = box_c2
+box.text_box = -1
+
+'gui(1).nam = "File Name"
+put_str gui(1).nam, "File Name"
+gui(1).row1 = box.row1 + 1
+gui(1).row2 = gui(1).row1 + 2
+gui(1).col1 = box.col1 + 5
+gui(1).col2 = box.col2 - 5
+gui(1).c1 = box_c1
+gui(1).c2 = box_c2
+gui(1).text_box = -1
+
+IF local_or_remote = 1 THEN
+  'gui(2).nam = "Local File"
+  put_str gui(2).nam, "Local File"
+  gui(2).row1 = box.row2 - 1
+  gui(2).c1 = box_c1
+  gui(2).c2 = box_c2
+  gui(2).sc1 = box_sel_c1
+  gui(2).sc2 = box_sel_c2
+  gui(2).button = -1
+ELSE
+  'IF is_connected THEN
+  'gui(2).nam = "Remote File"
+  put_str gui(2).nam, "Remove File"
+  gui(2).row1 = box.row2 - 1
+  gui(2).c1 = box_c1
+  gui(2).c2 = box_c2
+  gui(2).sc1 = box_sel_c1
+  gui(2).sc2 = box_sel_c2
+  gui(2).button = -1
+END IF
+
+'gui(3).nam = "Close"
+put_str gui(3).nam, "Close"
+gui(3).row1 = box.row2 - 1
+gui(3).c1 = box_c1
+gui(3).c2 = box_c2
+gui(3).sc1 = box_sel_c1
+gui(3).sc2 = box_sel_c2
+gui(3).button = -1
+
+blen = box.col2 - box.col1
+b = blen \ 3
+gui(2).col1 = b - LEN(get_str$(gui(2).nam)) \ 2 + box.col1
+gui(3).col1 = b * 2 - LEN(get_str$(gui(3).nam)) \ 2 + box.col1
+'END IF
+
+update = -1
+selected_box = 1
+LOCATE , , 1
+locrow = 1
+loccol = 1
+IF local_or_remote = 1 THEN put_str gui(1).text, RTRIM$(get_str$(Local_files(boxes(1).selected).nam)) ELSE put_str gui(1).text, RTRIM$(get_str$(Remote_files(boxes(2).selected).nam))
+DO
+  _LIMIT 500
+  m = mouse_range(gui(), gui_num)
+  IF m <> selected_box AND m > 0 THEN selected_box = m: update = -1
+  IF gui(selected_box).updated THEN gui(selected_box).updated = 0: update = -1
+  IF update THEN
+    _DISPLAY
+    update = 0
+    draw_box box, 0
+    FOR x = 1 TO gui_num
+      draw_box gui(x), selected_box = x
+      'IF x = 1 THEN
+      '  LOCATE gui(x).row1 + 1, gui(x).col1 + 1
+      '  PRINT RIGHT$(filename$, (gui(x).col2 - gui(x).col1) - 2);
+      'END IF
+      IF x = selected_box THEN
+        IF selected_box = 1 THEN
+          locrow = gui(x).row1 + 1
+          loccol = gui(x).col1 + gui(x).text_position - gui(x).text_offset + 1
+
+          'locrow = gui(x).row1 + 1
+          'loccol = gui(x).col1 + LEN(RIGHT$(filename$, (gui(x).col2 - gui(x).col1) - 2)) + 1
+        ELSE
+          locrow = gui(x).row1
+          loccol = gui(x).col1 + 1
+        END IF
+      END IF
+    NEXT x
+    LOCATE locrow, loccol
+    _AUTODISPLAY
+  END IF
+  k$ = INKEY$
+  update = update_input_boxes(gui(), selected_box, k$)
+  SELECT CASE k$
+    CASE CHR$(9) 'tab
+      selected_box = (selected_box MOD gui_num) + 1: update = -1
+    CASE CHR$(13)
+      IF selected_box = 1 THEN
+      ELSEIF selected_box = 2 THEN
+        IF local_or_remote = 1 THEN
+          'rename local file
+          GOSUB rename_local_file
+        ELSE
+          Rename_remote_file_dir RTRIM$(get_str$(Remote_files(boxes(2).selected).nam)), get_str$(gui(1).text), -1
+        END IF
+        exit_flag = -1
+      ELSEIF selected_box = 3 THEN
+        exit_flag = -1
+      END IF
+    CASE CHR$(27)
+      exit_flag = -1
+  END SELECT
+  IF but THEN
+    IF selected_box = 2 THEN
+      IF local_or_remote = 1 THEN
+        GOSUB rename_local_file
+      ELSE
+        Rename_remote_file_dir RTRIM$(get_str$(Remote_files(boxes(2).selected).nam)), get_str$(gui(1).text), -1
+      END IF
+      exit_flag = -1
+    ELSEIF selected_box = 3 THEN
+      exit_flag = -1
+    END IF
+  END IF
+LOOP UNTIL exit_flag
+_DISPLAY
+LOCATE , , 0
+EXIT SUB
+
+rename_local_file:
+ON ERROR GOTO error_flag
+err_flag = 0
+NAME RTRIM$(get_str$(Local_files(boxes(1).selected).nam)) AS get_str$(gui(1).text)
+IF err_flag THEN
+  dialog_disp "Error changing name of Local file..."
+END IF
+refresh_Local_files
+exit_flag = -1
+RETURN
+END SUB

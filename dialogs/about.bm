@@ -1,0 +1,47 @@
+
+SUB about_dialog () 'Displays 'about' box
+DIM box AS box_type, ok_button(1) AS box_type
+'box.nam = "About"
+put_str box.nam, "About"
+box.row1 = _HEIGHT(0) \ 2 - 3
+box.row2 = box.row1 + 7
+box.col1 = _WIDTH(0) \ 2 - 20
+box.col2 = _WIDTH(0) \ 2 + 20
+box.shadow = -1
+box.c1 = box_c1
+box.c2 = box_c2
+box.text_box = -1
+
+ok_button(1).button = -1
+ok_button(1).row1 = box.row2 - 1
+'ok_button(1).nam = "Close"
+put_str ok_button(1).nam, "Close"
+ok_button(1).col1 = box.col1 + (box.col2 - box.col1) \ 2 - 2
+ok_button(1).c1 = box_c1
+ok_button(1).c2 = box_c2
+ok_button(1).sc1 = box_sel_c1
+ok_button(1).sc2 = box_sel_c2
+
+update = -1
+exit_gui_flag = 0
+DO: _LIMIT 100
+  m = mouse_range(ok_button(), 1)
+  IF update THEN
+    update = 0
+    draw_box box, 0
+    draw_box ok_button(1), 1
+    COLOR box_c1, box_c2
+    d$ = "FTP Client version " + VER$
+    LOCATE box.row1 + 2, _WIDTH(0) \ 2 - LEN(d$) \ 2
+    PRINT d$;
+    d$ = "Written by Matt Kilgore in QB64"
+    LOCATE box.row1 + 4, _WIDTH(0) \ 2 - LEN(d$) \ 2
+    PRINT d$;
+    _AUTODISPLAY
+    LOCATE ok_button(1).row1, ok_button(1).col1 + 1, 1
+  END IF
+  IF m = 1 OR INKEY$ > "" THEN: LOCATE , , 0: exit_gui_flag = -1
+LOOP until exit_gui_flag
+free_gui_element box
+free_gui_array ok_button()
+END SUB
