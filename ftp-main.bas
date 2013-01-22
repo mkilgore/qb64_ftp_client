@@ -45,58 +45,9 @@ DIM SHARED boxes(BOXES) AS box_type, selected_box
 DIM SHARED Remote_files(500) AS filedir_type, Local_files(1000) AS filedir_type 'Change this number for more files
 DIM SHARED global_menu_sel, menu_sel, menu_max_len(g_menu_c), temp_menu_sel, menux AS box_type
 
-'$include:'dialogs/settings.bi'
-
-scrnw = 80 'Default screen size. -- Is overwritten if a Config file is found
-scrnh = 25 'Smaller then 80x25 is not recommended or garentied to work
-
-crlf$ = CHR$(13) + CHR$(10) 'end character
-status$ = "Not Connected." 'default status message
-
-a$ = "QWERTYUIOP????ASDFGHJKL?????ZXCVBNM" 'Credit to Galleon for the ALT key code stuff.
-DIM SHARED alt_codes$(LEN(a$) + 16)
-FOR x = 1 TO LEN(a$)
-  alt_codes$(x + 15) = MID$(a$, x, 1)
-NEXT x
-
-_TITLE "FTP Client -- QB64"
-
-CONFIG = -1 'If 0, it won't check for a config file
-CLI = 0 'Start Command Line only if -1.
-
-IF INSTR(_OS$, "[LINUX]") OR INSTR(_OS$, "[MACOSX]") THEN
-  opper$ = "NIX"
-  'Local_dir$ = "/" 'Root
-  sep$ = "/"
-  temp_dir$ = "/tmp"
-ELSE
-  opper$ = "WIN"
-  'Local_dir$ = "C:\" 'C Drive
-  sep$ = "\"
-  temp_dir$ = ENVIRON$("temp")
-END IF
+'$include:'settings.bi'
 
 '$include:'help/setup_help.bm'
-
-'check COMMAND$
-IF COMMAND$ > "" THEN
-  cmdarg$ = LCASE$(COMMAND$)
-  IF INSTR(cmdarg$, "-cli") THEN
-    CLI = -1
-  END IF
-  IF INSTR(cmdarg$, "-gui") THEN
-    CLI = 0
-  END IF
-  IF INSTR(cmdarg$, "-config") THEN
-    CONFIG = -1
-  END IF
-  IF INSTR(cmdarg$, "-noconfig") THEN
-    CONFIG = 0
-  END IF
-  IF INSTR(cmdargs$, "-h") OR INSTR(cmdargs$, "--help") THEN
-
-  END IF
-END IF
 
 IF CLI THEN
   command_line
@@ -189,9 +140,6 @@ RESUME NEXT
 
 'Help data
 '$include:'./help/help_data.bi'
-
-
-'INCLUDING LIBRARY CODE AND OTHERS
 
 'SETTINGS
 '$include:'settings.bm'
