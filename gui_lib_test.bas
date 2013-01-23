@@ -84,7 +84,7 @@ DO
   SELECT CASE key$
   
   END SELECT
-  if main_gui(5).pressed then
+  IF main_gui(5).pressed then
     locate 23, 1
     print "Pressed! "; count;
     count = count + 1
