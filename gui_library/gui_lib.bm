@@ -5,7 +5,7 @@
 'You are free to edit, copy, modify, and redistribute it under the terms
 'of the Do What You Want Public License, Version 1, as published by Matt Kilgore
 'See file COPYING that should have been included with this source.
-FUNCTION GUI_move_to_next_gui (movement$, current_selected, gui() AS gui_type, gui_num)
+FUNCTION GUI_move_to_next_gui (movement$, current_selected, gui() AS GUI_element_type, gui_num AS INTEGER)
 'function moves to next gui based on
 selected_row = gui(current_selected).row1
 selected_col = gui(current_selected).col1
@@ -93,41 +93,101 @@ END SELECT
 move_to_next_gui = new_gui
 END FUNCTION
 
-FUNCTION GUI_inkey$ (gui() AS gui_type, sel AS INTEGER)
+FUNCTION GUI_update_screen (gui() AS GUI_element_type, gui_num AS INTEGER)
+FOR x = 1 to gui_num
+  if gui(x).updated then GUI_update_screen = -1: exit function
+NEXT x
+END FUNCTION
+
+FUNCTION GUI_inkey$ (gui() AS GUI_element_type, gui_num AS INTEGER, sel AS INTEGER)
 ch$ = INKEY$
-IF gui(sel).text_box THEN
-  SELECT CASE ch$
-    CASE " " TO "~"
-      add_character gui(sel), ch$
-      update_input_boxes = -1
-    CASE CHR$(8)
-      del_character gui(sel)
-      update_input_boxes = -1
-    CASE CHR$(0) + CHR$(75)
+SELECT CASE ch$
+  CASE " " TO "~" 'typeable character
+    if gui(sel).element_type = GUI_INPUT_BOX then
+      GUI_add_character gui(sel), ch$
+      gui(sel).updated = -1
+    end if
+  CASE CHR$(8) 'BACKSPACE
+    if gui(sel).element_type = GUI_INPUT_BOX then
+      GUI_del_character gui(sel)
+      gui(sel).updated = -1
+    end if
+  CASE chr$(9)
+    sel = (sel mod gui_num) + 1
+    gui(sel).updated = -1
+  CASE CHR$(0) + CHR$(80) 'DOWN
+    if gui(sel).element_type = GUI_LIST_BOX then
+      if gui(sel).selected < gui(sel).length then
+        gui(sel).selected = gui(sel).selected + 1
+        GUI_fix_scroll gui(sel)
+        gui(sel).updated = -1
+      end if
+    end if
+  CASE CHR$(0) + CHR$(72) 'UP
+    if gui(sel).element_type = GUI_LIST_BOX then
+      if gui(sel).selected > 1 then
+        gui(sel).selected = gui(sel).selected - 1
+        GUI_fix_scroll gui(sel)
+        gui(sel).updated = -1
+      end if
+    end if
+  CASE CHR$(0) + CHR$(75) 'LEFT
+    if gui(sel).element_type = GUI_INPUT_BOX then
       IF gui(sel).text_position > 0 THEN
         gui(sel).text_position = gui(sel).text_position - 1
         IF gui(sel).text_position < gui(sel).text_offset THEN
           gui(sel).text_offset = gui(sel).text_offset - 1
         END IF
-        update_input_boxes = -1
+        gui(sel).updated = -1
+        'update_input_boxes = -1
       END IF
-    CASE CHR$(0) + CHR$(77)
+    end if
+  CASE CHR$(0) + CHR$(77) 'RIGHT
+    if gui(sel).element_type = GUI_INPUT_BOX then
       IF gui(sel).text_position < gui(sel).text.length THEN
         gui(sel).text_position = gui(sel).text_position + 1
         IF gui(sel).text_position > gui(sel).text_offset + (gui(sel).col2 - gui(sel).col1 - 1) THEN
           gui(sel).text_offset = gui(sel).text_offset + 1
         END IF
-        update_input_boxes = -1
-      END IF
-  END SELECT
-END IF
+        gui(sel).updated = -1
+      end if
+    END IF
+  CASE CHR$(0) + CHR$(73) 'PageUp
+    if gui(sel).element_type = GUI_LIST_BOX then
+      gui(sel).selected = gui(sel).selected - (gui(sel).row2 - gui(sel).row1 - 1)
+      if gui(sel).selected < 1 then gui(sel).selected = 1
+      GUI_fix_scroll gui(sel)
+      gui(sel).updated = -1
+    end if
+  CASE CHR$(0) + CHR$(81) 'PageDown
+    if gui(sel).element_type = GUI_LIST_BOX then
+      gui(sel).selected = gui(sel).selected + (gui(sel).row2 - gui(sel).row1 - 1)
+      if gui(sel).selected > gui(sel).length then gui(sel).selected = gui(sel).length
+      GUI_fix_scroll gui(sel)
+      gui(sel).updated = -1
+    end if
+END SELECT
 GUI_inkey$ = ch$
+EXIT FUNCTION
+
 END FUNCTION
 
-SUB GUI_draw_box (b as gui_type)
+SUB GUI_fix_scroll (gui AS GUI_element_type)
+  if gui.selected - 1 < gui.scroll_offset_vert then
+    gui.scroll_offset_vert = gui.selected - 1
+  elseif gui.selected > gui.scroll_offset_vert + (gui.row2 - gui.row1 - 1) then
+    gui.scroll_offset_vert = gui.selected  - (gui.row2 - gui.row1 - 1)
+  end if
+  if gui.scroll_offset_vert < 0 then gui.scroll_offset_vert = 0
+  if gui.scroll_offset_vert + (gui.row2 - gui.row1 - 1) > gui.length then 
+    gui.scroll_offset_vert = gui.length - (gui.row2 - gui.row1 - 1)
+  end if
+END SUB
+
+SUB GUI_draw_box (row1, col1, row2, col2, b as GUI_element_type)
 IF b.shadow THEN
-  FOR x = b.row1 + 1 TO b.row2 + 1
-    FOR y = b.col1 + 2 TO b.col2 + 2
+  FOR x = row1 + 1 TO row2 + 1
+    FOR y = col1 + 2 TO col2 + 2
       chr = SCREEN(x, y)
       colo = SCREEN(x, y, 1)
       LOCATE x, y
@@ -136,30 +196,30 @@ IF b.shadow THEN
     NEXT y
   NEXT x
 END IF
-IF b.scroll THEN b.scroll_loc = INT((b.scroll_offset) / (b.length - (b.row2 - b.row1 - 1)) * (b.row2 - b.row1 - 4) + b.row1 + 2)
+IF b.scroll AND 1 THEN b.scroll_loc_vert = INT((b.scroll_offset_vert) / (b.length - (row2 - row1 - 1)) * (row2 - row1 - 4) + row1 + 2)
 n$ = get_str$(b.nam)
 COLOR b.c1, b.c2
-LOCATE b.row1, b.col1
-PRINT CHR$(218); CHR$(196); n$; STRING$(b.col2 - b.col1 - 2 - LEN(n$), 196); CHR$(191);
-FOR x = b.row1 + 1 TO b.row2 - 1
-  LOCATE x, b.col1
+LOCATE row1, col1
+PRINT CHR$(218); CHR$(196); n$; STRING$(col2 - col1 - 2 - LEN(n$), 196); CHR$(191);
+FOR x = row1 + 1 TO row2 - 1
+  LOCATE x, col1
   COLOR b.c1, b.c2
-  PRINT CHR$(179); SPACE$(b.col2 - b.col1 - 1);
+  PRINT CHR$(179); SPACE$(col2 - col1 - 1);
   IF b.scroll = 0 THEN
     PRINT CHR$(179);
   END IF
   IF b.scroll AND 1 THEN
     COLOR 7
     SELECT CASE x
-      CASE b.row1 + 1
+      CASE row1 + 1
         COLOR 0, 7
         PRINT CHR$(24);
-      CASE b.row2 - 1
+      CASE row2 - 1
         COLOR 0, 7
         PRINT CHR$(25);
       CASE ELSE
         COLOR 0, 7
-        IF b.scroll_loc = x THEN
+        IF b.scroll_loc_vert = x THEN
           PRINT CHR$(219);
         ELSE
           PRINT CHR$(176);
@@ -168,43 +228,59 @@ FOR x = b.row1 + 1 TO b.row2 - 1
   END IF
 NEXT x
 COLOR b.c1 MOD 8, b.c2
-LOCATE b.row2, b.col1
-PRINT CHR$(192); STRING$(b.col2 - b.col1 - 1, 196); CHR$(217);
+LOCATE row2, col1
+PRINT CHR$(192); STRING$(col2 - col1 - 1, 196); CHR$(217);
+END SUB
+
+SUB GUI_draw_element_array (b() as GUI_element_type, gui_num, selected_gui)
+_DISPLAY
+FOR x = 1 to gui_num
+  GUI_draw_element b(x), selected_gui = x
+next x
+if b(selected_gui).cur_row > 0 then
+  locate b(selected_gui).cur_row, b(selected_gui).cur_col, 1
+  GUI_cur_row = b(selected_gui).cur_row
+  GUI_cur_col = b(selected_gui).cur_col
+else
+  locate ,,0
+  GUI_cur_row = 0
+END IF
+_AUTODISPLAY
 END SUB
 
 'sel indiciates whether that box is a selected GUI element
 'also -- as can be seen this is really just a wrapper around the real drawing SUB's
 'SUB's are split up to simplify the process
-SUB GUI_draw_element (b AS gui_type, sel) 'Draws box b -- this sub draws all the GUI parts
+SUB GUI_draw_element (b AS GUI_element_type, sel) 'Draws box b -- this sub draws all the GUI parts
 'Draws a box
-IF b.element_type = 1 THEN 'Plain box
-  GUI_draw_box b, sel
+IF b.element_type = GUI_BOX THEN 'Plain box
+  GUI_draw_box b.row1, b.col1, b.row2, b.col2, b
   
-ELSEIF b.element_type = 2 THEN 'Input box
+ELSEIF b.element_type = GUI_INPUT_BOX THEN 'Input box
   GUI_draw_input_box b, sel
   
-ELSEIF b.element_type = 3 THEN 'Multi-Line input box
-  GUI_draw_multi_line_input_box b, sel
+ELSEIF b.element_type = GUI_TEXT_BOX THEN 'Multi-Line input box
+  GUI_draw_text_box b, sel
   
-ELSEIF b.element_type = 4 THEN 'list box
+ELSEIF b.element_type = GUI_LIST_BOX THEN 'list box
   GUI_draw_list_box b, sel
   
-ELSEIF b.element_type = 5 THEN 'Dropdown -- NOT DONE
+ELSEIF b.element_type = GUI_DROP_DOWN THEN 'Dropdown -- NOT DONE
   GUI_draw_dropdown b, sel
   
-ELSEIF b.element_type = 6 THEN 'Checkbox
+ELSEIF b.element_type = GUI_CHECKBOX THEN 'Checkbox
   GUI_draw_checkbox b, sel
   
-ELSEIF b.element_type = 7 THEN
+ELSEIF b.element_type = GUI_MENU THEN 'Menu
   GUI_draw_menu b, sel
   
-ELSEIF b.element_type = 8 THEN 'Button
+ELSEIF b.element_type = GUI_BUTTON THEN 'Button
   GUI_draw_button b, sel
 
 END IF
 END SUB
 
-SUB GUI_draw_checkbox (b as gui_type, sel)
+SUB GUI_draw_checkbox (b as GUI_element_type, sel)
 LOCATE b.row1, b.col1
 IF sel THEN COLOR b.sc1, b.sc2 ELSE COLOR b.c1 MOD 8, b.c2
 PRINT "[";
@@ -212,139 +288,227 @@ IF b.checked THEN PRINT "X"; ELSE PRINT " ";
 PRINT "]";
 COLOR b.c1 MOD 8, b.c2
 PRINT get_str$(b.nam);
+b.cur_row = b.row1
+b.cur_col = b.col1 + 1
 END SUB
 
-SUB GUI_draw_button (b as gui_type, sel)
+SUB GUI_draw_button (b as GUI_element_type, sel)
 LOCATE b.row1, b.col1
 IF sel THEN COLOR b.sc1, b.sc2 ELSE COLOR b.c1 MOD 8, b.c2
 PRINT "<";
 'IF sel THEN COLOR b.selcol, b.c2 ELSE COLOR b.c1 MOD 8, b.c2
-'COLOR b.c1 MOD 8, b.c2
+COLOR b.c1, b.c2
 PRINT get_str$(b.nam);
 IF sel THEN COLOR b.sc1, b.sc2 ELSE COLOR b.c1 MOD 8, b.c2
 PRINT ">";
+b.cur_row = b.row1
+b.cur_col = b.col1 + 1
 END SUB
 
-SUB GUI_draw_input_box (b as gui_type, sel)
-GUI_draw_Box b
+SUB GUI_draw_input_box (b as GUI_element_type, sel)
+GUI_draw_Box b.row1, b.col1, b.row1 + 2, b.col2, b
 LOCATE b.row1 + 1, b.col1 + 1
 s$ = MID$(get_str$(b.text), b.text_offset + 1, b.col2 - b.col1 - 1)
 IF NOT b.hide THEN PRINT s$; ELSE PRINT STRING$(LEN(s$), "*");
+b.cur_row = b.row1 + 1
+b.cur_col = b.col1 + 1 + b.text_position - b.text_offset
 END SUB
 
-SUB GUI_draw_dropdown (b as gui_type, sel)
+SUB GUI_draw_dropdown (b as GUI_element_type, sel) ' -- NOT DONE
 _CONTROLCHR OFF
 LOCATE b.row1, b.col1
 COLOR b.c1, b.c2
-IF b.d_flag THEN PRINT CHR$(218); ELSE PRINT "[";
+IF b.drop_flag THEN PRINT CHR$(218); ELSE PRINT "[";
 IF sel THEN COLOR b.sc1, b.sc2
 PRINT LEFT$(get_str$(b.nam) + SPACE$(b.col2 - b.col1), b.col2 - b.col1 - 2); CHR$(31);
 COLOR b.c1, b.c2
-IF b.d_flag THEN PRINT CHR$(191); ELSE PRINT "]";
+IF b.drop_flag THEN PRINT CHR$(191); ELSE PRINT "]";
 _CONTROLCHR ON
+b.cur_row = 0
+b.cur_col = 0
 END SUB
 
-SUB GUI_draw_menu (b as gui_type, sel)
-
+SUB GUI_draw_menu (b as GUI_element_type, sel)
+b.cur_row = 0
+b.cur_col = 0
 END SUB
 
-SUB GUI_draw_list_box (b as gui_type, sel)
-GUI_draw_box b
+SUB GUI_draw_list_box (b as GUI_element_type, sel)
+GUI_draw_box b.row1, b.col1, b.row2, b.col2, b
+s = 0
 for x = 1 to b.row2 - b.row1 - 1
   locate x + b.row1, b.col1 + 1
-  if (b.selected - b.offset) = (x) then
+  if (b.selected - b.scroll_offset_vert) = (x) then
+    s = x
     color b.sc1, b.sc2
   else
     color b.c1, b.c2
   end if
-  print mid$(get_str_array$(b.multi_line, x + b.offset - 1), 1, b.col2 - b.col1 -1);
+  k$ = mid$(get_str_array$(b.lines, x + b.scroll_offset_vert), 1, b.col2 - b.col1 -1)
+  k$ = k$ + space$((b.col2 - b.col1 - 1) - len(k$))
+  print k$;
 next x
+if s > 0 then
+  b.cur_row = b.row1 + s
+  b.cur_col = b.col1 + 1
+else
+  b.cur_row = 0
+end if
 END SUB
 
-SUB GUI_draw_multi_line_input_box (b as gui_type, sel)
-
+SUB GUI_draw_text_box (b as GUI_element_type, sel)
+b.cur_row = 0
+b.cur_col = 0
 END SUB
 
-FUNCTION mouse_range (b() AS gui_type, boxnum) 'Checks if mouse is in one of the boxes in b()
+SUB GUI_mouse_range (b() AS GUI_element_type, boxnum, selected_gui) 'Checks if mouse is in one of the boxes in b()
 'Returns the array number if it is in one of them
-mscroll = 0
+STATIC GUI_butflag
+GUI_mscroll = 0
 DO WHILE _MOUSEINPUT
-  mscroll = mscroll + _MOUSEWHEEL
-  mx = _MOUSEX
-  my = _MOUSEY
-  but = _MOUSEBUTTON(1)
+  GUI_mscroll = GUI_mscroll + _MOUSEWHEEL
+  GUI_mx = _MOUSEX
+  GUI_my = _MOUSEY
+  GUI_but = _MOUSEBUTTON(1)
 LOOP
-IF but = -1 AND butflag = -1 THEN
-  but = 0
+IF GUI_mscroll and NOT GUI_but then
+'handle scrolling
+  IF b(selected_gui).element_type = 1 then 'plain box
+  ELSEIF b(selected_gui).element_type = 2 then 'Input box, nothing to do
+  ELSEIF b(selected_gui).element_type = 3 then 'Multi-Line Input box.
+  ELSEIF b(selected_gui).element_type = 4 then 'List box
+    b(selected_gui).scroll_offset_vert = b(selected_gui).scroll_offset_vert + GUI_mscroll
+    if b(selected_gui).scroll_offset_vert < 0 then b(selected_gui).scroll_offset_vert = 0
+    if b(selected_gui).scroll_offset_vert > b(selected_gui).length - (b(selected_gui).row2 - b(selected_gui).row1 - 1) then 
+      b(selected_gui).scroll_offset_vert = b(selected_gui).length - (b(selected_gui).row2 - b(selected_gui).row1 - 1)
+    end if
+    b(selected_gui).updated = -1
+  END IF
+END IF
+IF GUI_but AND GUI_butflag THEN
+  GUI_but = 0
   EXIT FUNCTION
 ELSE
-  butflag = 0
+  GUI_butflag = 0
 END IF
-IF but = 0 THEN EXIT FUNCTION
-butflag = -1
+IF GUI_but = 0 THEN EXIT FUNCTION
+GUI_butflag = -1
+current_layer = -1
+found = 0
 FOR x = 1 TO boxnum
-  IF b(x).text_box THEN
-    IF my <= b(x).row2 AND my >= b(x).row1 THEN
-      IF mx >= b(x).col1 AND mx <= b(x).col2 THEN
-        mouse_range = x
-        IF my = b(x).row1 + 1 THEN
-          IF mx > b(x).col1 + 1 AND mx < b(x).col2 - 1 THEN
-            b(x).text_position = b(x).text_offset + mx - b(x).col1 - 1
-            IF b(x).text_position > b(x).text.length THEN
-              b(x).text_position = b(x).text.length
-            END IF
-            b(x).updated = -1
-          END IF
+  select case b(x).element_type
+    case GUI_BOX 
+      IF GUI_my <= b(x).row2 AND GUI_my >= b(x).row1 THEN
+        IF GUI_mx >= b(x).col1 AND GUI_mx <= b(x).col2 THEN
+          if b(x).layer > current_layer then
+            found = x
+            current_layer = b(x).layer
+          end if
         END IF
-        EXIT FUNCTION
       END IF
-    END IF
-  ELSEIF b(x).menu then
-    if my = b(x).row1 then
-      b(x).updated = -1
-      mouse_range = x
-    end if
-  ELSEIF b(x).multi_text_Box then
-    IF my <= b(x).row2 AND my >= b(x).row1 THEN
-      IF mx >= b(x).col1 AND mx <= b(x).col2 THEN
-        mouse_range = x
-        IF my = b(x).row1 + 1 THEN
-          IF mx > b(x).col1 + 1 AND mx < b(x).col2 - 1 THEN
-            b(x).text_position = b(x).text_offset + mx - b(x).col1 - 1
-            IF b(x).text_position > b(x).text.length THEN
-              b(x).text_position = b(x).text.length
-            END IF
-            b(x).updated = -1
-          END IF
+    case GUI_INPUT_BOX
+      IF GUI_my <= b(x).row1 + 2 AND GUI_my >= b(x).row1 THEN
+        IF GUI_mx >= b(x).col1 AND GUI_mx <= b(x).col2 THEN
+          if b(x).layer > current_layer then
+            found = x
+            current_layer = b(x).layer
+          end if
         END IF
-        EXIT FUNCTION
       END IF
-    END IF
-  ELSEIF b(x).button THEN
-    IF my = b(x).row1 AND mx >= b(x).col1 AND mx <= b(x).col1 + LEN(get_str$(b(x).nam)) + 1 THEN
-      mouse_range = x
-      EXIT FUNCTION
-    END IF
-  ELSEIF b(x).checkbox THEN
-    IF my = b(x).row1 AND mx >= b(x).col1 AND mx <= b(x).col1 + 2 + LEN(get_str$(b(x).nam)) THEN
-      mouse_range = x
-      EXIT FUNCTION
-    END IF
-  ELSEIF b(x).drop_down THEN
-    IF my = b(x).row1 AND mx >= b(x).col1 AND mx <= b(x).col2 THEN
-      mouse_range = x
-      EXIT FUNCTION
-    END IF
-  END IF
+    case GUI_TEXT_BOX 
+    case GUI_LIST_BOX
+      IF GUI_my <= b(x).row2 AND GUI_my >= b(x).row1 THEN
+        IF GUI_mx >= b(x).col1 AND GUI_mx <= b(x).col2 THEN
+          if b(x).layer > current_layer then
+            found = x
+            current_layer = b(x).layer
+          end if
+        END IF
+      END IF
+    case GUI_DROP_DOWN
+      IF GUI_my = b(x).row1 AND GUI_mx >= b(x).col1 AND GUI_mx <= b(x).col2 THEN
+        if b(x).layer > current_layer then
+          found = x
+          current_layer = b(x).layer
+        end if
+      END IF
+    case GUI_CHECKBOX
+      IF GUI_my = b(x).row1 AND GUI_mx >= b(x).col1 AND GUI_mx <= b(x).col1 + 2 + LEN(get_str$(b(x).nam)) THEN
+        if b(x).layer > current_layer then
+          found = x
+          current_layer = b(x).layer
+        end if
+      END IF
+    case GUI_MENU
+      if GUI_my = b(x).row1 then
+        if b(x).layer > current_layer then
+          found = x
+          current_layer = b(x).layer
+        end if
+      end if
+    case GUI_BUTTON
+      IF GUI_my = b(x).row1 AND GUI_mx >= b(x).col1 AND GUI_mx <= b(x).col1 + LEN(get_str$(b(x).nam)) + 1 THEN
+        if b(x).layer > current_layer then
+          found = x
+          current_layer = b(x).layer
+        end if
+      END IF
+  END SELECT
 NEXT x
-END FUNCTION
 
-SUB print_menu_no_hilight (a$) 'Prints a$ without the '#' and no hilighting
+if found > 0 then
+  select case b(found).element_type
+    case GUI_BOX
+      selected_gui = found
+      b(found).updated = -1
+    case GUI_INPUT_BOX
+      selected_gui = found
+      IF GUI_my = b(found).row1 + 1 THEN
+        IF GUI_mx > b(found).col1 + 1 AND GUI_mx < b(found).col2 - 1 THEN
+          b(found).text_position = b(found).text_offset + GUI_mx - b(found).col1 - 1
+          IF b(found).text_position > b(found).text.length THEN
+            b(found).text_position = b(found).text.length
+          END IF
+        END IF
+      END IF
+      b(found).updated = -1
+    case GUI_TEXT_BOX
+    case GUI_LIST_BOX
+      selected_gui = found
+      IF GUI_my >= b(found).row1 + 1 and GUI_my <= b(found).row2 - 1 THEN
+        IF GUI_mx > b(found).col1 + 1 AND GUI_mx < b(found).col2 - 1 THEN
+          b(found).selected = GUI_my - b(found).row1 + b(found).scroll_offset_vert
+        END IF
+      END IF
+      b(found).updated = -1
+    case GUI_DROP_DOWN
+      selected_gui = found
+      b(found).updated = -1
+      EXIT FUNCTION
+    case GUI_CHECKBOX
+      if GUI_mx = b(found).col1 + 1 then b(found).checked = not b(found).checked
+      selected_gui = found
+      b(found).updated = -1
+      EXIT FUNCTION
+    case GUI_MENU
+      selected_gui = found
+      b(found).updated = -1
+    case GUI_BUTTON
+      b(found).pressed = -1
+      selected_gui = found
+      b(found).updated = -1
+      EXIT FUNCTION
+  END SELECT
+end if
+
+END SUB
+
+SUB GUI_print_menu_no_hilight (a$) 'Prints a$ without the '#' and no hilighting
 PRINT MID$(a$, 1, INSTR(a$, "#") - 1);
 PRINT MID$(a$, INSTR(a$, "#") + 1);
 END SUB
 
-SUB print_menu (a$, s) 'Prints a$ with the character after '#' hilighted in bright white
+SUB GUI_print_menu (a$, s) 'Prints a$ with the character after '#' hilighted in bright white
 PRINT MID$(a$, 1, INSTR(a$, "#") - 1);
 COLOR menu_char_c
 PRINT MID$(a$, INSTR(a$, "#") + 1, 1);
@@ -352,7 +516,7 @@ COLOR s
 PRINT MID$(a$, INSTR(a$, "#") + 2);
 END SUB
 
-FUNCTION menu_len (a$) 'Length of menu item a$.
+FUNCTION GUI_menu_len (a$) 'Length of menu item a$.
 'Just takes one away from the length if the string has a '#'`
 IF INSTR(a$, "#") THEN
   menu_len = LEN(a$) - 1
@@ -361,6 +525,44 @@ ELSE
 END IF
 END FUNCTION
 
-FUNCTION menu_char$ (a$) 'Get's the hilighted character
+FUNCTION GUI_menu_char$ (a$) 'Get's the hilighted character
 menu_char$ = MID$(a$, INSTR(a$, "#") + 1, 1)
 END FUNCTION
+
+SUB GUI_add_character (b AS GUI_element_type, ch$)
+t$ = get_str$(b.text)
+t$ = MID$(t$, 1, b.text_position) + ch$ + MID$(t$, b.text_position + 1)
+'print "T="; t$;
+'_DISPLAY
+'sleep
+put_str b.text, t$
+b.text_position = b.text_position + 1
+IF b.text_position > b.text_offset + (b.col2 - b.col1 - 2) THEN
+  b.text_offset = b.text_offset + 1
+END IF
+
+END SUB
+
+SUB GUI_del_character (b AS GUI_element_type)
+t$ = get_str$(b.text)
+IF LEN(t$) > 0 AND b.text_position > 0 THEN
+  t$ = MID$(t$, 1, b.text_position - 1) + MID$(t$, b.text_position + 1)
+  put_str b.text, t$
+  b.text_position = b.text_position - 1
+  IF b.text_position < b.text_offset THEN
+    b.text_offset = b.text_offset - 1
+  END IF
+END IF
+END SUB
+
+SUB GUI_free_element_array (b() as GUI_element_type)
+for x = 1 to ubound(b)
+  GUI_free_element b(x)
+next x
+END SUB
+
+SUB GUI_free_element (b as GUI_element_type)
+free_string b.nam
+free_string b.text
+free_array b.lines
+END SUB

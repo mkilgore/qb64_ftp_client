@@ -29,33 +29,6 @@ s.length = LEN(stri$)
 $CHECKING:ON
 END SUB
 
-SUB add_character (b AS box_type, ch$)
-t$ = get_str$(b.text)
-t$ = MID$(t$, 1, b.text_position) + ch$ + MID$(t$, b.text_position + 1)
-'print "T="; t$;
-'_DISPLAY
-'sleep
-put_str b.text, t$
-b.text_position = b.text_position + 1
-IF b.text_position > b.text_offset + (b.col2 - b.col1 - 2) THEN
-  b.text_offset = b.text_offset + 1
-END IF
-
-END SUB
-
-SUB del_character (b AS box_type)
-t$ = get_str$(b.text)
-IF LEN(t$) > 0 AND b.text_position > 0 THEN
-  t$ = MID$(t$, 1, b.text_position - 1) + MID$(t$, b.text_position + 1)
-  put_str b.text, t$
-  b.text_position = b.text_position - 1
-  IF b.text_position < b.text_offset THEN
-    b.text_offset = b.text_offset - 1
-  END IF
-END IF
-END SUB
-
-
 FUNCTION get_str_array$ (a AS array_type, array_number)
 DIM s AS string_type
 '$CHECKING:OFF
@@ -95,24 +68,24 @@ _MEMPUT a.mem, a.mem.OFFSET + array_number * LEN(st), st
 $CHECKING:ON
 END SUB
 
-SUB get_filedir_type_array (a AS array_type, array_number, f AS filedir_type)
-DIM m AS _MEM
-'$CHECKING:OFF
-m = _MEM(f)
-_MEMCOPY a.mem, a.mem.OFFSET + array_number * LEN(f), LEN(f) TO m, m.OFFSET
-$CHECKING:ON
-END SUB
+'SUB get_filedir_type_array (a AS array_type, array_number, f AS filedir_type)
+'DIM m AS _MEM
+''$CHECKING:OFF
+'m = _MEM(f)
+'_MEMCOPY a.mem, a.mem.OFFSET + array_number * LEN(f), LEN(f) TO m, m.OFFSET
+'$CHECKING:ON
+'END SUB
 
 SUB allocate_array (a AS array_type, number_of_elements, element_size)
 '$CHECKING:OFF
 IF NOT a.is_allocated THEN
   'not already allocated
   a.element_size = element_size
-  a.length = number_of_elements
+  a.length = number_of_elements + 1 'add one to make it go from 0 to number_of_elements as BASIC programers would expect
   a.is_allocated = -1
-  a.allocated = number_of_elements * element_size
-  a.mem = _MEMNEW(number_of_elements * element_size)
-  _MEMFILL a.mem, a.mem.OFFSET, number_of_elements * element_size, 0 as _byte
+  a.allocated = a.length * element_size
+  a.mem = _MEMNEW(a.length * element_size)
+  _MEMFILL a.mem, a.mem.OFFSET, a.length * element_size, 0 as _byte
 elseif a.element_size = element_size then
   reallocate_array a, number_of_elements
 END IF
@@ -127,30 +100,22 @@ DIM temp AS _MEM
 IF NOT a.is_allocated THEN
   IF a.element_size > 0 THEN allocate_array a, number_of_elements, a.element_size ELSE ERROR 255
 ELSE 'reallocate
-  IF number_of_elements * a.element_size < a.allocated THEN a.length = number_of_elements: EXIT SUB
+  a.length = number_of_elements + 1:
+  IF (number_of_elements + 1) * a.element_size < a.allocated THEN EXIT SUB
   temp = a.mem
-  a.mem = _MEMNEW(number_of_elements * a.element_size)
-  _MEMFILL a.mem, a.mem.OFFSET, number_of_elements * a.element_Size, 0 as _BYTE
+  a.mem = _MEMNEW((number_of_elements + 1) * a.element_size)
+  _MEMFILL a.mem, a.mem.OFFSET, (number_of_elements + 1) * a.element_Size, 0 as _BYTE
   _MEMCOPY temp, temp.OFFSET, a.allocated TO a.mem, a.mem.OFFSET
-  
-  s.allocated = number_of_elements * a.element_size
-  
+  s.allocated = (number_of_elements + 1) * a.element_size
   _MEMFREE temp
 END IF
 
 $CHECKING:ON
 END SUB
 
-SUB free_gui_array (b() as box_type)
-for x = 1 to ubound(b)
-  free_gui_element b(x)
-next x
-END SUB
-
-SUB free_gui_element (b as box_type)
-free_string b.nam
-free_string b.text
-free_array b.multi_line
+SUB allocate_string_array (a as array_type, number_of_elements)
+DIM s as string_type
+allocate_array a, number_of_elements, LEN(s)
 END SUB
 
 SUB free_array (a as array_type)

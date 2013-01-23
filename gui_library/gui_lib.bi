@@ -17,6 +17,15 @@ TYPE GUI_menu_type
   wid as INTEGER 'width of this menu -- if 0 then will be determined automatically based on items
 END TYPE
 
+CONST GUI_BOX = 1
+CONST GUI_INPUT_BOX = 2
+CONST GUI_TEXT_BOX = 3
+CONST GUI_LIST_BOX = 4
+CONST GUI_DROP_DOWN = 5
+CONST GUI_CHECKBOX = 6
+CONST GUI_MENU = 7
+CONST GUI_BUTTON = 8
+
 TYPE GUI_element_type
   nam AS string_type 'name of item
 
@@ -24,7 +33,7 @@ TYPE GUI_element_type
   '0 -- Nothing
   '1 -- Box                  -- Draws a plain box with nothing inside
   '2 -- Input-Box            -- Box is forced to 3 rows, single line input
-  '3 -- Multi-Line-Input-Box -- Multi-line input
+  '3 -- text-box             -- Multi-line input
   '4 -- List-Box             -- Multiple lines -- Lists lines and allows one to be selected
   '5 -- Drop-down            -- Displays as one line, but when clicked on a box appears with multiple selecteable items
   '6 -- CheckBox             -- Displays a label along with an empty or filled Box, which can be toggled by clicking on it
@@ -46,7 +55,16 @@ TYPE GUI_element_type
   sc1 AS _BYTE 'selected color (Has a few different meanings depending on the object)
   sc2 AS _BYTE
   
+  ' Just a number indicating the layering.
+  ' Lowest later is 0. If you need something to be ontop of something else, put it in a higher layer
+  layer AS _UNSIGNED _BYTE 
+  
+  skip AS _BYTE ' if -1 then will be skipped by TAB key
+  
   shadow AS _BYTE ' if -1 then a shadow will be drawn around the box
+  
+  pressed AS _BYTE ' set if button pressed -- needs to be reset if you intend to do something else
+
 
   'text_box AS _BYTE '-1 then drawn as textbox (input box) -- always as row2 = row1 + 2
   
@@ -60,8 +78,10 @@ TYPE GUI_element_type
   'scroll = 1 -- Vertical scroll bar only
   'scroll = 2 -- Horisontal scroll bar only
   'scroll = 3 -- Vertical and Horisontal scroll bars
-  scroll_offset AS INTEGER 'current scroll offset -- calculated in draw_gui function
-  scroll_loc AS INTEGER 'current location of scroll-bar
+  scroll_offset_vert AS INTEGER 'current scroll offset -- calculated in draw_gui function
+  scroll_offset_hors AS INTEGER
+  scroll_loc_hors AS INTEGER 'current location of scroll-bar
+  scroll_loc_vert AS INTEGER
   scroll_max_hors AS INTEGER 'Max number of characters in a line -- If 0 then will be automatically calculated (Which is a bit slower)
   'The length variable is used in place of a "scroll_max_vert" variable
   
@@ -88,3 +108,4 @@ END TYPE
 
 'shared variables for mouse
 COMMON SHARED GUI_mx AS INTEGER, GUI_my AS INTEGER, GUI_but AS INTEGER, GUI_mtimer AS SINGLE, GUI_mscroll AS INTEGER
+COMMON SHARED GUI_cur_row AS INTEGER, GUI_cur_col AS INTEGER
