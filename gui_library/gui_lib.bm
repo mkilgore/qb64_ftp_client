@@ -93,9 +93,10 @@ END SELECT
 move_to_next_gui = new_gui
 END FUNCTION
 
-FUNCTION GUI_update_screen (gui() AS GUI_element_type, gui_num AS INTEGER)
+FUNCTION GUI_update_screen (gui() AS GUI_element_type, gui_num AS INTEGER, sel AS INTEGER)
 FOR x = 1 to gui_num
-  if gui(x).updated then GUI_update_screen = -1: exit function
+  if gui(x).element_type = GUI_DROP_DOWN and x <> sel and gui(x).drop_flag then gui(x).drop_flag = 0: GUI_update_screen = -1
+  if gui(x).updated then GUI_update_screen = -1
 NEXT x
 END FUNCTION
 
@@ -116,7 +117,7 @@ SELECT CASE ch$
     sel = (sel mod gui_num) + 1
     gui(sel).updated = -1
   CASE CHR$(0) + CHR$(80) 'DOWN
-    if gui(sel).element_type = GUI_LIST_BOX then
+    if gui(sel).element_type = GUI_LIST_BOX OR (gui(sel).element_type = GUI_DROP_DOWN AND gui(sel).drop_flag) then
       if gui(sel).selected < gui(sel).length then
         gui(sel).selected = gui(sel).selected + 1
         GUI_fix_scroll gui(sel)
@@ -124,7 +125,7 @@ SELECT CASE ch$
       end if
     end if
   CASE CHR$(0) + CHR$(72) 'UP
-    if gui(sel).element_type = GUI_LIST_BOX then
+    if gui(sel).element_type = GUI_LIST_BOX OR (gui(sel).element_type = GUI_DROP_DOWN AND gui(sel).drop_flag)  then
       if gui(sel).selected > 1 then
         gui(sel).selected = gui(sel).selected - 1
         GUI_fix_scroll gui(sel)
@@ -153,14 +154,14 @@ SELECT CASE ch$
       end if
     END IF
   CASE CHR$(0) + CHR$(73) 'PageUp
-    if gui(sel).element_type = GUI_LIST_BOX then
+    if gui(sel).element_type = GUI_LIST_BOX OR (gui(sel).element_type = GUI_DROP_DOWN AND gui(sel).drop_flag)  then
       gui(sel).selected = gui(sel).selected - (gui(sel).row2 - gui(sel).row1 - 1)
       if gui(sel).selected < 1 then gui(sel).selected = 1
       GUI_fix_scroll gui(sel)
       gui(sel).updated = -1
     end if
   CASE CHR$(0) + CHR$(81) 'PageDown
-    if gui(sel).element_type = GUI_LIST_BOX then
+    if gui(sel).element_type = GUI_LIST_BOX OR (gui(sel).element_type = GUI_DROP_DOWN AND gui(sel).drop_flag) then
       gui(sel).selected = gui(sel).selected + (gui(sel).row2 - gui(sel).row1 - 1)
       if gui(sel).selected > gui(sel).length then gui(sel).selected = gui(sel).length
       GUI_fix_scroll gui(sel)
@@ -232,11 +233,31 @@ LOCATE row2, col1
 PRINT CHR$(192); STRING$(col2 - col1 - 1, 196); CHR$(217);
 END SUB
 
+FUNCTION GUI_get_layer (b as GUI_element_type)
+IF b.element_type <> GUI_DROP_DOWN AND b.element_type <> GUI_MENU then
+  GUI_get_layer = b.layer
+ELSEIF b.element_type = GUI_DROP_DOWN AND b.drop_flag then
+  GUI_get_layer = 128
+ELSEIF b.element_type = GUI_DROP_DOWN and b.drop_flag THEN
+  GUI_get_layer = b.layer
+ELSEIF b.element_type = GUI_MENU then
+
+END IF
+END FUNCTION
+
 SUB GUI_draw_element_array (b() as GUI_element_type, gui_num, selected_gui)
 _DISPLAY
-FOR x = 1 to gui_num
-  GUI_draw_element b(x), selected_gui = x
-next x
+drawn_count = 0
+FOR cur_layer = -128 to 128
+  for x = 1 to gui_num
+    if GUI_get_layer(b(x)) = cur_layer then
+      GUI_draw_element b(x), selected_gui = x
+      drawn_count = drawn_count + 1
+    end if
+    if drawn_count = gui_num then exit FOR
+  next x
+  if draw_count = gui_num then exit FOR
+next cur_layer
 if b(selected_gui).cur_row > 0 then
   locate b(selected_gui).cur_row, b(selected_gui).cur_col, 1
   GUI_cur_row = b(selected_gui).cur_row
@@ -318,14 +339,37 @@ SUB GUI_draw_dropdown (b as GUI_element_type, sel) ' -- NOT DONE
 _CONTROLCHR OFF
 LOCATE b.row1, b.col1
 COLOR b.c1, b.c2
-IF b.drop_flag THEN PRINT CHR$(218); ELSE PRINT "[";
+if b.drop_flag then
+  GUI_draw_box b.row1, b.col1, b.row2, b.col2, b
+end if
+IF NOT b.drop_flag THEN PRINT "[";
 IF sel THEN COLOR b.sc1, b.sc2
-PRINT LEFT$(get_str$(b.nam) + SPACE$(b.col2 - b.col1), b.col2 - b.col1 - 2); CHR$(31);
+locate b.row1, b.col1 + 1
+PRINT LEFT$(get_str_array$(b.lines, b.selected) + SPACE$(b.col2 - b.col1), b.col2 - b.col1 - 2); CHR$(31);
 COLOR b.c1, b.c2
-IF b.drop_flag THEN PRINT CHR$(191); ELSE PRINT "]";
+IF NOT b.drop_flag THEN PRINT "]";
+if b.drop_flag then
+  for x = 1 to b.row2 - b.row1 - 1
+    locate x + b.row1, b.col1 + 1
+    if (b.selected - b.scroll_offset_vert) = (x) then
+      s = x
+      color b.sc1, b.sc2
+    else
+      color b.c1, b.c2
+    end if
+    k$ = mid$(get_str_array$(b.lines, x + b.scroll_offset_vert), 1, b.col2 - b.col1 -1)
+    k$ = k$ + space$((b.col2 - b.col1 - 1) - len(k$))
+    print k$;
+  next x
+end if
 _CONTROLCHR ON
-b.cur_row = 0
-b.cur_col = 0
+if s = 0 then
+  b.cur_row = 0
+  b.cur_col = 0
+else 
+  b.cur_row = s + b.row1 
+  b.cur_col = b.col1 + 1
+end if
 END SUB
 
 SUB GUI_draw_menu (b as GUI_element_type, sel)
@@ -373,10 +417,10 @@ DO WHILE _MOUSEINPUT
 LOOP
 IF GUI_mscroll and NOT GUI_but then
 'handle scrolling
-  IF b(selected_gui).element_type = 1 then 'plain box
-  ELSEIF b(selected_gui).element_type = 2 then 'Input box, nothing to do
-  ELSEIF b(selected_gui).element_type = 3 then 'Multi-Line Input box.
-  ELSEIF b(selected_gui).element_type = 4 then 'List box
+  IF b(selected_gui).element_type = GUI_BOX then 'plain box
+  ELSEIF b(selected_gui).element_type = GUI_INPUT_BOX then 'Input box, nothing to do
+  ELSEIF b(selected_gui).element_type = GUI_TEXT_BOX then 'Text-Box
+  ELSEIF b(selected_gui).element_type = GUI_LIST_BOX OR (b(selected_gui).element_type = GUI_DROP_DOWN AND b(selected_gui).drop_flag) then 'List box or open Drop-Down
     b(selected_gui).scroll_offset_vert = b(selected_gui).scroll_offset_vert + GUI_mscroll
     if b(selected_gui).scroll_offset_vert < 0 then b(selected_gui).scroll_offset_vert = 0
     if b(selected_gui).scroll_offset_vert > b(selected_gui).length - (b(selected_gui).row2 - b(selected_gui).row1 - 1) then 
@@ -400,18 +444,18 @@ FOR x = 1 TO boxnum
     case GUI_BOX 
       IF GUI_my <= b(x).row2 AND GUI_my >= b(x).row1 THEN
         IF GUI_mx >= b(x).col1 AND GUI_mx <= b(x).col2 THEN
-          if b(x).layer > current_layer then
+          if GUI_get_layer(b(x)) > current_layer then
             found = x
-            current_layer = b(x).layer
+            current_layer = GUI_get_layer(b(x))
           end if
         END IF
       END IF
     case GUI_INPUT_BOX
       IF GUI_my <= b(x).row1 + 2 AND GUI_my >= b(x).row1 THEN
         IF GUI_mx >= b(x).col1 AND GUI_mx <= b(x).col2 THEN
-          if b(x).layer > current_layer then
+          if GUI_get_layer(b(x)) > current_layer then
             found = x
-            current_layer = b(x).layer
+            current_layer = GUI_get_layer(b(x))
           end if
         END IF
       END IF
@@ -419,38 +463,38 @@ FOR x = 1 TO boxnum
     case GUI_LIST_BOX
       IF GUI_my <= b(x).row2 AND GUI_my >= b(x).row1 THEN
         IF GUI_mx >= b(x).col1 AND GUI_mx <= b(x).col2 THEN
-          if b(x).layer > current_layer then
+          if GUI_get_layer(b(x)) > current_layer then
             found = x
-            current_layer = b(x).layer
+            current_layer = GUI_get_layer(b(x))
           end if
         END IF
       END IF
     case GUI_DROP_DOWN
       IF GUI_my = b(x).row1 AND GUI_mx >= b(x).col1 AND GUI_mx <= b(x).col2 THEN
-        if b(x).layer > current_layer then
+        if GUI_get_layer(b(x)) > current_layer then
           found = x
-          current_layer = b(x).layer
+          current_layer = GUI_get_layer(b(x))
         end if
       END IF
     case GUI_CHECKBOX
       IF GUI_my = b(x).row1 AND GUI_mx >= b(x).col1 AND GUI_mx <= b(x).col1 + 2 + LEN(get_str$(b(x).nam)) THEN
-        if b(x).layer > current_layer then
+        if GUI_get_layer(b(x)) > current_layer then
           found = x
-          current_layer = b(x).layer
+          current_layer = GUI_get_layer(b(x))
         end if
       END IF
     case GUI_MENU
       if GUI_my = b(x).row1 then
-        if b(x).layer > current_layer then
+        if GUI_get_layer(b(x)) > current_layer then
           found = x
-          current_layer = b(x).layer
+          current_layer = GUI_get_layer(b(x))
         end if
       end if
     case GUI_BUTTON
       IF GUI_my = b(x).row1 AND GUI_mx >= b(x).col1 AND GUI_mx <= b(x).col1 + LEN(get_str$(b(x).nam)) + 1 THEN
-        if b(x).layer > current_layer then
+        if GUI_get_layer(b(x)) > current_layer then
           found = x
-          current_layer = b(x).layer
+          current_layer = GUI_get_layer(b(x))
         end if
       END IF
   END SELECT
@@ -476,12 +520,22 @@ if found > 0 then
     case GUI_LIST_BOX
       selected_gui = found
       IF GUI_my >= b(found).row1 + 1 and GUI_my <= b(found).row2 - 1 THEN
-        IF GUI_mx > b(found).col1 + 1 AND GUI_mx < b(found).col2 - 1 THEN
+        IF GUI_mx >= b(found).col1 + 1 AND GUI_mx <= b(found).col2 - 1 THEN
           b(found).selected = GUI_my - b(found).row1 + b(found).scroll_offset_vert
         END IF
       END IF
       b(found).updated = -1
     case GUI_DROP_DOWN
+      if selected_gui = found and GUI_my = b(found).row1 then
+        b(found).drop_flag = not b(found).drop_flag
+      end if
+      if b(found).drop_flag then
+        IF GUI_my >= b(found).row1 + 1 and GUI_my <= b(found).row2 - 1 THEN
+          IF GUI_mx >= b(found).col1 + 1 AND GUI_mx <= b(found).col2 - 1 THEN
+            b(found).selected = GUI_my - b(found).row1 + b(found).scroll_offset_vert
+          END IF
+        END IF
+      end if
       selected_gui = found
       b(found).updated = -1
       EXIT FUNCTION
