@@ -328,7 +328,7 @@ SELECT CASE n$
         'ELSE
         '  Remote_files(x).dir = ""
         'END IF
-        IF get_str$(Remote_files(x).nam) <> ".." AND get_str$(Remote_files(x).nam) <> "." and git_str$(Remote_files(x).nam) > "" THEN boxes(2).length = x
+        IF get_str$(Remote_files(x).nam) <> ".." AND get_str$(Remote_files(x).nam) <> "." and get_str$(Remote_files(x).nam) > "" THEN boxes(2).length = x
       LOOP UNTIL dirs$ = ""
       sort_dir_listing Remote_files(), boxes(2).length
     END IF
