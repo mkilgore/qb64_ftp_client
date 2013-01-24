@@ -103,9 +103,13 @@ DO
   SELECT CASE key$ 'Extra stuff to do on keypresses, if you have anything that isn't already handled.
   
   END SELECT
+<<<<<<< HEAD
   
   'manage interactions here.
   if main_gui(5).pressed then
+=======
+  IF main_gui(5).pressed then
+>>>>>>> b98a3643c011b204fc2fa9562e07e75424f8a1ed
     locate 23, 1
     print "Pressed! "; count;
     count = count + 1
