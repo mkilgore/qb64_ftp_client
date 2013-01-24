@@ -94,6 +94,8 @@ TYPE GUI_element_type
   
   drop_flag AS _BYTE ' If drop_flag is set, then the drop-down box is showing
   
+  menu as GUI_menu_type
+  
   'Updated only applies to selected gui element, to ease the ease of checking.
   'You can assume that unless you change the values directly, no other gui's accept the selected gui
   'will be changed.
@@ -102,14 +104,6 @@ TYPE GUI_element_type
   cur_row AS INTEGER
   cur_col AS INTEGER
   
-  'A _MEM pointing to this elements parent
-  'If a parent is pointed at, then various things can be inhereted
-  'Specefically:
-  'Any color set to -1 will be inhereted from the parent
-  'Row/Col are made relative to the parents location (So row1 will now equal row1 + parent.row1)
-  'Layer equals parent + 1 + layer
-  has_parent AS _BYTE
-  parent as _MEM
   'If this GUI is currently selected, then you should do a:
   'LOCATE cur_row, cur_col, 1
   'to locate the cursor

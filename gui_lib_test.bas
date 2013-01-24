@@ -8,6 +8,7 @@ gui_num = 6
 
 DIM main_gui(gui_num) as GUI_element_type 'create 3 GUI elements
 
+'GUI(1) is our main dialog box and is going to be
 main_gui(1).updated = -1 'set update flag for first pass
 main_gui(1).element_type = GUI_BOX
 put_str main_gui(1).nam, "Plain Box"
@@ -19,7 +20,8 @@ main_gui(1).row1 = 1
 main_gui(1).row2 = 25
 main_gui(1).col1 = 1
 main_gui(1).col2 = 80
-main_gui(1).layer = -1
+main_gui(1).skip = -1 ' -- We don't want to be able to TAB to this gui element
+main_gui(1).layer = -1 ' -- Set in background. Layer 0 is the default
 
 main_gui(2).element_type = GUI_INPUT_BOX
 put_str main_gui(2).nam, "Input Box"
@@ -65,8 +67,8 @@ main_gui(6).element_type = GUI_DROP_DOWN
 put_str main_gui(6).nam, "Drop Down"
 main_gui(6).c1 = 7
 main_gui(6).c2 = 1
-main_gui(6).sc1 = 15
-main_gui(6).sc2 = 1
+main_gui(6).sc1 = 1
+main_gui(6).sc2 = 7
 main_gui(6).row1 = 6
 main_gui(6).col1 = 2
 main_gui(6).row2 = 15
@@ -96,12 +98,13 @@ DO
 
   
   GUI_mouse_range main_gui(), gui_num, selected_gui
-
   key$ = GUI_inkey$(main_gui(), gui_num, selected_gui)
-  
-  SELECT CASE key$
+
+  SELECT CASE key$ 'Extra stuff to do on keypresses, if you have anything that isn't already handled.
   
   END SELECT
+  
+  'manage interactions here.
   if main_gui(5).pressed then
     locate 23, 1
     print "Pressed! "; count;

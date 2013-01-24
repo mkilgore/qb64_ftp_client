@@ -113,8 +113,10 @@ SELECT CASE ch$
       GUI_del_character gui(sel)
       gui(sel).updated = -1
     end if
-  CASE chr$(9)
-    sel = (sel mod gui_num) + 1
+  CASE chr$(9) 'Tab
+    do
+      sel = (sel mod gui_num) + 1
+    loop until gui(sel).skip = 0
     gui(sel).updated = -1
   CASE CHR$(0) + CHR$(80) 'DOWN
     if gui(sel).element_type = GUI_LIST_BOX OR (gui(sel).element_type = GUI_DROP_DOWN AND gui(sel).drop_flag) then
@@ -335,7 +337,7 @@ b.cur_row = b.row1 + 1
 b.cur_col = b.col1 + 1 + b.text_position - b.text_offset
 END SUB
 
-SUB GUI_draw_dropdown (b as GUI_element_type, sel) ' -- NOT DONE
+SUB GUI_draw_dropdown (b as GUI_element_type, sel)
 _CONTROLCHR OFF
 LOCATE b.row1, b.col1
 COLOR b.c1, b.c2
@@ -400,7 +402,7 @@ else
 end if
 END SUB
 
-SUB GUI_draw_text_box (b as GUI_element_type, sel)
+SUB GUI_draw_text_box (b as GUI_element_type, sel) ' -- NOT DONE
 b.cur_row = 0
 b.cur_col = 0
 END SUB
@@ -440,22 +442,23 @@ GUI_butflag = -1
 current_layer = -1
 found = 0
 FOR x = 1 TO boxnum
+  k = GUI_get_layer(b(x))
   select case b(x).element_type
     case GUI_BOX 
       IF GUI_my <= b(x).row2 AND GUI_my >= b(x).row1 THEN
         IF GUI_mx >= b(x).col1 AND GUI_mx <= b(x).col2 THEN
-          if GUI_get_layer(b(x)) > current_layer then
+          if k > current_layer then
             found = x
-            current_layer = GUI_get_layer(b(x))
+            current_layer = k
           end if
         END IF
       END IF
     case GUI_INPUT_BOX
       IF GUI_my <= b(x).row1 + 2 AND GUI_my >= b(x).row1 THEN
         IF GUI_mx >= b(x).col1 AND GUI_mx <= b(x).col2 THEN
-          if GUI_get_layer(b(x)) > current_layer then
+          if k > current_layer then
             found = x
-            current_layer = GUI_get_layer(b(x))
+            current_layer = k
           end if
         END IF
       END IF
@@ -463,38 +466,47 @@ FOR x = 1 TO boxnum
     case GUI_LIST_BOX
       IF GUI_my <= b(x).row2 AND GUI_my >= b(x).row1 THEN
         IF GUI_mx >= b(x).col1 AND GUI_mx <= b(x).col2 THEN
-          if GUI_get_layer(b(x)) > current_layer then
+          if k > current_layer then
             found = x
-            current_layer = GUI_get_layer(b(x))
+            current_layer = k
           end if
         END IF
       END IF
     case GUI_DROP_DOWN
-      IF GUI_my = b(x).row1 AND GUI_mx >= b(x).col1 AND GUI_mx <= b(x).col2 THEN
-        if GUI_get_layer(b(x)) > current_layer then
-          found = x
-          current_layer = GUI_get_layer(b(x))
+      if NOT b(x).drop_flag then
+        IF GUI_my = b(x).row1 AND GUI_mx >= b(x).col1 AND GUI_mx <= b(x).col2 THEN
+          if k > current_layer then
+            found = x
+            current_layer = k
+          end if
+        END IF
+      else
+        if GUI_my >= b(x).row1 and GUI_my <= b(x).row2 and GUI_mx >= b(x).col1 and GUI_mx <= b(x).col2 then
+          if k > current_layer then
+            found = x
+            current_layer = k
+          end if
         end if
-      END IF
+      end if
     case GUI_CHECKBOX
       IF GUI_my = b(x).row1 AND GUI_mx >= b(x).col1 AND GUI_mx <= b(x).col1 + 2 + LEN(get_str$(b(x).nam)) THEN
-        if GUI_get_layer(b(x)) > current_layer then
+        if k > current_layer then
           found = x
-          current_layer = GUI_get_layer(b(x))
+          current_layer = k
         end if
       END IF
     case GUI_MENU
       if GUI_my = b(x).row1 then
-        if GUI_get_layer(b(x)) > current_layer then
+        if k > current_layer then
           found = x
-          current_layer = GUI_get_layer(b(x))
+          current_layer = k
         end if
       end if
     case GUI_BUTTON
       IF GUI_my = b(x).row1 AND GUI_mx >= b(x).col1 AND GUI_mx <= b(x).col1 + LEN(get_str$(b(x).nam)) + 1 THEN
-        if GUI_get_layer(b(x)) > current_layer then
+        if k > current_layer then
           found = x
-          current_layer = GUI_get_layer(b(x))
+          current_layer = k
         end if
       END IF
   END SELECT
@@ -582,6 +594,10 @@ END FUNCTION
 FUNCTION GUI_menu_char$ (a$) 'Get's the hilighted character
 menu_char$ = MID$(a$, INSTR(a$, "#") + 1, 1)
 END FUNCTION
+
+SUB GUI_menu_attach ()
+
+END SUB
 
 SUB GUI_add_character (b AS GUI_element_type, ch$)
 t$ = get_str$(b.text)
