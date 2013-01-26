@@ -7,14 +7,21 @@
 'See file COPYING that should have been included with this source.
 TYPE GUI_menu_item_type
   nam as string_type
+  identifier as STRING * 5 'identifer string
   'support will be added later
   'modifier as STRING * 2 'INKEY$ return
-  sub_menu as _MEM 'mem pointing to a menu_type
+  sub_menu as _MEM 'mem pointing to a GUI_menu_type
 END TYPE
 
 TYPE GUI_menu_type
   items as array_type 'array of menu_items
+  selected as integer
   wid as INTEGER 'width of this menu -- if 0 then will be determined automatically based on items
+END TYPE
+
+TYPE GUI_color_type
+  fr as _BYTE
+  bk as _BYTE
 END TYPE
 
 CONST GUI_BOX = 1
@@ -49,11 +56,13 @@ TYPE GUI_element_type
   row2 AS INTEGER
   col2 AS INTEGER
 
-  c1 AS _BYTE 'forcolor
-  c2 AS _BYTE 'backcolor
+  mcolor as GUI_color_type
+  'c1 AS _BYTE 'forcolor
+  'c2 AS _BYTE 'backcolor
 
-  sc1 AS _BYTE 'selected color (Has a few different meanings depending on the object)
-  sc2 AS _BYTE
+  selcolor as GUI_color_type 
+  'sc1 AS _BYTE 'selected color (Has a few different meanings depending on the object)
+  'sc2 AS _BYTE
   
   ' Just a number indicating the layering.
   ' Default layer is zero. If you need something to be ontop of something else, put it in a higher layer
@@ -74,14 +83,17 @@ TYPE GUI_element_type
   hide AS _BYTE 'text will be drawn as "****" instead of "test" -- use for passwords, etc.
 
   scroll AS _BYTE ' If set then scroll bar(s) are drawn
+  scroll_color as GUI_color_type
   'scroll = 0 -- no scroll bars
   'scroll = 1 -- Vertical scroll bar only
   'scroll = 2 -- Horisontal scroll bar only
   'scroll = 3 -- Vertical and Horisontal scroll bars
   scroll_offset_vert AS INTEGER 'current scroll offset -- calculated in draw_gui function
   scroll_offset_hors AS INTEGER
+  
   scroll_loc_hors AS INTEGER 'current location of scroll-bar
   scroll_loc_vert AS INTEGER
+  
   scroll_max_hors AS INTEGER 'Max number of characters in a line -- If 0 then will be automatically calculated (Which is a bit slower)
   'The length variable is used in place of a "scroll_max_vert" variable
   
@@ -95,6 +107,8 @@ TYPE GUI_element_type
   drop_flag AS _BYTE ' If drop_flag is set, then the drop-down box is showing
   
   menu as GUI_menu_type
+  menu_chosen AS _BYTE
+  menu_choice AS STRING * 5
   
   'Updated only applies to selected gui element, to ease the ease of checking.
   'You can assume that unless you change the values directly, no other gui's accept the selected gui
@@ -109,6 +123,16 @@ TYPE GUI_element_type
   'to locate the cursor
 END TYPE
 
+TYPE GUI_default_color_type
+  mcolor as GUI_color_type
+  selcolor as GUI_color_type
+END TYPE
+
 'shared variables for mouse
-COMMON SHARED GUI_mx AS INTEGER, GUI_my AS INTEGER, GUI_but AS INTEGER, GUI_mtimer AS SINGLE, GUI_mscroll AS INTEGER
-COMMON SHARED GUI_cur_row AS INTEGER, GUI_cur_col AS INTEGER
+COMMON SHARED GUI_MX AS INTEGER, GUI_MY AS INTEGER, GUI_BUT AS INTEGER, GUI_MTIMER AS SINGLE, GUI_MSCROLL AS INTEGER
+COMMON SHARED GUI_CUR_ROW AS INTEGER, GUI_CUR_COL AS INTEGER
+COMMON SHARED GUI_DEFAULT_COLOR_BOX as GUI_default_color_type, GUI_DEFAULT_COLOR_INPUT as GUI_default_color_type
+COMMON SHARED GUI_DEFAULT_COLOR_TEXT as GUI_default_color_type, GUI_DEFAULT_COLOR_LIST as GUI_default_color_type
+COMMON SHARED GUI_DEFAULT_COLOR_DROP as GUI_default_color_type, GUI_DEFAULT_COLOR_CHECKBOX as GUI_default_color_type
+COMMON SHARED GUI_DEFAULT_COLOR_MENU as GUI_default_color_type, GUI_DEFAULT_COLOR_BUTTON as GUI_default_color_type
+DIM SHARED GUI_alt_codes$(51)

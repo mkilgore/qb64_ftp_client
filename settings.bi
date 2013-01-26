@@ -38,12 +38,6 @@ scrnh = 25 'Smaller then 80x25 is not recommended or garentied to work
 crlf$ = CHR$(13) + CHR$(10) 'end character
 status$ = "Not Connected." 'default status message
 
-a$ = "QWERTYUIOP????ASDFGHJKL?????ZXCVBNM" 'Credit to Galleon for the ALT key code stuff.
-DIM SHARED alt_codes$(LEN(a$) + 16)
-FOR x = 1 TO LEN(a$)
-  alt_codes$(x + 15) = MID$(a$, x, 1)
-NEXT x
-
 _TITLE "FTP Client -- QB64"
 
 CONFIG = -1 'If 0, it won't check for a config file
