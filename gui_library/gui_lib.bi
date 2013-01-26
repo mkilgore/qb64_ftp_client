@@ -1,29 +1,39 @@
-'FTP Client
+'GUI Library
 'Copyright Matt Kilgore -- 2011/2013
 
 'This program is free software, without any warranty of any kind.
 'You are free to edit, copy, modify, and redistribute it under the terms
 'of the Do What You Want Public License, Version 1, as published by Matt Kilgore
 'See file COPYING that should have been included with this source.
+
 TYPE GUI_menu_item_type
-  nam as string_type
+  nam as string_type 'Displayed string for MENU choice
   identifier as STRING * 5 'identifer string
-  'support will be added later
+  'The identifier string will be returned in menu_choice
+  'when a choice is chosen. Use the identifier to match
+  'what menu choice they did. More reliable then mapping
+  'choices to exact locations in the menu -- they change when you edit the menu
+  
+  'support for modifiers will be added at a later date, sorry.
   'modifier as STRING * 2 'INKEY$ return
   sub_menu as _MEM 'mem pointing to a GUI_menu_type
 END TYPE
 
 TYPE GUI_menu_type
   items as array_type 'array of menu_items
-  selected as integer
-  wid as INTEGER 'width of this menu -- if 0 then will be determined automatically based on items
+  selected as integer 'selected menu
+  hors AS _BYTE 'If -1, then this menu is horisontal
+  'Number of spaces to pad the left of the menu (hors only)
+  padding as INTEGER
+  wid as INTEGER 'width of this menu (hors must equal zero) -- if 0 then will be determined automatically based on items
 END TYPE
 
-TYPE GUI_color_type
+TYPE GUI_color_type 'Holds color info -- forground and background
   fr as _BYTE
   bk as _BYTE
 END TYPE
 
+'CONST values coresponding to a element type
 CONST GUI_BOX = 1
 CONST GUI_INPUT_BOX = 2
 CONST GUI_TEXT_BOX = 3
@@ -32,6 +42,7 @@ CONST GUI_DROP_DOWN = 5
 CONST GUI_CHECKBOX = 6
 CONST GUI_MENU = 7
 CONST GUI_BUTTON = 8
+CONST GUI_RADIO_BUTTON = 9
 
 TYPE GUI_element_type
   nam AS string_type 'name of item
@@ -46,6 +57,7 @@ TYPE GUI_element_type
   '6 -- CheckBox             -- Displays a label along with an empty or filled Box, which can be toggled by clicking on it
   '7 -- Menu handler         -- Indicates this element is a menu (Menus are a bit more complex -- see documentation)
   '8 -- Button               -- Just a simple button
+  '9 -- Radio button         -- Like a checkbox, but they can be linked together so that only one in a group is selectable at a time
   
   ' V -- not implemented just yet
   ' -- Radio Buttons?
@@ -110,6 +122,8 @@ TYPE GUI_element_type
   menu_chosen AS _BYTE
   menu_choice AS STRING * 5
   
+  group as INTEGER 'group number for radio buttons
+  
   'Updated only applies to selected gui element, to ease the ease of checking.
   'You can assume that unless you change the values directly, no other gui's accept the selected gui
   'will be changed.
@@ -123,16 +137,19 @@ TYPE GUI_element_type
   'to locate the cursor
 END TYPE
 
-TYPE GUI_default_color_type
+TYPE GUI_default_color_type 'holds colors
   mcolor as GUI_color_type
   selcolor as GUI_color_type
+  scroll_color as GUI_color_type
 END TYPE
 
 'shared variables for mouse
-COMMON SHARED GUI_MX AS INTEGER, GUI_MY AS INTEGER, GUI_BUT AS INTEGER, GUI_MTIMER AS SINGLE, GUI_MSCROLL AS INTEGER
+COMMON SHARED GUI_MX AS INTEGER, GUI_MY AS INTEGER, GUI_BUT AS INTEGER, GUI_MTIMER AS SINGLE, GUI_MSCROLL AS INTEGER, GUI_BUTFLAG AS INTEGER
 COMMON SHARED GUI_CUR_ROW AS INTEGER, GUI_CUR_COL AS INTEGER
+'default colors -- Values are set by GUI_init and are changable at any time
 COMMON SHARED GUI_DEFAULT_COLOR_BOX as GUI_default_color_type, GUI_DEFAULT_COLOR_INPUT as GUI_default_color_type
 COMMON SHARED GUI_DEFAULT_COLOR_TEXT as GUI_default_color_type, GUI_DEFAULT_COLOR_LIST as GUI_default_color_type
 COMMON SHARED GUI_DEFAULT_COLOR_DROP as GUI_default_color_type, GUI_DEFAULT_COLOR_CHECKBOX as GUI_default_color_type
 COMMON SHARED GUI_DEFAULT_COLOR_MENU as GUI_default_color_type, GUI_DEFAULT_COLOR_BUTTON as GUI_default_color_type
-DIM SHARED GUI_alt_codes$(51)
+COMMON SHARED GUI_DEFAULT_COLOR_RADIO as GUI_default_color_type
+DIM SHARED GUI_alt_codes$(51) ' thanks to Galleon for alt-code stuff

@@ -9,8 +9,50 @@
 SUB GUI_init()
 a$ = "QWERTYUIOP????ASDFGHJKL?????ZXCVBNM" 'Credit to Galleon for the ALT key code stuff.
 FOR x = 1 TO LEN(a$)
-  alt_codes$(x + 15) = MID$(a$, x, 1)
+  GUI_alt_codes$(x + 15) = MID$(a$, x, 1)
 NEXT x
+GUI_DEFAULT_COLOR_BOX.mcolor.fr = 7
+GUI_DEFAULT_COLOR_BOX.mcolor.bk = 1
+GUI_DEFAULT_COLOR_BOX.selcolor.fr = 1
+GUI_DEFAULT_COLOR_BOX.selcolor.bk = 7
+GUI_DEFAULT_COLOR_BUTTON.mcolor.fr = 7
+GUI_DEFAULT_COLOR_BUTTON.mcolor.bk = 1
+GUI_DEFAULT_COLOR_BUTTON.selcolor.fr = 15
+GUI_DEFAULT_COLOR_BUTTON.selcolor.bk = 1
+GUI_DEFAULT_COLOR_DROP.mcolor.fr = 7
+GUI_DEFAULT_COLOR_DROP.mcolor.bk = 1
+GUI_DEFAULT_COLOR_DROP.selcolor.fr = 15
+GUI_DEFAULT_COLOR_DROP.selcolor.bk = 1
+GUI_DEFAULT_COLOR_DROP.scroll_color.fr = 0
+GUI_DEFAULT_COLOR_DROP.scroll_color.bk = 7
+GUI_DEFAULT_COLOR_CHECKBOX.mcolor.fr = 7
+GUI_DEFAULT_COLOR_CHECKBOX.mcolor.bk = 1
+GUI_DEFAULT_COLOR_CHECKBOX.selcolor.fr = 15
+GUI_DEFAULT_COLOR_CHECKBOX.selcolor.bk = 1
+GUI_DEFAULT_COLOR_INPUT.mcolor.fr = 7
+GUI_DEFAULT_COLOR_INPUT.mcolor.bk = 1
+GUI_DEFAULT_COLOR_INPUT.selcolor.fr = 1
+GUI_DEFAULT_COLOR_INPUT.selcolor.bk = 7
+GUI_DEFAULT_COLOR_LIST.mcolor.fr = 7
+GUI_DEFAULT_COLOR_LIST.mcolor.bk = 1
+GUI_DEFAULT_COLOR_LIST.selcolor.fr = 15
+GUI_DEFAULT_COLOR_LIST.selcolor.bk = 1
+GUI_DEFAULT_COLOR_LIST.scroll_color.fr = 0
+GUI_DEFAULT_COLOR_LIST.scroll_color.bk = 7
+GUI_DEFAULT_COLOR_MENU.mcolor.fr = 7
+GUI_DEFAULT_COLOR_MENU.mcolor.bk = 1
+GUI_DEFAULT_COLOR_MENU.selcolor.fr = 1
+GUI_DEFAULT_COLOR_MENU.selcolor.bk = 7
+GUI_DEFAULT_COLOR_TEXT.mcolor.fr = 7
+GUI_DEFAULT_COLOR_TEXT.mcolor.bk = 1
+GUI_DEFAULT_COLOR_TEXT.selcolor.fr = 1
+GUI_DEFAULT_COLOR_TEXT.selcolor.bk = 7
+GUI_DEFAULT_COLOR_TEXT.scroll_color.fr = 0
+GUI_DEFAULT_COLOR_TEXT.scroll_color.bk = 7
+GUI_DEFAULT_COLOR_RADIO.mcolor.fr = 7
+GUI_DEFAULT_COLOR_RADIO.mcolor.bk = 1
+GUI_DEFAULT_COLOR_RADIO.selcolor.fr = 15
+GUI_DEFAULT_COLOR_RADIO.selcolor.bk = 1
 END SUB
 
 FUNCTION GUI_move_to_next_gui (movement$, current_selected, gui() AS GUI_element_type, gui_num AS INTEGER)
@@ -117,6 +159,17 @@ SELECT CASE ch$
       gui(sel).updated = -1
     elseif ch$ = " " and gui(sel).element_type = GUI_CHECKBOX then
       gui(sel).checked = not gui(sel).checked
+    elseif ch$ = " " and gui(sel).element_type = GUI_RADIO_BUTTON then
+      gui(sel).checked = not gui(sel).checked
+      FOR x = 1 to gui_num
+        if x <> sel then
+          if gui(x).element_type = GUI_RADIO_BUTTON then
+            if gui(x).group = gui(sel).group then
+              gui(x).checked = 0
+            end if
+          end if
+        end if
+      NEXT x
     end if
   CASE CHR$(8) 'BACKSPACE
     if gui(sel).element_type = GUI_INPUT_BOX then
@@ -133,6 +186,7 @@ SELECT CASE ch$
       if gui(sel).selected < gui(sel).length then
         gui(sel).selected = gui(sel).selected + 1
         GUI_fix_scroll gui(sel)
+        GUI_calc_scroll gui(sel).row1, gui(sel).col1, gui(sel).row2, gui(sel).col2, gui(sel)
         gui(sel).updated = -1
       end if
     ELSEIF gui(sel).element_type = GUI_DROP_DOWN then
@@ -143,6 +197,7 @@ SELECT CASE ch$
       if gui(sel).selected > 1 then
         gui(sel).selected = gui(sel).selected - 1
         GUI_fix_scroll gui(sel)
+        GUI_calc_scroll gui(sel).row1, gui(sel).col1, gui(sel).row2, gui(sel).col2, gui(sel)
         gui(sel).updated = -1
       end if
     end if
@@ -154,6 +209,7 @@ SELECT CASE ch$
           gui(sel).text_offset = gui(sel).text_offset - 1
         END IF
         gui(sel).updated = -1
+        GUI_calc_scroll gui(sel).row1, gui(sel).col1, gui(sel).row2, gui(sel).col2, gui(sel)
         'update_input_boxes = -1
       END IF
     ELSEIF gui(sel).element_type = GUI_DROP_DOWN or gui(sel).element_type = GUI_LIST_BOX then
@@ -161,6 +217,7 @@ SELECT CASE ch$
         if gui(sel).scroll_offset_hors > 0 then
           gui(sel).scroll_offset_hors = gui(sel).scroll_offset_hors - 1
           gui(sel).updated = -1
+        GUI_calc_scroll gui(sel).row1, gui(sel).col1, gui(sel).row2, gui(sel).col2, gui(sel)
         end if
       end if
     end if
@@ -172,12 +229,14 @@ SELECT CASE ch$
           gui(sel).text_offset = gui(sel).text_offset + 1
         END IF
         gui(sel).updated = -1
+        GUI_calc_scroll gui(sel).row1, gui(sel).col1, gui(sel).row2, gui(sel).col2, gui(sel)
       end if
     ELSEIF gui(sel).element_type = GUI_DROP_DOWN or gui(sel).element_type = GUI_LIST_BOX then
       if gui(sel).scroll AND 2 then
         if gui(sel).scroll_offset_hors < gui(sel).scroll_max_hors - (gui(sel).col2 - gui(sel).col1 - 1) then
           gui(sel).scroll_offset_hors = gui(sel).scroll_offset_hors + 1
           gui(sel).updated = -1
+          GUI_calc_scroll gui(sel).row1, gui(sel).col1, gui(sel).row2, gui(sel).col2, gui(sel)
         end if
       end if
     END IF
@@ -186,6 +245,7 @@ SELECT CASE ch$
       gui(sel).selected = gui(sel).selected - (gui(sel).row2 - gui(sel).row1 - 1)
       if gui(sel).selected < 1 then gui(sel).selected = 1
       GUI_fix_scroll gui(sel)
+      GUI_calc_scroll gui(sel).row1, gui(sel).col1, gui(sel).row2, gui(sel).col2, gui(sel)
       gui(sel).updated = -1
     end if
   CASE CHR$(0) + CHR$(81) 'PageDown
@@ -193,6 +253,7 @@ SELECT CASE ch$
       gui(sel).selected = gui(sel).selected + (gui(sel).row2 - gui(sel).row1 - 1)
       if gui(sel).selected > gui(sel).length then gui(sel).selected = gui(sel).length
       GUI_fix_scroll gui(sel)
+      GUI_calc_scroll gui(sel).row1, gui(sel).col1, gui(sel).row2, gui(sel).col2, gui(sel)
       gui(sel).updated = -1
     end if
 END SELECT
@@ -216,6 +277,7 @@ SELECT CASE g.element_type
   CASE GUI_DROP_DOWN
     g.mcolor = GUI_DEFAULT_COLOR_DROP.mcolor
     g.selcolor = GUI_DEFAULT_COLOR_DROP.selcolor
+    g.scroll_color = GUI_DEFAULT_COLOR_DROP.scroll_color
   CASE GUI_CHECKBOX
     g.mcolor = GUI_DEFAULT_COLOR_CHECKBOX.mcolor
     g.selcolor = GUI_DEFAULT_COLOR_CHECKBOX.selcolor
@@ -225,12 +287,17 @@ SELECT CASE g.element_type
   CASE GUI_LIST_BOX
     g.mcolor = GUI_DEFAULT_COLOR_LIST.mcolor
     g.selcolor = GUI_DEFAULT_COLOR_LIST.selcolor
+    g.scroll_color = GUI_DEFAULT_COLOR_LIST.scroll_color
   CASE GUI_MENU
     g.mcolor = GUI_DEFAULT_COLOR_MENU.mcolor
     g.selcolor = GUI_DEFAULT_COLOR_MENU.selcolor
   CASE GUI_TEXT_BOX
     g.mcolor = GUI_DEFAULT_COLOR_TEXT.mcolor
     g.selcolor = GUI_DEFAULT_COLOR_TEXT.selcolor
+    g.scroll_color = GUI_DEFAULT_COLOR_TEXT.scroll_color
+  CASE GUI_RADIO_BUTTON
+    g.mcolor = GUI_DEFAULT_COLOR_RADIO.mcolor
+    g.selcolor = GUI_DEFAULT_COLOR_RADIO.selcolor
 END SELECT
 END SUB
 
@@ -246,6 +313,30 @@ if gui.scroll_offset_vert + (gui.row2 - gui.row1 - 1) > gui.length then
 end if
 END SUB
 
+'This will recalculate scroll bar locations
+SUB GUI_calc_scroll (row1, col1, row2, col2, b as GUI_element_type)
+IF b.scroll AND 1 THEN
+  'scr_len = row2 - row1 - 2
+  'if scr_len * 2 <= b.length then
+  '  b.scroll_wid_vert = 1
+  b.scroll_loc_vert = INT((b.scroll_offset_vert) / (b.length - (row2 - row1 - 1)) * (row2 - row1 - 4) + row1 + 2)
+  'else
+  '  b.scroll_wid_vert = scr_len * 2 - b.length
+  '  b.scroll_loc_vert = INT((b.scroll_offset_vert) / (b.length - (row2 - row1 - 1)) * (row2 - row1 - 3 - b.scroll_wid_vert) + row1 + 2)
+  'end if
+end if
+if b.scroll AND 2 then 
+  'scr_len = col2 - col1 - 2
+  'if scr_len * 2 <= b.scroll_max_hors then
+  '  b.scroll_wid_hors = 1
+  b.scroll_loc_hors = INT((b.scroll_offset_hors) / (b.scroll_max_hors - (col2 - col1 - 1)) * (col2 - col1 - 4) + col1 + 2)
+  'else
+  '  b.scroll_wid_hors = scr_len * 2 - b.scroll_max_hors - 1
+  '  b.scroll_loc_hors = INT((b.scroll_offset_hors) / (b.scroll_max_hors - (col2 - col1 - 1)) * (col2 - col1 - 3 - b.scroll_wid_hors) + col1 + 2)
+  'end if
+end if
+END SUB
+
 SUB GUI_draw_box (row1, col1, row2, col2, b as GUI_element_type)
 IF b.shadow THEN
   FOR x = row1 + 1 TO row2 + 1
@@ -258,26 +349,8 @@ IF b.shadow THEN
     NEXT y
   NEXT x
 END IF
-IF b.scroll AND 1 THEN
-  'scr_len = row2 - row1 - 2
-  'if scr_len * 2 <= b.length then
-  '  b.scroll_wid_vert = 1
-    b.scroll_loc_vert = INT((b.scroll_offset_vert) / (b.length - (row2 - row1 - 1)) * (row2 - row1 - 4) + row1 + 2)
-  'else
-  '  b.scroll_wid_vert = scr_len * 2 - b.length
-  '  b.scroll_loc_vert = INT((b.scroll_offset_vert) / (b.length - (row2 - row1 - 1)) * (row2 - row1 - 3 - b.scroll_wid_vert) + row1 + 2)
-  'end if
-end if
-if b.scroll AND 2 then 
-  'scr_len = col2 - col1 - 2
-  'if scr_len * 2 <= b.scroll_max_hors then
-  '  b.scroll_wid_hors = 1
-    b.scroll_loc_hors = INT((b.scroll_offset_hors) / (b.scroll_max_hors - (col2 - col1 - 1)) * (col2 - col1 - 4) + col1 + 2)
-  'else
-  '  b.scroll_wid_hors = scr_len * 2 - b.scroll_max_hors - 1
-  '  b.scroll_loc_hors = INT((b.scroll_offset_hors) / (b.scroll_max_hors - (col2 - col1 - 1)) * (col2 - col1 - 3 - b.scroll_wid_hors) + col1 + 2)
-  'end if
-end if
+if (b.scroll AND 1) and (b.scroll_loc_vert = 0) then GUI_calc_scroll row1, col1, row2, col2, b
+if (b.scroll AND 2) and (b.scroll_loc_hors = 0) then GUI_calc_scroll row1, col1, row2, col2, b
 n$ = get_str$(b.nam)
 COLOR b.mcolor.fr, b.mcolor.bk
 LOCATE row1, col1
@@ -349,6 +422,10 @@ ELSEIF b.element_type = GUI_MENU then
 END IF
 END FUNCTION
 
+'Draws an array of elements
+'  respects layering
+'  Call's _DISPLAY at start and _AUTODISPLAY at the end
+'  Locates the cursor to a proper spot (And stores the location)
 SUB GUI_draw_element_array (b() as GUI_element_type, gui_num, selected_gui)
 _DISPLAY
 drawn_count = 0
@@ -376,7 +453,7 @@ END SUB
 'sel indiciates whether that box is a selected GUI element
 'also -- as can be seen this is really just a wrapper around the real drawing SUB's
 'SUB's are split up to simplify the process
-SUB GUI_draw_element (b AS GUI_element_type, sel) 'Draws box b -- this sub draws all the GUI parts
+SUB GUI_draw_element (b AS GUI_element_type, sel) 'Draws box b
 'Draws a box
 IF b.element_type = GUI_BOX THEN 'Plain box
   GUI_draw_box b.row1, b.col1, b.row2, b.col2, b
@@ -384,13 +461,13 @@ IF b.element_type = GUI_BOX THEN 'Plain box
 ELSEIF b.element_type = GUI_INPUT_BOX THEN 'Input box
   GUI_draw_input_box b, sel
   
-ELSEIF b.element_type = GUI_TEXT_BOX THEN 'Multi-Line input box
+ELSEIF b.element_type = GUI_TEXT_BOX THEN 'TextBox -- not done yet
   GUI_draw_text_box b, sel
   
 ELSEIF b.element_type = GUI_LIST_BOX THEN 'list box
   GUI_draw_list_box b, sel
   
-ELSEIF b.element_type = GUI_DROP_DOWN THEN 'Dropdown -- NOT DONE
+ELSEIF b.element_type = GUI_DROP_DOWN THEN 'Dropdown
   GUI_draw_dropdown b, sel
   
 ELSEIF b.element_type = GUI_CHECKBOX THEN 'Checkbox
@@ -401,17 +478,32 @@ ELSEIF b.element_type = GUI_MENU THEN 'Menu
   
 ELSEIF b.element_type = GUI_BUTTON THEN 'Button
   GUI_draw_button b, sel
+  
+ELSEIF b.element_type = GUI_RADIO_BUTTON THEN 'Radio button
+  GUI_draw_radio_button b, sel
 
 END IF
 END SUB
 
 SUB GUI_draw_checkbox (b as GUI_element_type, sel)
 LOCATE b.row1, b.col1
-IF sel THEN COLOR b.selcolor.bk, b.selcolor.fr ELSE COLOR b.mcolor.fr MOD 8, b.mcolor.bk
+IF sel THEN COLOR b.selcolor.fr, b.selcolor.bk ELSE COLOR b.mcolor.fr MOD 8, b.mcolor.bk
 PRINT "[";
-IF b.checked THEN PRINT "X"; ELSE PRINT " ";
+IF b.checked THEN PRINT chr$(251); ELSE PRINT " ";
 PRINT "]";
-COLOR b.mcolor.fr MOD 8, b.mcolor.bk
+COLOR b.mcolor.fr, b.mcolor.bk
+PRINT get_str$(b.nam);
+b.cur_row = b.row1
+b.cur_col = b.col1 + 1
+END SUB
+
+SUB GUI_draw_radio_button (b as GUI_element_type, sel)
+LOCATE b.row1, b.col1
+IF sel THEN COLOR b.selcolor.fr, b.selcolor.bk ELSE COLOR b.mcolor.fr MOD 8, b.mcolor.bk
+PRINT "(";
+IF b.checked THEN PRINT chr$(254); ELSE PRINT " ";
+PRINT ")";
+COLOR b.mcolor.fr, b.mcolor.bk
 PRINT get_str$(b.nam);
 b.cur_row = b.row1
 b.cur_col = b.col1 + 1
@@ -489,7 +581,12 @@ END SUB
 
 SUB GUI_mouse_range (b() AS GUI_element_type, boxnum, selected_gui) 'Checks if mouse is in one of the boxes in b()
 'Returns the array number if it is in one of them
-STATIC GUI_butflag
+
+'GUI_butflag is a flag indicating if we've already handled the current mouse click
+'GUI_butflag equals -1 when the mouse button is pressed and that press has already been handled
+'By that logic, if GUI_butflag and GUI_but are both -1, then the mouse-button is being held-down
+'It prevents holding the mouse-button down from being interperated as lots and lots of mouse clicks
+
 GUI_mscroll = 0
 DO WHILE _MOUSEINPUT
   GUI_mscroll = GUI_mscroll + _MOUSEWHEEL
@@ -497,8 +594,7 @@ DO WHILE _MOUSEINPUT
   GUI_my = _MOUSEY
   GUI_but = _MOUSEBUTTON(1)
 LOOP
-IF GUI_mscroll and NOT GUI_but then
-'handle scrolling
+IF GUI_mscroll and NOT GUI_but then 'handle scrolling
   IF b(selected_gui).element_type = GUI_BOX then 'plain box
   ELSEIF b(selected_gui).element_type = GUI_INPUT_BOX then 'Input box, nothing to do
   ELSEIF b(selected_gui).element_type = GUI_TEXT_BOX then 'Text-Box
@@ -508,18 +604,31 @@ IF GUI_mscroll and NOT GUI_but then
     if b(selected_gui).scroll_offset_vert > b(selected_gui).length - (b(selected_gui).row2 - b(selected_gui).row1 - 1) then 
       b(selected_gui).scroll_offset_vert = b(selected_gui).length - (b(selected_gui).row2 - b(selected_gui).row1 - 1)
     end if
+    GUI_calc_scroll b(selected_gui).row1, b(selected_gui).col1, b(selected_gui).row2, b(selected_gui).col2, b(selected_gui)
     b(selected_gui).updated = -1
   END IF
 END IF
-IF GUI_but AND GUI_butflag THEN
-  GUI_but = 0
+IF GUI_but AND GUI_butflag THEN 'Mouse held
+  IF b(selected_gui).element_type = GUI_LIST_BOX or (b(selected_gui).element_type = GUI_DROP_DOWN AND b(selected_gui).drop_flag) then
+    if GUI_mx = b(selected_gui).col2 AND (b(selected_gui).scroll AND 1) then
+      if GUI_my >= b(selected_gui).row1 + 2 and GUI_my <= b(selected_gui).row2 - 2 then
+        b(selected_gui).scroll_loc_vert = GUI_my
+        b(selected_gui).scroll_offset_vert = ((GUI_my - b(selected_gui).row1 - 2) / (b(selected_gui).row2 - b(selected_gui).row1 - 2)) * (b(selected_gui).length - (b(selected_gui).row2 - b(selected_gui).row1 - 4))
+      end if
+    elseif GUI_my = b(selected_gui).row2 AND (b(selected_gui).scroll AND 2) then
+      if GUI_mx >= b(selected_gui).col1 + 2 and GUI_mx <= b(selected_gui).col2 - 2 then
+        b(selected_gui).scroll_loc_hors = GUI_mx
+        b(selected_gui).scroll_offset_hors = ((GUI_mx - b(selected_gui).col1 - 2) / (b(selected_gui).col2 - b(selected_gui).col1 - 2)) * (b(selected_gui).scroll_max_hors - (b(selected_gui).col2 - b(selected_gui).col1 - 4))
+      end if
+    end if
+  end if
   EXIT FUNCTION
 ELSE
   GUI_butflag = 0
 END IF
 IF GUI_but = 0 THEN EXIT FUNCTION
 GUI_butflag = -1
-current_layer = -1
+current_layer = -128
 found = 0
 FOR x = 1 TO boxnum
   k = GUI_get_layer(b(x))
@@ -589,6 +698,13 @@ FOR x = 1 TO boxnum
           current_layer = k
         end if
       END IF
+    case GUI_RADIO_BUTTON
+      if GUI_my = b(x).row1 AND GUI_mx >= b(x).col1 AND GUI_mx <= b(x).col1 + 2 + LEN(get_str$(b(x).nam)) THEN
+        if k > current_layer then
+          found = x
+          current_layer = k
+        end if
+      end if
   END SELECT
 NEXT x
 
@@ -616,6 +732,7 @@ if found > 0 then
           b(found).selected = GUI_my - b(found).row1 + b(found).scroll_offset_vert
         END IF
       END IF
+      check_scroll = -1
       b(found).updated = -1
     case GUI_DROP_DOWN
       if selected_gui = found and GUI_my = b(found).row1 then
@@ -624,18 +741,18 @@ if found > 0 then
       if b(found).drop_flag then
         IF GUI_my >= b(found).row1 + 1 and GUI_my <= b(found).row2 - 1 THEN
           IF GUI_mx >= b(found).col1 + 1 AND GUI_mx <= b(found).col2 - 1 THEN
-            b(found).selected = GUI_my - b(found).row1 + b(found).scroll_offset_vert
+            s = GUI_my - b(found).row1 + b(found).scroll_offset_vert
+            if s = b(found).selected then b(found).drop_flag = 0 else b(found).selected = s
           END IF
         END IF
+        check_scroll = -1
       end if
       selected_gui = found
       b(found).updated = -1
-      EXIT FUNCTION
     case GUI_CHECKBOX
       if GUI_mx = b(found).col1 + 1 then b(found).checked = not b(found).checked
       selected_gui = found
       b(found).updated = -1
-      EXIT FUNCTION
     case GUI_MENU
       selected_gui = found
       b(found).updated = -1
@@ -643,13 +760,61 @@ if found > 0 then
       b(found).pressed = -1
       selected_gui = found
       b(found).updated = -1
-      EXIT FUNCTION
+    CASE GUI_RADIO_BUTTON
+      if GUI_mx = b(found).col1 + 1 then
+        b(found).checked = not b(found).checked
+        FOR x = 1 to boxnum
+          if x <> found then
+            if b(x).element_type = GUI_RADIO_BUTTON then
+              if b(x).group = b(found).group then
+                b(x).checked = 0
+              end if
+            end if
+          end if
+        NEXT x
+      end if
+      selected_gui = found
+      b(found).updated = -1
   END SELECT
+  if check_scroll then
+    if b(found).scroll AND 2 then
+      if GUI_my = b(found).row2 then 
+        if GUI_mx = b(found).col1 + 1 then
+          if b(found).scroll_offset_hors > 0 then
+            b(found).scroll_offset_hors = b(found).scroll_offset_hors - 1
+            calc_flag = -1
+          end if
+        elseif GUI_mx = b(found).col2 - 1 then
+          if b(found).scroll_offset_hors < (b(found).scroll_max_hors - (b(found).col2 - b(found).col1 - 1)) then
+            b(found).scroll_offset_hors = b(found).scroll_offset_hors + 1
+            calc_flag = -1
+          end if
+        end if
+      end if
+    end if
+    if b(found).scroll AND 1 then
+      if GUI_mx = b(found).col2 then
+        if GUI_my = b(found).row1 + 1 then
+          if b(found).scroll_offset_vert > 0 then
+            b(found).scroll_offset_vert = b(found).scroll_offset_vert - 1
+            calc_flag = -1
+          end if
+        elseif GUI_my = b(found).row2 - 1 then
+          if b(found).scroll_offset_vert < (b(found).length - (b(found).row2 - b(found).row1 - 1)) then
+            b(found).scroll_offset_vert = b(found).scroll_offset_vert + 1
+            calc_flag = -1
+          end if
+        end if
+      end if
+    end if
+  end if
+  if calc_flag then GUI_calc_scroll b(found).row1, b(found).col1, b(found).row2, b(found).col2, b(found)
 end if
 
 END SUB
 
 SUB GUI_print_menu_no_hilight (a$) 'Prints a$ without the '#' and no hilighting
+
 PRINT MID$(a$, 1, INSTR(a$, "#") - 1);
 PRINT MID$(a$, INSTR(a$, "#") + 1);
 END SUB
