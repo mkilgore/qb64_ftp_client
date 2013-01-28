@@ -97,7 +97,8 @@ TYPE GUI_element_type
   text_position AS INTEGER 'position of the cursor in the input
   'text_offset AS INTEGER 'We display the string in the box starting at the text_offset character, to account for scrolling to the right
   
-  hide AS _BYTE 'text will be drawn as "****" instead of "test" -- use for passwords, etc.
+  hide AS _BYTE 'For Input-box -- text will be drawn as "****" instead of "test" -- use for passwords, etc.
+  'For GUI_BOX, Box will not be drawn (Useful if you want to make a background a certain color -- just put a GUI_BOX in the background and then have it not draw the box part)
 
   scroll AS _BYTE ' If set then scroll bar(s) are drawn
   scroll_color as GUI_color_type

@@ -39,10 +39,12 @@ GUI_DEFAULT_COLOR_LIST.selcolor.fr = 15
 GUI_DEFAULT_COLOR_LIST.selcolor.bk = 1
 GUI_DEFAULT_COLOR_LIST.scroll_color.fr = 0
 GUI_DEFAULT_COLOR_LIST.scroll_color.bk = 7
-GUI_DEFAULT_COLOR_MENU.mcolor.fr = 7
-GUI_DEFAULT_COLOR_MENU.mcolor.bk = 1
-GUI_DEFAULT_COLOR_MENU.selcolor.fr = 1
-GUI_DEFAULT_COLOR_MENU.selcolor.bk = 7
+GUI_DEFAULT_COLOR_MENU.mcolor.fr = 0
+GUI_DEFAULT_COLOR_MENU.mcolor.bk = 7
+GUI_DEFAULT_COLOR_MENU.selcolor.fr = 7
+GUI_DEFAULT_COLOR_MENU.selcolor.bk = 0
+GUI_DEFAULT_COLOR_MENU.scroll_color.fr = 15
+GUI_DEFAULT_COLOR_MENU.scroll_color.bk = 7
 GUI_DEFAULT_COLOR_TEXT.mcolor.fr = 7
 GUI_DEFAULT_COLOR_TEXT.mcolor.bk = 1
 GUI_DEFAULT_COLOR_TEXT.selcolor.fr = 7
@@ -316,6 +318,7 @@ SELECT CASE g.element_type
   CASE GUI_MENU
     g.mcolor = GUI_DEFAULT_COLOR_MENU.mcolor
     g.selcolor = GUI_DEFAULT_COLOR_MENU.selcolor
+    g.scroll_color = GUI_DEFAULT_COLOR_MENU.scroll_color
   CASE GUI_TEXT_BOX
     g.mcolor = GUI_DEFAULT_COLOR_TEXT.mcolor
     g.selcolor = GUI_DEFAULT_COLOR_TEXT.selcolor
@@ -484,8 +487,15 @@ END SUB
 SUB GUI_draw_element (b AS GUI_element_type, sel) 'Draws box b
 'Draws a box
 IF b.element_type = GUI_BOX THEN 'Plain box
-  GUI_draw_box b.row1, b.col1, b.row2, b.col2, b
-  
+  if b.hide then 
+    color b.mcolor.fr, b.mcolor.bk
+    for x = b.row1 to b.row2
+      locate x, b.col1
+      print space$(b.col2 - b.col1 + 1);
+    next x
+  else
+    GUI_draw_box b.row1, b.col1, b.row2, b.col2, b
+  end if
 ELSEIF b.element_type = GUI_INPUT_BOX THEN 'Input box
   GUI_draw_input_box b, sel
   
@@ -590,6 +600,21 @@ end if
 END SUB
 
 SUB GUI_draw_menu (b as GUI_element_type, sel)
+DIM men as GUI_menu_item_type
+locate b.row1, b.col1
+color b.mcolor.fr, b.mcolor.bk
+print space$(b.col2 - b.col1 + 1)
+locate b.row1, b.col1
+PRINT SPACE$(b.menu_padding);
+for x = 1 to b.length
+  men = _MEMGET(b.menu, b.menu.OFFSET + len(men) * (x - 1), GUI_menu_item_type)
+  if b.selected = x and sel then
+    GUI_print_menu get_str$(men.nam), b.mcolor.fr, b.mcolor.bk, b.scroll_color.fr, b.scroll_color.bk
+  else
+    color b.mcolor.fr, b.mcolor.bk
+    GUI_print_menu_no_hilight get_str$(men.nam)
+  end if
+next x
 b.cur_row = 0
 b.cur_col = 0
 END SUB
@@ -871,17 +896,16 @@ end if
 END SUB
 
 SUB GUI_print_menu_no_hilight (a$) 'Prints a$ without the '#' and no hilighting
-
-PRINT MID$(a$, 1, INSTR(a$, "#") - 1);
-PRINT MID$(a$, INSTR(a$, "#") + 1);
+PRINT " "; MID$(a$, 1, INSTR(a$, "#") - 1); MID$(a$, INSTR(a$, "#") + 1); " ";
 END SUB
 
-SUB GUI_print_menu (a$, s) 'Prints a$ with the character after '#' hilighted in bright white
-PRINT MID$(a$, 1, INSTR(a$, "#") - 1);
-COLOR menu_char_c
+SUB GUI_print_menu (a$, c1, c2, menu_c1, menu_c2) 'Prints a$ with the character after '#' hilighted in bright white
+color c1, c2
+PRINT " "; MID$(a$, 1, INSTR(a$, "#") - 1);
+COLOR menu_c1, menu_c2
 PRINT MID$(a$, INSTR(a$, "#") + 1, 1);
-COLOR s
-PRINT MID$(a$, INSTR(a$, "#") + 2);
+COLOR c1, c2
+PRINT MID$(a$, INSTR(a$, "#") + 2); " ";
 END SUB
 
 FUNCTION GUI_menu_len (a$) 'Length of menu item a$.

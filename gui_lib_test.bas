@@ -35,8 +35,8 @@ put_str base_menu(4).nam, "#Tools"
 base_menu(4).ident = "Tools"
 put_str base_menu(5).nam, "#Help"
 base_menu(5).ident = "Help "
-
 GUI_attach_base_menu main_gui(g), 5, _OFFSET(base_menu(1))
+
 put_str sub_menus(1, 1).nam, "#New"
 put_str sub_menus(1, 2).nam, "#Open"
 put_str sub_menus(1, 3).nam, "-"
@@ -74,27 +74,28 @@ g=g+1
 main_gui(g).updated = -1 'set update flag for first pass
 main_gui(g).element_type = GUI_BOX
 GUI_init_element main_gui(g), "Plain Box" 'set name and initalize element (Currently just set's default colors)
-main_gui(g).row1 = 1  'location
+main_gui(g).row1 = 2  'location
 main_gui(g).row2 = 25
 main_gui(g).col1 = 1
 main_gui(g).col2 = 80
 main_gui(g).skip = -1 ' -- We don't want to be able to TAB to this gui element
 main_gui(g).layer = -1 ' -- Set in background. Layer 0 is the default
+main_gui(g).hide = -1 ' -- Don't draw box characters or box name, etc.
 
 g=g+1
 main_gui(g).element_type = GUI_INPUT_BOX
 GUI_init_element main_gui(g), "Input Box"
 main_gui(g).row1 = 2
-main_gui(g).col1 = 2
-main_gui(g).col2 = 30
+main_gui(g).col1 = 1
+main_gui(g).col2 = 40
 
 g=g+1
 main_gui(g).element_type = GUI_LIST_BOX
 GUI_init_element main_gui(g), "List Box"
 main_gui(g).row1 = 2
 main_gui(g).row2 = 10
-main_gui(g).col1 = 31
-main_gui(g).col2 = 79
+main_gui(g).col1 = 41
+main_gui(g).col2 = 80
 'scroll = 1 means just vertical, scroll = 2 means just horisontal, scroll = 3 means both (Bit field)
 main_gui(g).scroll = 1
 allocate_string_array main_gui(g).lines, 120
@@ -107,44 +108,44 @@ next x
 g=g+1
 main_gui(g).element_type = GUI_CHECKBOX
 GUI_init_element main_gui(g), "CheckBox1"
-main_gui(g).row1 = 5
-main_gui(g).col1 = 2
+main_gui(g).row1 = 6
+main_gui(g).col1 = 1
 
 g=g+1
 main_gui(g).element_type = GUI_CHECKBOX
 GUI_init_element main_gui(g), "CheckBox2"
-main_gui(g).row1 = 5
-main_gui(g).col1 = 16
+main_gui(g).row1 = 6
+main_gui(g).col1 = 20
 
 g=g+1
 main_gui(g).element_type = GUI_BUTTON
 GUI_init_element main_gui(g), "Button"
-main_gui(g).row1 = 6
-main_gui(g).col1 = 2
+main_gui(g).row1 = 7
+main_gui(g).col1 = 1
 buttons(1) = g
 
 g=g+1
 main_gui(g).element_type = GUI_BUTTON
 GUI_init_element main_gui(g), "Button2"
-main_gui(g).row1 = 6
-main_gui(g).col1 = 11
+main_gui(g).row1 = 7
+main_gui(g).col1 = 14
 buttons(2) = g
 
 g=g+1
 main_gui(g).element_type = GUI_BUTTON
 GUI_init_element main_gui(g), "Button3"
-main_gui(g).row1 = 6
-main_gui(g).col1 = 21
+main_gui(g).row1 = 7
+main_gui(g).col1 = 28
 buttons(3) = g
 
 
 g=g+1
 main_gui(g).element_type = GUI_DROP_DOWN
 GUI_init_element main_gui(g), "Drop Down"
-main_gui(g).row1 = 7
-main_gui(g).col1 = 2
+main_gui(g).row1 = 8
+main_gui(g).col1 = 1
 main_gui(g).row2 = 15
-main_gui(g).col2 = 30
+main_gui(g).col2 = 40
 main_gui(g).scroll = 1 'just vertical scroll
 main_gui(g).shadow = -1 'Draws shadow under box when drop-down is opened
 main_gui(g).selected = 1 'Set the default selected item
@@ -158,10 +159,10 @@ next x
 g=g+1
 main_gui(g).element_type = GUI_DROP_DOWN 
 GUI_init_element main_gui(g), "Drop Down"
-main_gui(g).row1 = 8
-main_gui(g).col1 = 2
+main_gui(g).row1 = 9
+main_gui(g).col1 = 1
 main_gui(g).row2 = 24
-main_gui(g).col2 = 30
+main_gui(g).col2 = 40
 main_gui(g).scroll = 1
 main_gui(g).shadow = -1
 main_gui(g).selected = 1
@@ -175,24 +176,24 @@ next x
 g=g+1
 main_gui(g).element_type = GUI_INPUT_BOX
 GUI_init_element main_gui(g), "Input Box"
-main_gui(g).row1 = 22
-main_gui(g).col1 = 2
-main_gui(g).col2 = 79
+main_gui(g).row1 = 23
+main_gui(g).col1 = 1
+main_gui(g).col2 = 80
 
 for x = 1 to 4 'group 0
   g=g+1
   main_gui(g).element_type = GUI_RADIO_BUTTON
   GUI_init_element main_gui(g), "Radio Button" + str$(x)
-  main_gui(g).row1 = 8 + x
-  main_gui(g).col1 = 2
+  main_gui(g).row1 = 9 + x
+  main_gui(g).col1 = 1
 next x
 
 for x = 1 to 4 'group 1
   g=g+1
   main_gui(g).element_type = GUI_RADIO_BUTTON
   GUI_init_element main_gui(g), "Radio Button" + str$(x)
-  main_gui(g).row1 = 13 + x
-  main_gui(g).col1 = 2
+  main_gui(g).row1 = 14 + x
+  main_gui(g).col1 = 1
   main_gui(g).group = 1
 next x
 
@@ -200,7 +201,7 @@ FOR x = 1 to 3
   g=g+1
   main_gui(g).element_type = GUI_LABEL
   GUI_init_element main_gui(g), ""
-  main_gui(g).row1 = 18 + x
+  main_gui(g).row1 = 19 + x
   main_gui(g).col1 = 2 ' + (x - 1) * (78 / 3)
   labels(x) = g
 NEXT x
@@ -209,9 +210,9 @@ g=g+1
 main_gui(g).element_type = GUI_TEXT_BOX
 GUI_init_element main_gui(g), "Text Box"
 main_gui(g).row1 = 11
-main_gui(g).row2 = 21
-main_gui(g).col1 = 31
-main_gui(g).col2 = 79
+main_gui(g).row2 = 22
+main_gui(g).col1 = 41
+main_gui(g).col2 = 80
 'scroll = 1 means just vertical, scroll = 2 means just horisontal, scroll = 3 means both (Bit field)
 main_gui(g).scroll = 3
 allocate_string_array main_gui(g).lines, 120
