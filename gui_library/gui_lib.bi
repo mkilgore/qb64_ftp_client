@@ -8,25 +8,28 @@
 
 TYPE GUI_menu_item_type
   nam as string_type 'Displayed string for MENU choice
-  identifier as STRING * 5 'identifer string
-  'The identifier string will be returned in menu_choice
+  ident as STRING * 5 'identifer string
+  'The ident string will be returned in menu_choice
   'when a choice is chosen. Use the identifier to match
   'what menu choice they did. More reliable then mapping
   'choices to exact locations in the menu -- they change when you edit the menu
   
   'support for modifiers will be added at a later date, sorry.
   'modifier as STRING * 2 'INKEY$ return
-  sub_menu as _MEM 'mem pointing to a GUI_menu_type
+  has_sub AS _BYTE 'If -1 then sub_menu is set
+  sub_menu as _MEM 'Points to an array of GUI_menu_item_type
+  sub_menu_length AS INTEGER
+  selected AS INTEGER 'current
 END TYPE
 
-TYPE GUI_menu_type
-  items as array_type 'array of menu_items
-  selected as integer 'selected menu
-  hors AS _BYTE 'If -1, then this menu is horisontal
-  'Number of spaces to pad the left of the menu (hors only)
-  padding as INTEGER
-  wid as INTEGER 'width of this menu (hors must equal zero) -- if 0 then will be determined automatically based on items
-END TYPE
+'TYPE GUI_menu_type
+'  items as array_type 'array of menu_items
+'  selected as integer 'selected menu
+'  hors AS _BYTE 'If -1, then this menu is horisontal
+'  'Number of spaces to pad the left of the menu (hors only)
+'  padding as INTEGER
+'  wid as INTEGER 'width of this menu (hors must equal zero) -- if 0 then will be determined automatically based on items
+'END TYPE
 
 TYPE GUI_color_type 'Holds color info -- forground and background
   fr as _BYTE
@@ -43,6 +46,7 @@ CONST GUI_CHECKBOX = 6
 CONST GUI_MENU = 7
 CONST GUI_BUTTON = 8
 CONST GUI_RADIO_BUTTON = 9
+CONST GUI_LABEL = 10
 
 TYPE GUI_element_type
   nam AS string_type 'name of item
@@ -58,7 +62,7 @@ TYPE GUI_element_type
   '7 -- Menu handler         -- Indicates this element is a menu (Menus are a bit more complex -- see documentation)
   '8 -- Button               -- Just a simple button
   '9 -- Radio button         -- Like a checkbox, but they can be linked together so that only one in a group is selectable at a time
-  
+  '10 - Label                -- Just plain text (Prints nam at row1, col1). skip is set by default
   ' V -- not implemented just yet
   ' -- Radio Buttons?
   ' -- Combo Box
@@ -91,7 +95,8 @@ TYPE GUI_element_type
   
   text AS string_type 'text drawn/edited in a Input-Box
   text_position AS INTEGER 'position of the cursor in the input
-  text_offset AS INTEGER 'We display the string in the box starting at the text_offset character, to account for scrolling to the right
+  'text_offset AS INTEGER 'We display the string in the box starting at the text_offset character, to account for scrolling to the right
+  
   hide AS _BYTE 'text will be drawn as "****" instead of "test" -- use for passwords, etc.
 
   scroll AS _BYTE ' If set then scroll bar(s) are drawn
@@ -102,6 +107,8 @@ TYPE GUI_element_type
   'scroll = 3 -- Vertical and Horisontal scroll bars
   scroll_offset_vert AS INTEGER 'current scroll offset -- calculated in draw_gui function
   scroll_offset_hors AS INTEGER
+  
+  scroll_held AS _BYTE 'flag variable indicating a held scroll or not
   
   scroll_loc_hors AS INTEGER 'current location of scroll-bar
   scroll_loc_vert AS INTEGER
@@ -118,8 +125,10 @@ TYPE GUI_element_type
   
   drop_flag AS _BYTE ' If drop_flag is set, then the drop-down box is showing
   
-  menu as GUI_menu_type
+  menu as _MEM ' Points to an actual array of menu_items
+
   menu_chosen AS _BYTE
+  menu_padding as INTEGER 'Spaces padded before start of menu
   menu_choice AS STRING * 5
   
   group as INTEGER 'group number for radio buttons
@@ -131,6 +140,9 @@ TYPE GUI_element_type
 
   cur_row AS INTEGER
   cur_col AS INTEGER
+  
+  'This does not corespond to the displayed number of lines, just the real max allocation length of lines
+  max_lines AS _UNSIGNED INTEGER 'If 0 then the lines array will automatically be reallocated, else we won't go over lines
   
   'If this GUI is currently selected, then you should do a:
   'LOCATE cur_row, cur_col, 1
@@ -151,5 +163,5 @@ COMMON SHARED GUI_DEFAULT_COLOR_BOX as GUI_default_color_type, GUI_DEFAULT_COLOR
 COMMON SHARED GUI_DEFAULT_COLOR_TEXT as GUI_default_color_type, GUI_DEFAULT_COLOR_LIST as GUI_default_color_type
 COMMON SHARED GUI_DEFAULT_COLOR_DROP as GUI_default_color_type, GUI_DEFAULT_COLOR_CHECKBOX as GUI_default_color_type
 COMMON SHARED GUI_DEFAULT_COLOR_MENU as GUI_default_color_type, GUI_DEFAULT_COLOR_BUTTON as GUI_default_color_type
-COMMON SHARED GUI_DEFAULT_COLOR_RADIO as GUI_default_color_type
+COMMON SHARED GUI_DEFAULT_COLOR_RADIO as GUI_default_color_type, GUI_DEFAULT_COLOR_LABEL as GUI_default_color_type
 DIM SHARED GUI_alt_codes$(51) ' thanks to Galleon for alt-code stuff
