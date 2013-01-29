@@ -13,8 +13,12 @@ DIM buttons(3) AS INTEGER
 DIM labels(3) AS INTEGER 'Will hold the GUI numbers for 3 labels we have
 DIM click_count(3) AS INTEGER
 DIM base_menu(5) as GUI_menu_item_type
-DIM sub_menus(5, 10) as GUI_menu_item_type
-
+'DIM sub_menus(5, 10) as GUI_menu_item_type
+DIM file_menu(10) as GUI_menu_item_type
+DIM edit_menu(10) as GUI_menu_item_type
+DIM search_menu(10) as GUI_menu_item_type
+DIM tools_menu(10) as GUI_menu_item_type
+DIM help_menu(10) as GUI_menu_item_type
 
 'GUI(1) is our main dialog box and is going to be
 g = 1
@@ -24,6 +28,8 @@ main_gui(g).row1 = 1
 main_gui(g).col1 = 1
 main_gui(g).col2 = 80
 main_gui(g).menu_padding = 2
+main_gui(g).skip = -1
+main_gui(g).shadow = -1
 
 put_str base_menu(1).nam, "#File"
 base_menu(1).ident = "File "
@@ -37,38 +43,38 @@ put_str base_menu(5).nam, "#Help"
 base_menu(5).ident = "Help "
 GUI_attach_base_menu main_gui(g), 5, _OFFSET(base_menu(1))
 
-put_str sub_menus(1, 1).nam, "#New"
-put_str sub_menus(1, 2).nam, "#Open"
-put_str sub_menus(1, 3).nam, "-"
-put_str sub_menus(1, 4).nam, "#Save"
-put_str sub_menus(1, 5).nam, "S#ave As"
-put_str sub_menus(1, 6).nam, "-"
-put_str sub_menus(1, 7).nam, "#Exit"
-GUI_attach_menu base_menu(1), 7, _OFFSET(sub_menus(1, 1))
+put_str file_menu(1).nam, "#New         "
+put_str file_menu(2).nam, "#Open"
+put_str file_menu(3).nam, "-"
+put_str file_menu(4).nam, "#Save"
+put_str file_menu(5).nam, "S#ave As"
+put_str file_menu(6).nam, "-"
+put_str file_menu(7).nam, "#Exit": file_menu(7).ident = "EXIT "
+GUI_attach_menu base_menu(1), 7, _OFFSET(file_menu(1))
 
-put_str sub_menus(2, 1).nam, "#Cut"
-put_str sub_menus(2, 2).nam, "#Copy"
-put_str sub_menus(2, 3).nam, "#Paste"
-put_str sub_menus(2, 4).nam, "#Delete"
-GUI_attach_menu base_menu(2), 4, _OFFSET(sub_menus(2, 1))
+put_str edit_menu(1).nam, "#Cut"
+put_str edit_menu(2).nam, "#Copy"
+put_str edit_menu(3).nam, "#Paste"
+put_str edit_menu(4).nam, "#Delete"
+GUI_attach_menu base_menu(2), 4, _OFFSET(edit_menu(1))
 
-put_str sub_menus(3, 1).nam, "#Cut"
-put_str sub_menus(3, 2).nam, "#Copy"
-put_str sub_menus(3, 3).nam, "#Paste"
-put_str sub_menus(3, 4).nam, "#Delete"
-GUI_attach_menu base_menu(3), 4, _OFFSET(sub_menus(3, 1))
+put_str search_menu(1).nam, "#Cut"
+put_str search_menu(2).nam, "#Copy"
+put_str search_menu(3).nam, "#Paste"
+put_str search_menu(4).nam, "#Delete"
+GUI_attach_menu base_menu(3), 4, _OFFSET(search_menu(1))
 
-put_str sub_menus(4, 1).nam, "#Cut"
-put_str sub_menus(4, 2).nam, "#Copy"
-put_str sub_menus(4, 3).nam, "#Paste"
-put_str sub_menus(4, 4).nam, "#Delete"
-GUI_attach_menu base_menu(4), 4, _OFFSET(sub_menus(4, 1))
+put_str tools_menu(1).nam, "#Cut"
+put_str tools_menu(2).nam, "#Copy"
+put_str tools_menu(3).nam, "#Paste"
+put_str tools_menu(4).nam, "#Delete"
+GUI_attach_menu base_menu(4), 4, _OFFSET(tools_menu(1))
 
-put_str sub_menus(5, 1).nam, "#Cut"
-put_str sub_menus(5, 2).nam, "#Copy"
-put_str sub_menus(5, 3).nam, "#Paste"
-put_str sub_menus(5, 4).nam, "#Delete"
-GUI_attach_menu base_menu(5), 4, _OFFSET(sub_menus(5, 1))
+put_str help_menu(1).nam, "#Cut"
+put_str help_menu(2).nam, "#Copy"
+put_str help_menu(3).nam, "#Paste"
+put_str help_menu(4).nam, "#Delete"
+GUI_attach_menu base_menu(5), 4, _OFFSET(help_menu(1))
 
 g=g+1
 main_gui(g).updated = -1 'set update flag for first pass
@@ -109,7 +115,7 @@ g=g+1
 main_gui(g).element_type = GUI_CHECKBOX
 GUI_init_element main_gui(g), "CheckBox1"
 main_gui(g).row1 = 6
-main_gui(g).col1 = 1
+main_gui(g).col1 = 2
 
 g=g+1
 main_gui(g).element_type = GUI_CHECKBOX
@@ -121,21 +127,21 @@ g=g+1
 main_gui(g).element_type = GUI_BUTTON
 GUI_init_element main_gui(g), "Button"
 main_gui(g).row1 = 7
-main_gui(g).col1 = 1
+main_gui(g).col1 = 2
 buttons(1) = g
 
 g=g+1
 main_gui(g).element_type = GUI_BUTTON
 GUI_init_element main_gui(g), "Button2"
 main_gui(g).row1 = 7
-main_gui(g).col1 = 14
+main_gui(g).col1 = 15
 buttons(2) = g
 
 g=g+1
 main_gui(g).element_type = GUI_BUTTON
 GUI_init_element main_gui(g), "Button3"
 main_gui(g).row1 = 7
-main_gui(g).col1 = 28
+main_gui(g).col1 = 31
 buttons(3) = g
 
 
@@ -143,7 +149,7 @@ g=g+1
 main_gui(g).element_type = GUI_DROP_DOWN
 GUI_init_element main_gui(g), "Drop Down"
 main_gui(g).row1 = 8
-main_gui(g).col1 = 1
+main_gui(g).col1 = 2
 main_gui(g).row2 = 15
 main_gui(g).col2 = 40
 main_gui(g).scroll = 1 'just vertical scroll
@@ -160,7 +166,7 @@ g=g+1
 main_gui(g).element_type = GUI_DROP_DOWN 
 GUI_init_element main_gui(g), "Drop Down"
 main_gui(g).row1 = 9
-main_gui(g).col1 = 1
+main_gui(g).col1 = 2
 main_gui(g).row2 = 24
 main_gui(g).col2 = 40
 main_gui(g).scroll = 1
@@ -185,7 +191,7 @@ for x = 1 to 4 'group 0
   main_gui(g).element_type = GUI_RADIO_BUTTON
   GUI_init_element main_gui(g), "Radio Button" + str$(x)
   main_gui(g).row1 = 9 + x
-  main_gui(g).col1 = 1
+  main_gui(g).col1 = 2
 next x
 
 for x = 1 to 4 'group 1
@@ -193,8 +199,8 @@ for x = 1 to 4 'group 1
   main_gui(g).element_type = GUI_RADIO_BUTTON
   GUI_init_element main_gui(g), "Radio Button" + str$(x)
   main_gui(g).row1 = 14 + x
-  main_gui(g).col1 = 1
-  main_gui(g).group = 1
+  main_gui(g).col1 = 2
+  main_gui(g).group = 2
 next x
 
 FOR x = 1 to 3
@@ -216,7 +222,7 @@ main_gui(g).col2 = 80
 'scroll = 1 means just vertical, scroll = 2 means just horisontal, scroll = 3 means both (Bit field)
 main_gui(g).scroll = 3
 allocate_string_array main_gui(g).lines, 120
-main_gui(g).length = 20
+main_gui(g).length = 10
 main_gui(g).scroll_max_hors = 120
 for x = 1 to 10
   put_str_array main_gui(g).lines, x, "Str:" + str$(x)

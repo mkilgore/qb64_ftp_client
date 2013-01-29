@@ -127,7 +127,8 @@ TYPE GUI_element_type
   drop_flag AS _BYTE ' If drop_flag is set, then the drop-down box is showing
   
   menu as _MEM ' Points to an actual array of menu_items
-
+  
+  menu_open as _BYTE 'if -1 then 'selected' menu was chosen  -- -2 means Alt is being held
   menu_chosen AS _BYTE
   menu_padding as INTEGER 'Spaces padded before start of menu
   menu_choice AS STRING * 5
