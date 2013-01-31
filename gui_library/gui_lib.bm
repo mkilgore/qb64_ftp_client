@@ -156,6 +156,33 @@ END FUNCTION
 
 FUNCTION GUI_inkey$ (gui() AS GUI_element_type, gui_num AS INTEGER, sel)
 DIM tempm AS GUI_menu_item_type, men AS GUI_menu_item_type
+'Credit to Galleon for ALT key stuff
+keys = _KEYDOWN(100307) + _KEYDOWN(100308) * 2
+IF (keys) AND GUI_alt_flag = 0 THEN 'Hold
+  GUI_alt_flag = -1
+  'Switch to menu item if one is in gui()
+  if gui(sel).element_type <> GUI_MENU or gui(sel).menu_open = 0 then
+    for x = 1 to gui_num
+      if gui(x).element_type = GUI_MENU then
+        sel = x 'change selected
+        gui(x).updated = -1
+        gui(x).menu_open = -2
+      end if
+    next x
+  end if
+END IF
+IF keys = 0 AND GUI_alt_flag THEN 'Release
+  GUI_alt_flag = 0
+  if gui(sel).menu_open = -2 then
+    gui(sel).menu_open = 0
+    if gui(sel).selected = 0 then
+      gui(sel).selected = 1
+    end if
+    men = _MEMGET(gui(sel).menu, gui(sel).menu.OFFSET + len(men) * (gui(sel).selected - 1), GUI_menu_item_type)
+    men.selected = 1
+    _MEMPUT gui(sel).menu, gui(sel).menu.OFFSET + len(men) * (gui(sel).selected - 1), men
+  end if
+END IF
 ch$ = INKEY$
 SELECT CASE ch$
   CASE " " TO "~" 'typeable character
@@ -178,6 +205,8 @@ SELECT CASE ch$
           end if
         end if
       NEXT x
+    elseif ch$ = " " and gui(sel).element_type = GUI_BUTTON then
+      gui(sel).pressed = -1
     end if
   CASE CHR$(8) 'BACKSPACE
     if gui(sel).element_type = GUI_INPUT_BOX then
@@ -228,6 +257,24 @@ SELECT CASE ch$
         gui(sel).menu_open = 0
         gui(sel).selected = 0
       end if
+    elseif gui(sel).element_type = GUI_BUTTON then
+      gui(sel).pressed = -1
+    elseif gui(sel).element_type = GUI_RADIO_BUTTON then
+      gui(sel).checked = not gui(sel).checked
+      FOR x = 1 to gui_num
+        if x <> sel then
+          if gui(x).element_type = GUI_RADIO_BUTTON then
+            if gui(x).group = gui(sel).group then
+              gui(x).checked = 0
+            end if
+          end if
+        end if
+      NEXT x
+    elseif gui(sel).element_type = GUI_CHECKBOX then
+      gui(sel).checked = not gui(sel).checked
+    elseif gui(sel).element_type = GUI_DROP_DOWN then
+      gui(sel).drop_flag = not gui(sel).drop_flag
+      gui(sel).updated = -1
     end if
   CASE CHR$(0) + CHR$(80) 'DOWN
     if gui(sel).element_type = GUI_LIST_BOX OR gui(sel).element_type = GUI_TEXT_BOX OR (gui(sel).element_type = GUI_DROP_DOWN AND gui(sel).drop_flag) then
@@ -297,6 +344,9 @@ SELECT CASE ch$
       'if gui(sel).menu_open = 0 then
       gui(sel).selected = gui(sel).selected - 1
       if gui(sel).selected = 0 then gui(sel).selected = gui(sel).length
+      men = _MEMGET(gui(sel).menu, gui(sel).menu.OFFSET + len(men) * (gui(sel).selected - 1), GUI_menu_item_type)
+      men.selected = 1
+      _MEMPUT gui(sel).menu, gui(sel).menu.OFFSET + len(men) * (gui(sel).selected - 1), men
       'end if
     end if
   CASE CHR$(0) + CHR$(77) 'RIGHT
@@ -320,6 +370,9 @@ SELECT CASE ch$
     ELSEIF gui(sel).element_type = GUI_MENU then
       'if gui(sel).menu_open = 0 then
       gui(sel).selected = (gui(sel).selected mod gui(sel).length) + 1
+      men = _MEMGET(gui(sel).menu, gui(sel).menu.OFFSET + len(men) * (gui(sel).selected - 1), GUI_menu_item_type)
+      men.selected = 1
+      _MEMPUT gui(sel).menu, gui(sel).menu.OFFSET + len(men) * (gui(sel).selected - 1), men
       'end if
     END IF
   CASE CHR$(0) + CHR$(73) 'PageUp
@@ -337,6 +390,33 @@ SELECT CASE ch$
       GUI_fix_scroll gui(sel)
       GUI_calc_scroll gui(sel).row1, gui(sel).col1, gui(sel).row2, gui(sel).col2, gui(sel)
       gui(sel).updated = -1
+    end if
+  CASE CHR$(0) + CHR$(16) TO CHR$(0) + CHR$(50)
+    k$ = GUI_alt_codes$(ASC(ch$, 2))
+    if gui(sel).element_type = GUI_MENU and GUI_alt_flag then
+      if gui(sel).menu_open = -2 then
+        for x = 1 to gui(sel).length
+          men = _MEMGET(gui(sel).menu, gui(sel).menu.OFFSET + len(men) * (x - 1), GUI_menu_item_type)
+          if ucase$(k$) = ucase$(GUI_menu_char$(get_str$(men.nam))) then
+            gui(sel).selected = x
+            gui(sel).menu_open = -1
+            men.selected = 1
+            _MEMPUT gui(sel).menu, gui(sel).menu.OFFSET + len(men) * (x - 1), men
+          end if
+        next x
+      elseif gui(sel).menu_open = -1 then
+        men = _MEMGET(gui(sel).menu, gui(sel).menu.OFFSET + len(men) * (gui(sel).selected - 1), GUI_menu_item_type)
+        for x = 1 to men.sub_menu_length
+          tempm = _MEMGET(men.sub_menu, men.sub_menu.OFFSET + len(men) * (x - 1), GUI_menu_item_type)
+          if ucase$(k$) = ucase$(GUI_menu_char$(get_str$(tempm.nam))) then
+            gui(sel).menu_choice = tempm.ident
+            gui(sel).menu_chosen = -1
+            gui(sel).updated = -1
+            gui(sel).menu_open = 0
+            gui(sel).selected = 0
+          end if
+        next x
+      end if
     end if
 END SELECT
 GUI_inkey$ = ch$
@@ -676,10 +756,18 @@ for x = 1 to b.length
       if menu_col1 < 1 then menu_col1 = 1
     end if
     color b.selcolor.fr, b.selcolor.bk
-    GUI_print_menu_no_hilight get_str$(men.nam) ', b.mcolor.fr, b.mcolor.bk, b.scroll_color.fr, b.scroll_color.bk
+    if b.menu_open <> -2 then
+      GUI_print_menu_no_hilight get_str$(men.nam) ', b.mcolor.fr, b.mcolor.bk, b.scroll_color.fr, b.scroll_color.bk
+    else
+      GUI_print_menu get_str$(men.nam), b.selcolor.fr, b.selcolor.bk, b.scroll_color.fr, b.selcolor.bk
+    end if 
   else
     color b.mcolor.fr, b.mcolor.bk
-    GUI_print_menu_no_hilight get_str$(men.nam)
+    if b.menu_open <> -2 then
+      GUI_print_menu_no_hilight get_str$(men.nam)
+    else
+      GUI_print_menu get_str$(men.nam), b.mcolor.fr, b.mcolor.bk, b.scroll_color.fr, b.mcolor.bk
+    end if
   end if
 next x
 if b.menu_open = -1 then
@@ -721,7 +809,7 @@ END SUB
 SUB GUI_mouse_range (b() AS GUI_element_type, boxnum, selected_gui) 'Checks if mouse is in one of the boxes in b()
 'Returns the array number if it is in one of them
 
-DIM men as GUI_menu_item_type
+DIM men as GUI_menu_item_type, mtmp as GUI_menu_item_type
 
 'GUI_butflag is a flag indicating if we've already handled the current mouse click
 'GUI_butflag equals -1 when the mouse button is pressed and that press has already been handled
@@ -832,6 +920,28 @@ FOR x = 1 TO boxnum
           found = x
           current_layer = k
         end if
+      elseif b(x).menu_open = -1 then
+        col1 = b(x).col1 + b(x).menu_padding - 1 'Find row and column locations of the open menu
+        row1 = b(x).row1
+        for m = 1 to b(x).selected
+          men = _MEMGET(b(x).menu, b(x).menu.OFFSET + len(men) * (m - 1), GUI_menu_item_type)
+          if m < b(x).selected then col1 = col1 + len(get_str$(men.nam)) + 2
+        next m
+        men_len = 0
+        for m = 1 to men.sub_menu_length
+          mtmp = _MEMGET(men.sub_menu, men.sub_menu.OFFSET + len(mtmp) * (m - 1), GUI_menu_item_type)
+          if len(get_str$(mtmp.nam)) > men_len then
+            men_len = len(get_str$(mtmp.nam))
+          end if
+        next m
+        row2 = row1 + men.sub_menu_length + 2
+        col2 = col1 + men_len + 2
+        if GUI_my >= row1 and GUI_my <= row2 then
+          if GUI_mx >= col1 and GUI_mx <= col2 then
+            found = x
+            current_layer = k
+          end if
+        end if
       end if
     case GUI_BUTTON
       IF GUI_my = b(x).row1 AND GUI_mx >= b(x).col1 AND GUI_mx <= b(x).col1 + LEN(get_str$(b(x).nam)) + 1 THEN
@@ -912,15 +1022,34 @@ if found > 0 then
       selected_gui = found
       b(found).updated = -1
       if GUI_my = b(found).row1 then
-        c = b(found).col1 + b(found).menu_padding
-        for x = 1 to b(found).length
-          men = _MEMGET(b(found).menu, b(found).menu.OFFSET + len(men) * (x - 1), GUI_menu_item_type)
-          if GUI_mx >= c and GUI_mx <= c + GUI_menu_len(get_str$(men.nam)) + 2 then
-            b(found).selected = x
-            b(found).menu_open = -1
+        if GUI_my = b(found).row1 then
+          c = b(found).col1 + b(found).menu_padding
+          for x = 1 to b(found).length
+            men = _MEMGET(b(found).menu, b(found).menu.OFFSET + len(men) * (x - 1), GUI_menu_item_type)
+            if GUI_mx >= c and GUI_mx <= c + GUI_menu_len(get_str$(men.nam)) + 2 then
+              b(found).selected = x
+              b(found).menu_open = -1
+              men.selected = 1
+              _MEMPUT b(found).menu, b(found).menu.OFFSET + len(men) * (x - 1), men
+            end if
+            c = c + 2 + GUI_menu_len(get_str$(men.nam))
+          next x
+        end if
+      elseif b(found).menu_open = -1 then
+        men = _MEMGET(b(found).menu, b(found).menu.OFFSET + len(men) * (b(found).selected - 1), GUI_menu_item_type)
+        if GUI_my > row1 and GUI_my < row2 then
+          if GUI_mx > col1 and GUI_mx < col2 then
+            s = GUI_my - row1 - 1
+            mtmp = _MEMGET(men.sub_menu, men.sub_menu.OFFSET + len(men) * (s - 1), GUI_menu_item_type)
+            if get_str$(mtmp.nam) <> "-" then
+              mtmp.selected = s
+              b(found).selected = 0
+              b(found).menu_open = 0
+              b(found).menu_chosen = -1
+              b(found).menu_choice = mtmp.ident
+            end if
           end if
-          c = c + 2 + GUI_menu_len(get_str$(men.nam))
-        next x
+        end if
       end if
     case GUI_BUTTON
       b(found).pressed = -1
@@ -1144,16 +1273,20 @@ for x = 1 to m.sub_menu_length
   locate x + row1, col1
   color b.mcolor.fr, b.mcolor.bk
   print chr$(179);
-  if m.selected = x then
-    color b.selcolor.fr, b.selcolor.bk
-  else
-    color b.mcolor.fr, b.mcolor.bk
-  end if
   if get_str$(men.nam) = "-" then
+    if m.selected = x then
+      color b.selcolor.fr, b.selcolor.bk
+    else
+      color b.mcolor.fr, b.mcolor.bk
+    end if
     locate , col1
     PRINT CHR$(195); STRING$(col2 - col1 - 1, 196); CHR$(180);
   else
-    GUI_print_menu_no_hilight get_str$(men.nam)
+    if m.selected = x then
+      GUI_print_menu get_str$(men.nam), b.selcolor.fr, b.selcolor.bk, b.scroll_color.fr, b.selcolor.bk
+    else
+      GUI_print_menu get_str$(men.nam), b.mcolor.fr, b.mcolor.bk, b.scroll_color.fr, b.mcolor.bk
+    end if
     PRINT SPACE$(wid - GUI_menu_len(get_str$(men.nam)));
     color b.mcolor.fr, b.mcolor.bk
     print chr$(179);

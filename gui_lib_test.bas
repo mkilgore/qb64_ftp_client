@@ -6,11 +6,11 @@
 
 GUI_init
 
-gui_num = 24
+gui_num = 25
 
 DIM main_gui(gui_num) as GUI_element_type 'create 7 GUI elements
 DIM buttons(3) AS INTEGER 
-DIM labels(3) AS INTEGER 'Will hold the GUI numbers for 3 labels we have
+DIM labels(4) AS INTEGER 'Will hold the GUI numbers for 3 labels we have
 DIM click_count(3) AS INTEGER
 DIM base_menu(5) as GUI_menu_item_type
 'DIM sub_menus(5, 10) as GUI_menu_item_type
@@ -43,11 +43,11 @@ put_str base_menu(5).nam, "#Help"
 base_menu(5).ident = "Help "
 GUI_attach_base_menu main_gui(g), 5, _OFFSET(base_menu(1))
 
-put_str file_menu(1).nam, "#New         "
-put_str file_menu(2).nam, "#Open"
+put_str file_menu(1).nam, "#New         ": file_menu(1).ident = "NEW  "
+put_str file_menu(2).nam, "#Open": file_menu(2).ident = "OPEN "
 put_str file_menu(3).nam, "-"
-put_str file_menu(4).nam, "#Save"
-put_str file_menu(5).nam, "S#ave As"
+put_str file_menu(4).nam, "#Save": file_menu(4).ident = "SAVE "
+put_str file_menu(5).nam, "S#ave As": file_menu(5).ident = "SAVEA"
 put_str file_menu(6).nam, "-"
 put_str file_menu(7).nam, "#Exit": file_menu(7).ident = "EXIT "
 GUI_attach_menu base_menu(1), 7, _OFFSET(file_menu(1))
@@ -203,11 +203,11 @@ for x = 1 to 4 'group 1
   main_gui(g).group = 2
 next x
 
-FOR x = 1 to 3
+FOR x = 1 to 4
   g=g+1
   main_gui(g).element_type = GUI_LABEL
   GUI_init_element main_gui(g), ""
-  main_gui(g).row1 = 19 + x
+  main_gui(g).row1 = 18 + x
   main_gui(g).col1 = 2 ' + (x - 1) * (78 / 3)
   labels(x) = g
 NEXT x
@@ -259,7 +259,12 @@ DO
       main_gui(buttons(x)).pressed = 0
     end if
   next x
-LOOP UNTIL key$ = CHR$(27) or _EXIT
+  if main_gui(1).menu_chosen then
+    put_str main_gui(labels(4)).nam, "Menu Chosen: " + main_gui(1).menu_choice
+    main_gui(1).menu_chosen = 0
+    i$ = main_gui(1).menu_choice
+  end if
+LOOP UNTIL key$ = CHR$(27) or _EXIT OR i$ = "EXIT "
 
 GUI_free_element_array main_gui()
 
