@@ -119,7 +119,7 @@ TYPE GUI_element_type
   
   length AS INTEGER ' Length of string array
   selected AS INTEGER 'selected line in list-box, drop-down, etc.
-  
+  selected_old AS INTEGER
   lines AS array_type ' Array to store strings for list-box, drop-down, etc.
   
   checked AS _BYTE 'If set then the check-box is checked

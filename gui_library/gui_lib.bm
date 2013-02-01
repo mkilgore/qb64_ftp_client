@@ -164,9 +164,10 @@ IF (keys) AND GUI_alt_flag = 0 THEN 'Hold
   if gui(sel).element_type <> GUI_MENU or gui(sel).menu_open = 0 then
     for x = 1 to gui_num
       if gui(x).element_type = GUI_MENU then
-        sel = x 'change selected
         gui(x).updated = -1
         gui(x).menu_open = -2
+        gui(x).selected_old = sel
+        sel = x 'change selected
       end if
     next x
   end if
@@ -175,12 +176,14 @@ IF keys = 0 AND GUI_alt_flag THEN 'Release
   GUI_alt_flag = 0
   if gui(sel).menu_open = -2 then
     gui(sel).menu_open = 0
-    if gui(sel).selected = 0 then
-      gui(sel).selected = 1
+    if gui(sel).selected > 0 then
+      men = _MEMGET(gui(sel).menu, gui(sel).menu.OFFSET + len(men) * (gui(sel).selected - 1), GUI_menu_item_type)
+      men.selected = 1
+      _MEMPUT gui(sel).menu, gui(sel).menu.OFFSET + len(men) * (gui(sel).selected - 1), men
+    elseif gui(sel).selected = 0 then
+      sel = gui(sel).selected_old
+      gui(sel).updated = -1
     end if
-    men = _MEMGET(gui(sel).menu, gui(sel).menu.OFFSET + len(men) * (gui(sel).selected - 1), GUI_menu_item_type)
-    men.selected = 1
-    _MEMPUT gui(sel).menu, gui(sel).menu.OFFSET + len(men) * (gui(sel).selected - 1), men
   end if
 END IF
 ch$ = INKEY$
@@ -1283,9 +1286,18 @@ for x = 1 to m.sub_menu_length
     PRINT CHR$(195); STRING$(col2 - col1 - 1, 196); CHR$(180);
   else
     if m.selected = x then
-      GUI_print_menu get_str$(men.nam), b.selcolor.fr, b.selcolor.bk, b.scroll_color.fr, b.selcolor.bk
+      if GUI_alt_flag then
+        GUI_print_menu get_str$(men.nam), b.selcolor.fr, b.selcolor.bk, b.scroll_color.fr, b.selcolor.bk
+      else
+        color b.selcolor.fr, b.selcolor.bk
+        GUI_print_menu_no_hilight get_str$(men.nam)
+      end if
     else
-      GUI_print_menu get_str$(men.nam), b.mcolor.fr, b.mcolor.bk, b.scroll_color.fr, b.mcolor.bk
+      if GUI_alt_flag then
+        GUI_print_menu get_str$(men.nam), b.mcolor.fr, b.mcolor.bk, b.scroll_color.fr, b.mcolor.bk
+      else
+        GUI_print_menu_no_hilight get_str$(men.nam)
+      end if
     end if
     PRINT SPACE$(wid - GUI_menu_len(get_str$(men.nam)));
     color b.mcolor.fr, b.mcolor.bk

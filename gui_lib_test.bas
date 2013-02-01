@@ -12,7 +12,7 @@ DIM main_gui(gui_num) as GUI_element_type 'create 7 GUI elements
 DIM buttons(3) AS INTEGER 
 DIM labels(4) AS INTEGER 'Will hold the GUI numbers for 3 labels we have
 DIM click_count(3) AS INTEGER
-DIM base_menu(5) as GUI_menu_item_type
+DIM base_menu(4) as GUI_menu_item_type
 'DIM sub_menus(5, 10) as GUI_menu_item_type
 DIM file_menu(10) as GUI_menu_item_type
 DIM edit_menu(10) as GUI_menu_item_type
@@ -37,44 +37,42 @@ put_str base_menu(2).nam, "#Edit"
 base_menu(2).ident = "Edit "
 put_str base_menu(3).nam, "#Search"
 base_menu(3).ident = "Searc"
-put_str base_menu(4).nam, "#Tools"
-base_menu(4).ident = "Tools"
-put_str base_menu(5).nam, "#Help"
-base_menu(5).ident = "Help "
-GUI_attach_base_menu main_gui(g), 5, _OFFSET(base_menu(1))
+put_str base_menu(4).nam, "#Help"
+base_menu(4).ident = "Help "
+GUI_attach_base_menu main_gui(g), 4, _OFFSET(base_menu(1))
 
-put_str file_menu(1).nam, "#New         ": file_menu(1).ident = "NEW  "
-put_str file_menu(2).nam, "#Open": file_menu(2).ident = "OPEN "
-put_str file_menu(3).nam, "-"
-put_str file_menu(4).nam, "#Save": file_menu(4).ident = "SAVE "
-put_str file_menu(5).nam, "S#ave As": file_menu(5).ident = "SAVEA"
-put_str file_menu(6).nam, "-"
-put_str file_menu(7).nam, "#Exit": file_menu(7).ident = "EXIT "
-GUI_attach_menu base_menu(1), 7, _OFFSET(file_menu(1))
+m=0
+m=m+1: put_str file_menu(m).nam, "#New         ": file_menu(m).ident = "NEW  "
+m=m+1: put_str file_menu(m).nam, "#Open": file_menu(m).ident = "OPEN "
+m=m+1: put_str file_menu(m).nam, "-"
+m=m+1: put_str file_menu(m).nam, "#Save": file_menu(m).ident = "SAVE "
+m=m+1: put_str file_menu(m).nam, "S#ave As": file_menu(m).ident = "SAVEA"
+m=m+1: put_str file_menu(m).nam, "-"
+m=m+1: put_str file_menu(m).nam, "#Exit": file_menu(m).ident = "EXIT "
+GUI_attach_menu base_menu(1), m, _OFFSET(file_menu(1))
 
-put_str edit_menu(1).nam, "#Cut"
-put_str edit_menu(2).nam, "#Copy"
-put_str edit_menu(3).nam, "#Paste"
-put_str edit_menu(4).nam, "#Delete"
-GUI_attach_menu base_menu(2), 4, _OFFSET(edit_menu(1))
+m=0
+m=m+1: put_str edit_menu(m).nam, "#Cut": edit_menu(m).ident = "CUT  "
+m=m+1: put_str edit_menu(m).nam, "#Copy": edit_menu(m).ident = "COPY "
+m=m+1: put_str edit_menu(m).nam, "#Paste": edit_menu(m).ident = "PASTE"
+m=m+1: put_str edit_menu(m).nam, "#Delete": edit_menu(m).ident = "DELET"
+m=m+1: put_str edit_menu(m).nam, "-"
+m=m+1: put_str edit_menu(m).nam, "#Select All": edit_menu(m).ident = "SELAL"
+GUI_attach_menu base_menu(2), m, _OFFSET(edit_menu(1))
 
-put_str search_menu(1).nam, "#Cut"
-put_str search_menu(2).nam, "#Copy"
-put_str search_menu(3).nam, "#Paste"
-put_str search_menu(4).nam, "#Delete"
-GUI_attach_menu base_menu(3), 4, _OFFSET(search_menu(1))
+m=0
+m=m+1: put_str search_menu(m).nam, "#Find": search_menu(m).ident = "FIND "
+m=m+1: put_str search_menu(m).nam, "Find #Next": search_menu(m).ident = "FINDN"
+m=m+1: put_str search_menu(m).nam, "Find #Previous": search_menu(m).ident = "FINDP"
+m=m+1: put_str search_menu(m).nam, "-"
+m=m+1: put_str search_menu(m).nam, "#Replace": search_menu(m).ident = "REPLA"
+GUI_attach_menu base_menu(3), m, _OFFSET(search_menu(1))
 
-put_str tools_menu(1).nam, "#Cut"
-put_str tools_menu(2).nam, "#Copy"
-put_str tools_menu(3).nam, "#Paste"
-put_str tools_menu(4).nam, "#Delete"
-GUI_attach_menu base_menu(4), 4, _OFFSET(tools_menu(1))
-
-put_str help_menu(1).nam, "#Cut"
-put_str help_menu(2).nam, "#Copy"
-put_str help_menu(3).nam, "#Paste"
-put_str help_menu(4).nam, "#Delete"
-GUI_attach_menu base_menu(5), 4, _OFFSET(help_menu(1))
+m=0
+m=m+1: put_str help_menu(m).nam, "#Help": help_menu(m).ident = "HELP "
+m=m+1: put_str help_menu(m).nam, "-"
+m=m+1: put_str help_menu(m).nam, "#About     ": help_menu(m).ident = "ABOUT"
+GUI_attach_menu base_menu(4), m, _OFFSET(help_menu(1))
 
 g=g+1
 main_gui(g).updated = -1 'set update flag for first pass
@@ -232,7 +230,7 @@ next x
  'Initalize arrays for elements that need them and fill then with random data
 
 
-selected_gui = 1 'First selected gui element
+'selected_gui = 0 'First selected gui element
 
 DO
   _LIMIT 1000
