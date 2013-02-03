@@ -22,15 +22,6 @@ TYPE GUI_menu_item_type
   selected AS INTEGER 'current
 END TYPE
 
-'TYPE GUI_menu_type
-'  items as array_type 'array of menu_items
-'  selected as integer 'selected menu
-'  hors AS _BYTE 'If -1, then this menu is horisontal
-'  'Number of spaces to pad the left of the menu (hors only)
-'  padding as INTEGER
-'  wid as INTEGER 'width of this menu (hors must equal zero) -- if 0 then will be determined automatically based on items
-'END TYPE
-
 TYPE GUI_color_type 'Holds color info -- forground and background
   fr as _BYTE
   bk as _BYTE
@@ -158,7 +149,7 @@ TYPE GUI_default_color_type 'holds colors
 END TYPE
 
 'shared variables for mouse
-COMMON SHARED GUI_MX AS INTEGER, GUI_MY AS INTEGER, GUI_BUT AS INTEGER GUI_MSCROLL AS INTEGER, GUI_BUTFLAG AS INTEGER
+COMMON SHARED GUI_MX AS INTEGER, GUI_MY AS INTEGER, GUI_BUT AS INTEGER, GUI_MSCROLL AS INTEGER, GUI_BUTFLAG AS INTEGER
 COMMON SHARED GUI_CUR_ROW AS INTEGER, GUI_CUR_COL AS INTEGER, GUI_alt_flag AS INTEGER
 'default colors -- Values are set by GUI_init and are changable at any time
 COMMON SHARED GUI_DEFAULT_COLOR_BOX as GUI_default_color_type, GUI_DEFAULT_COLOR_INPUT as GUI_default_color_type
@@ -166,4 +157,5 @@ COMMON SHARED GUI_DEFAULT_COLOR_TEXT as GUI_default_color_type, GUI_DEFAULT_COLO
 COMMON SHARED GUI_DEFAULT_COLOR_DROP as GUI_default_color_type, GUI_DEFAULT_COLOR_CHECKBOX as GUI_default_color_type
 COMMON SHARED GUI_DEFAULT_COLOR_MENU as GUI_default_color_type, GUI_DEFAULT_COLOR_BUTTON as GUI_default_color_type
 COMMON SHARED GUI_DEFAULT_COLOR_RADIO as GUI_default_color_type, GUI_DEFAULT_COLOR_LABEL as GUI_default_color_type
+
 DIM SHARED GUI_alt_codes$(51) ' thanks to Galleon for alt-code stuff

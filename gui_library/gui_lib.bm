@@ -253,7 +253,7 @@ SELECT CASE ch$
       end if
 
       GUI_calc_scroll gui(sel).row1, gui(sel).col1, gui(sel).row2, gui(sel).col2, gui(sel)
-    elseif gui(sel).element_type = GUI_MENU then
+    elseif gui(sel).element_type = GUI_MENU and gui(sel).selected > 0 then
       if gui(sel).menu_open = 0 then
         gui(sel).menu_open = -1
       elseif gui(sel).menu_open = -1 then
@@ -293,7 +293,7 @@ SELECT CASE ch$
       end if
     ELSEIF gui(sel).element_type = GUI_DROP_DOWN then
       gui(sel).drop_flag = -1
-    ELSEIF gui(sel).element_type = GUI_MENU then
+    ELSEIF gui(sel).element_type = GUI_MENU and gui(sel).selected > 0  then
       if gui(sel).menu_open = 0 then
         gui(sel).menu_open = -1
       elseif gui(sel).menu_open = -1 then
