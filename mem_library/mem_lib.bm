@@ -5,19 +5,20 @@
 'You are free to edit, copy, modify, and redistribute it under the terms
 'of the Do What You Want Public License, Version 1, as published by Matt Kilgore
 'See file COPYING that should have been included with this source.
-FUNCTION get_str$ (s AS string_type)
-'$CHECKING:OFF
+
+FUNCTION MEM_get_str$ (s AS MEM_string_type)
+$CHECKING:OFF
 IF s.is_allocated <> 0 AND s.length > 0 THEN
   FOR x = 1 TO s.length
     get_s$ = get_s$ + _MEMGET(s.mem, s.mem.OFFSET + x - 1, STRING * 1)
   NEXT x
 END IF
-get_str$ = get_s$
+MEM_get_str$ = get_s$
 $CHECKING:ON
 END FUNCTION
 
-SUB put_str (s AS string_type, stri$)
-'$CHECKING:OFF
+SUB MEM_put_str (s AS MEM_string_type, stri$)
+$CHECKING:OFF
 IF NOT s.is_allocated OR s.allocated < LEN(stri$) THEN
   IF s.is_allocated THEN _MEMFREE s.mem
   s.mem = _MEMNEW(LEN(stri$) + 10) 'allocate 10 extra bytes
@@ -29,40 +30,21 @@ s.length = LEN(stri$)
 $CHECKING:ON
 END SUB
 
-FUNCTION get_str_array$ (a AS array_type, array_number)
-DIM s AS string_type
-'$CHECKING:OFF
+FUNCTION MEM_get_str_array$ (a AS MEM_array_type, array_number)
+DIM s AS MEM_string_type
+$CHECKING:OFF
 _MEMGET a.mem, a.mem.OFFSET + array_number * LEN(s), s
 '_MEMCOPY a.mem, a.mem.OFFSET + array_number * LEN(string_type), LEN(string_type) TO m, m.OFFSET
 $CHECKING:ON
 
-get_str_array$ = get_str$(s)
+MEM_get_str_array$ = MEM_get_str$(s)
 END FUNCTION
 
-'KEEP IN MIND, ST's _MEM value points to the same location as the array's one does
-'USING ST RIGHT AFTER GETTING IT WILL CHANGE THE VALUE IN ARRAY
-'MAKE A SAFE COPY OF ST FIRST IF YOU PLAN ON CHANGING IT WITHOUT CHANGING ARRAY VALUE
-'Safe value's can be made by put_str temp_str, get_str$(st)
-'Allocates a new string into temp_Str that you can use that is seperate from the array
-SUB get_str_type_array (a AS array_type, array_number, st AS string_type)
-DIM m AS _MEM
-'$CHECKING:OFF
-m = _MEM(st)
-_MEMCOPY a.mem, a.mem.OFFSET + array_number * LEN(st), LEN(st) TO m, m.OFFSET
-$CHECKING:ON
-END SUB
-
-'SUB put_str_array (a AS array_type, array_number, s AS string_type)
-''$CHECKING:OFF
-'_MEMCOPY s.mem, s.mem.OFFSET, LEN(string_type) TO a.mem, a.mem.OFFSET + array_number * LEN(string_type)
-''$CHECKING:ON
-'END SUB
-
-SUB put_str_array (a AS array_type, array_number, s$)
-'$CHECKING:OFF
-DIM st as string_type
+SUB MEM_put_str_array (a AS MEM_array_type, array_number, s$)
+$CHECKING:OFF
+DIM st as MEM_string_type
 _MEMGET a.mem, a.mem.OFFSET + array_number * LEN(st), st
-put_str st, s$
+MEM_put_str st, s$
 _MEMPUT a.mem, a.mem.OFFSET + array_number * LEN(st), st
 
 $CHECKING:ON
@@ -73,11 +55,11 @@ END SUB
 ''$CHECKING:OFF
 'm = _MEM(f)
 '_MEMCOPY a.mem, a.mem.OFFSET + array_number * LEN(f), LEN(f) TO m, m.OFFSET
-'$CHECKING:ON
+''$CHECKING:ON
 'END SUB
 
-SUB allocate_array (a AS array_type, number_of_elements, element_size)
-'$CHECKING:OFF
+SUB MEM_allocate_array (a AS MEM_array_type, number_of_elements, element_size)
+$CHECKING:OFF
 IF NOT a.is_allocated THEN
   'not already allocated
   a.element_size = element_size
@@ -87,18 +69,18 @@ IF NOT a.is_allocated THEN
   a.mem = _MEMNEW(a.length * element_size)
   _MEMFILL a.mem, a.mem.OFFSET, a.length * element_size, 0 as _byte
 elseif a.element_size = element_size then
-  reallocate_array a, number_of_elements
+  MEM_reallocate_array a, number_of_elements
 END IF
 $CHECKING:ON
 
 END SUB
 
-SUB reallocate_array (a AS array_type, number_of_elements)
+SUB MEM_reallocate_array (a AS MEM_array_type, number_of_elements)
 
 DIM temp AS _MEM
-'$CHECKING:OFF
+$CHECKING:OFF
 IF NOT a.is_allocated THEN
-  IF a.element_size > 0 THEN allocate_array a, number_of_elements, a.element_size ELSE ERROR 255
+  IF a.element_size > 0 THEN MEM_allocate_array a, number_of_elements, a.element_size ELSE ERROR 255
 ELSE 'reallocate
   a.length = number_of_elements + 1:
   IF (number_of_elements + 1) * a.element_size < a.allocated THEN EXIT SUB
@@ -113,13 +95,28 @@ END IF
 $CHECKING:ON
 END SUB
 
-SUB allocate_string_array (a as array_type, number_of_elements)
-DIM s as string_type
-allocate_array a, number_of_elements, LEN(s)
+SUB MEM_allocate_string_array (a as MEM_array_type, number_of_elements)
+DIM s as MEM_string_type
+MEM_allocate_array a, number_of_elements, LEN(s)
 END SUB
 
-SUB free_array (a as array_type)
-'$CHECKING:OFF
+SUB MEM_free_string_array (a as MEM_array_type)
+DIM s as MEM_string_type
+$CHECKING:OFF
+if a.is_allocated then
+  FOR x = 1 to a.length 'Free each individual string
+    s = _MEMGET(a.mem, a.mem.OFFSET + LEN(s) * (x - 1), MEM_string_type)
+    MEM_free_string s
+  next x
+  _MEMFREE a.mem
+  a.is_allocated = 0
+  a.allocated = 0
+end if
+$CHECKING:ON
+END SUB
+
+SUB MEM_free_array (a as MEM_array_type)
+$CHECKING:OFF
 if a.is_allocated then
   _MEMFREE a.mem
   a.is_allocated = 0
@@ -128,8 +125,8 @@ end if
 $CHECKING:ON
 END SUB
 
-SUB free_string (s as string_type)
-'$CHECKING:OFF
+SUB MEM_free_string (s as MEM_string_type)
+$CHECKING:OFF
 if s.is_allocated then
   _memfree s.mem
   s.is_allocated = 0

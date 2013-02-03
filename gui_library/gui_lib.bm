@@ -226,19 +226,23 @@ SELECT CASE ch$
     gui(sel).updated = -1
   CASE CHR$(13) 'Enter
     if gui(sel).element_type = GUI_TEXT_BOX then
-      tex$ = mid$(get_str_array$(gui(sel).lines, gui(sel).selected), gui(sel).text_position + 1)
-      for x = gui(sel).length to gui(sel).selected + 1 STEP -1
-        put_str_array gui(sel).lines, x, get_str_array$(gui(sel).lines, x - 1)
-      next x
-      put_str_array gui(sel).lines, gui(sel).selected + 1, tex$
-      put_str_array gui(sel).lines, gui(sel).selected, mid$(get_str_array$(gui(sel).lines, gui(sel).selected), 1, gui(sel).text_position)
-      gui(sel).selected = gui(sel).selected + 1
-      if gui(sel).selected > gui(sel).length and (gui(sel).length < gui(sel).max_lines or gui(sel).max_lines = 0) then
+      tex$ = mid$(MEM_get_str_array$(gui(sel).lines, gui(sel).selected), gui(sel).text_position + 1)
+      
+      if gui(sel).length + 1 > gui(sel).lines.allocated and (gui(sel).length < gui(sel).max_lines OR gui(sel).max_lines = 0) then
+        MEM_allocate_string_array gui(sel).lines, gui(sel).length + 10
         gui(sel).length = gui(sel).length + 1
-        if gui(sel).length > gui(sel).lines.length then
-          allocate_string_array gui(sel).lines, gui(sel).length + 10
-        end if
-      elseif gui(sel).selected > gui(sel).length then
+      elseif gui(sel).length < gui(sel).max_lines OR gui(sel).max_lines = 0 then
+        gui(sel).length = gui(sel).length + 1
+      end if
+      
+      for x = gui(sel).length to gui(sel).selected + 1 STEP -1
+        MEM_put_str_array gui(sel).lines, x, MEM_get_str_array$(gui(sel).lines, x - 1)
+      next x
+      
+      MEM_put_str_array gui(sel).lines, gui(sel).selected + 1, tex$
+      MEM_put_str_array gui(sel).lines, gui(sel).selected, mid$(MEM_get_str_array$(gui(sel).lines, gui(sel).selected), 1, gui(sel).text_position)
+      gui(sel).selected = gui(sel).selected + 1
+      if gui(sel).selected > gui(sel).length then
         gui(sel).selected = gui(sel).selected - 1
       end if
       gui(sel).text_position = 0
@@ -297,7 +301,7 @@ SELECT CASE ch$
         do
           tempm.selected = (tempm.selected mod tempm.sub_menu_length) + 1
           men = _MEMGET(tempm.sub_menu, tempm.sub_menu.OFFSET + len(tempm) * (tempm.selected - 1), GUI_menu_item_type)
-        loop until get_str$(men.nam) <> "-"
+        loop until MEM_get_str$(men.nam) <> "-"
         _MEMPUT gui(sel).menu, gui(sel).menu.OFFSET + len(tempm) * (gui(sel).selected - 1), tempm
       end if
       gui(sel).updated = -1
@@ -319,7 +323,7 @@ SELECT CASE ch$
             tempm.selected = tempm.sub_menu_length
           end if
           men = _MEMGET(tempm.sub_menu, tempm.sub_menu.OFFSET + len(tempm) * (tempm.selected - 1), GUI_menu_item_type)
-        loop until get_str$(men.nam) <> "-"
+        loop until MEM_get_str$(men.nam) <> "-"
         _MEMPUT gui(sel).menu, gui(sel).menu.OFFSET + len(tempm) * (gui(sel).selected - 1), tempm
       end if
       gui(sel).updated = -1
@@ -400,7 +404,7 @@ SELECT CASE ch$
       if gui(sel).menu_open = -2 then
         for x = 1 to gui(sel).length
           men = _MEMGET(gui(sel).menu, gui(sel).menu.OFFSET + len(men) * (x - 1), GUI_menu_item_type)
-          if ucase$(k$) = ucase$(GUI_menu_char$(get_str$(men.nam))) then
+          if ucase$(k$) = ucase$(GUI_menu_char$(MEM_get_str$(men.nam))) then
             gui(sel).selected = x
             gui(sel).menu_open = -1
             men.selected = 1
@@ -411,7 +415,7 @@ SELECT CASE ch$
         men = _MEMGET(gui(sel).menu, gui(sel).menu.OFFSET + len(men) * (gui(sel).selected - 1), GUI_menu_item_type)
         for x = 1 to men.sub_menu_length
           tempm = _MEMGET(men.sub_menu, men.sub_menu.OFFSET + len(men) * (x - 1), GUI_menu_item_type)
-          if ucase$(k$) = ucase$(GUI_menu_char$(get_str$(tempm.nam))) then
+          if ucase$(k$) = ucase$(GUI_menu_char$(MEM_get_str$(tempm.nam))) then
             gui(sel).menu_choice = tempm.ident
             gui(sel).menu_chosen = -1
             gui(sel).updated = -1
@@ -427,11 +431,11 @@ EXIT FUNCTION
 
 END FUNCTION
 
-'Inits an element without a parent
-'While it doesn't do much now besides set some default colors, it may do more in the future
+'Inits an element
+'While it doesn't do much now besides set some default colors and the name, it's highly likely it may do more in the future
 'It's recommended to use this SUB
 SUB GUI_init_element (g as GUI_element_type, nam$)
-put_str g.nam, nam$
+MEM_put_str g.nam, nam$
 SELECT CASE g.element_type
   case GUI_BOX
     g.mcolor = GUI_DEFAULT_COLOR_BOX.mcolor
@@ -457,6 +461,7 @@ SELECT CASE g.element_type
     g.mcolor = GUI_DEFAULT_COLOR_MENU.mcolor
     g.selcolor = GUI_DEFAULT_COLOR_MENU.selcolor
     g.scroll_color = GUI_DEFAULT_COLOR_MENU.scroll_color
+    g.skip = -1
   CASE GUI_TEXT_BOX
     g.mcolor = GUI_DEFAULT_COLOR_TEXT.mcolor
     g.selcolor = GUI_DEFAULT_COLOR_TEXT.selcolor
@@ -468,6 +473,7 @@ SELECT CASE g.element_type
     g.mcolor = GUI_DEFAULT_COLOR_LABEL.mcolor
     g.skip = -1
 END SELECT
+g.updated = -1
 END SUB
 
 SUB GUI_fix_scroll (gui AS GUI_element_type)
@@ -493,7 +499,11 @@ IF b.scroll AND 1 THEN
   'scr_len = row2 - row1 - 2
   'if scr_len * 2 <= b.length then
   '  b.scroll_wid_vert = 1
-  b.scroll_loc_vert = INT((b.scroll_offset_vert) / (b.length - (row2 - row1 - 1)) * (row2 - row1 - 4) + row1 + 2)
+  if (b.length - (row2 - row1 - 1)) > 0 then
+    b.scroll_loc_vert = (((b.scroll_offset_vert) / (b.length - (row2 - row1 - 1))) * (row2 - row1 - 4) + row1 + 2)
+  else
+    b.scroll_loc_vert = row1
+  end if
   'else
   '  b.scroll_wid_vert = scr_len * 2 - b.length
   '  b.scroll_loc_vert = INT((b.scroll_offset_vert) / (b.length - (row2 - row1 - 1)) * (row2 - row1 - 3 - b.scroll_wid_vert) + row1 + 2)
@@ -503,7 +513,11 @@ if b.scroll AND 2 then
   'scr_len = col2 - col1 - 2
   'if scr_len * 2 <= b.scroll_max_hors then
   '  b.scroll_wid_hors = 1
-  b.scroll_loc_hors = INT((b.scroll_offset_hors) / (b.scroll_max_hors - (col2 - col1 - 1)) * (col2 - col1 - 4) + col1 + 2)
+  if (b.scroll_max_hors - (col2 - col1 - 1)) > 0 then
+    b.scroll_loc_hors = (((b.scroll_offset_hors) / (b.scroll_max_hors - (col2 - col1 - 1))) * (col2 - col1 - 4) + col1 + 2)
+  else
+    b.scroll_loc_hors = col1
+  end if
   'else
   '  b.scroll_wid_hors = scr_len * 2 - b.scroll_max_hors - 1
   '  b.scroll_loc_hors = INT((b.scroll_offset_hors) / (b.scroll_max_hors - (col2 - col1 - 1)) * (col2 - col1 - 3 - b.scroll_wid_hors) + col1 + 2)
@@ -518,7 +532,7 @@ END IF
 _CONTROLCHR OFF
 if (b.scroll AND 1) and (b.scroll_loc_vert = 0) then GUI_calc_scroll row1, col1, row2, col2, b
 if (b.scroll AND 2) and (b.scroll_loc_hors = 0) then GUI_calc_scroll row1, col1, row2, col2, b
-n$ = get_str$(b.nam)
+n$ = MEM_get_str$(b.nam)
 COLOR b.mcolor.fr, b.mcolor.bk
 LOCATE row1, col1
 PRINT CHR$(218); CHR$(196); n$; STRING$(col2 - col1 - 2 - LEN(n$), 196); CHR$(191);
@@ -571,7 +585,7 @@ for x = 1 to b.row2 - b.row1 - 1
   else
     color b.mcolor.fr, b.mcolor.bk
   end if
-  k$ = mid$(get_str_array$(b.lines, x + b.scroll_offset_vert), b.scroll_offset_hors + 1, b.col2 - b.col1 - 1)
+  k$ = mid$(MEM_get_str_array$(b.lines, x + b.scroll_offset_vert), b.scroll_offset_hors + 1, b.col2 - b.col1 - 1)
   k$ = k$ + space$((b.col2 - b.col1 - 1) - len(k$))
   print k$;
 next x
@@ -592,7 +606,7 @@ ELSEIF b.element_type = GUI_MENU then
 END IF
 END FUNCTION
 
-'Draws an array of elements
+'Draws an array of elements, does the following things:
 '  respects layering
 '  Call's _DISPLAY at start and _AUTODISPLAY at the end
 '  Locates the cursor to a proper spot (And stores the location)
@@ -672,7 +686,7 @@ PRINT "[";
 IF b.checked THEN PRINT chr$(251); ELSE PRINT " ";
 PRINT "]";
 COLOR b.mcolor.fr, b.mcolor.bk
-PRINT get_str$(b.nam);
+PRINT MEM_get_str$(b.nam);
 b.cur_row = b.row1
 b.cur_col = b.col1 + 1
 END SUB
@@ -684,7 +698,7 @@ PRINT "(";
 IF b.checked THEN PRINT chr$(254); ELSE PRINT " ";
 PRINT ")";
 COLOR b.mcolor.fr, b.mcolor.bk
-PRINT get_str$(b.nam);
+PRINT MEM_get_str$(b.nam);
 b.cur_row = b.row1
 b.cur_col = b.col1 + 1
 END SUB
@@ -695,7 +709,7 @@ IF sel THEN COLOR b.selcolor.fr, b.selcolor.bk ELSE COLOR b.mcolor.fr MOD 8, b.m
 PRINT "<";
 'IF sel THEN COLOR b.selcol, b.c2 ELSE COLOR b.c1 MOD 8, b.c2
 COLOR b.mcolor.fr, b.mcolor.bk
-PRINT get_str$(b.nam);
+PRINT MEM_get_str$(b.nam);
 IF sel THEN COLOR b.selcolor.fr, b.selcolor.bk ELSE COLOR b.mcolor.fr MOD 8, b.mcolor.bk
 PRINT ">";
 b.cur_row = b.row1
@@ -706,7 +720,7 @@ SUB GUI_draw_input_box (b as GUI_element_type, sel)
 
 GUI_draw_Box b.row1, b.col1, b.row1 + 2, b.col2, b
 LOCATE b.row1 + 1, b.col1 + 1
-s$ = MID$(get_str$(b.text), b.scroll_offset_hors + 1, b.col2 - b.col1 - 1)
+s$ = MID$(MEM_get_str$(b.text), b.scroll_offset_hors + 1, b.col2 - b.col1 - 1)
 IF NOT b.hide THEN PRINT s$; ELSE PRINT STRING$(LEN(s$), "*");
 b.cur_row = b.row1 + 1
 b.cur_col = b.col1 + 1 + b.text_position - b.scroll_offset_hors
@@ -722,7 +736,7 @@ end if
 IF NOT b.drop_flag THEN PRINT "[";
 IF sel THEN COLOR b.selcolor.fr, b.selcolor.bk
 locate b.row1, b.col1 + 1
-PRINT LEFT$(get_str_array$(b.lines, b.selected) + SPACE$(b.col2 - b.col1), b.col2 - b.col1 - 2); CHR$(31);
+PRINT LEFT$(MEM_get_str_array$(b.lines, b.selected) + SPACE$(b.col2 - b.col1), b.col2 - b.col1 - 2); CHR$(31);
 COLOR b.mcolor.fr, b.mcolor.bk
 IF NOT b.drop_flag THEN PRINT "]";
 if b.drop_flag then
@@ -760,16 +774,16 @@ for x = 1 to b.length
     end if
     color b.selcolor.fr, b.selcolor.bk
     if b.menu_open <> -2 then
-      GUI_print_menu_no_hilight get_str$(men.nam) ', b.mcolor.fr, b.mcolor.bk, b.scroll_color.fr, b.scroll_color.bk
+      GUI_print_menu_no_hilight MEM_get_str$(men.nam) ', b.mcolor.fr, b.mcolor.bk, b.scroll_color.fr, b.scroll_color.bk
     else
-      GUI_print_menu get_str$(men.nam), b.selcolor.fr, b.selcolor.bk, b.scroll_color.fr, b.selcolor.bk
+      GUI_print_menu MEM_get_str$(men.nam), b.selcolor.fr, b.selcolor.bk, b.scroll_color.fr, b.selcolor.bk
     end if 
   else
     color b.mcolor.fr, b.mcolor.bk
     if b.menu_open <> -2 then
-      GUI_print_menu_no_hilight get_str$(men.nam)
+      GUI_print_menu_no_hilight MEM_get_str$(men.nam)
     else
-      GUI_print_menu get_str$(men.nam), b.mcolor.fr, b.mcolor.bk, b.scroll_color.fr, b.mcolor.bk
+      GUI_print_menu MEM_get_str$(men.nam), b.mcolor.fr, b.mcolor.bk, b.scroll_color.fr, b.mcolor.bk
     end if
   end if
 next x
@@ -792,12 +806,15 @@ else
 end if
 END SUB
 
-SUB GUI_draw_text_box (b as GUI_element_type, sel) ' -- NOT DONE
+SUB GUI_draw_text_box (b as GUI_element_type, sel)
 GUI_draw_box b.row1, b.col1, b.row2, b.col2, b
 s = GUI_draw_inside_text(b)
 if s > 0 then
   b.cur_row = b.row1 + s
   b.cur_col = b.col1 + 1 + b.text_position - b.scroll_offset_hors
+  if b.cur_col <= b.col1 or b.cur_col >= b.col2 then
+    b.cur_row = 0
+  end if
 else
   b.cur_row = 0
 end if
@@ -806,7 +823,7 @@ END SUB
 SUB GUI_draw_label (b as GUI_element_type, sel)
 COLOR b.mcolor.fr, b.mcolor.bk
 LOCATE b.row1, b.col1
-print get_str$(b.nam);
+print MEM_get_str$(b.nam);
 END SUB
 
 SUB GUI_mouse_range (b() AS GUI_element_type, boxnum, selected_gui) 'Checks if mouse is in one of the boxes in b()
@@ -838,12 +855,28 @@ IF GUI_mscroll and NOT GUI_but then 'handle scrolling
   END IF
 END IF
 IF GUI_but AND GUI_butflag THEN 'Mouse held
-  IF b(selected_gui).element_type = GUI_LIST_BOX OR b(selected_gui).element_type = GUI_TEXT_BOX or (b(selected_gui).element_type = GUI_DROP_DOWN AND b(selected_gui).drop_flag) then
-    if b(selected_gui).scroll_held = -1 then 'hors
-    
-    elseif b(selected_gui).scroll_held = -2 then 'vert
-    
+  'IF b(selected_gui).element_type = GUI_LIST_BOX OR b(selected_gui).element_type = GUI_TEXT_BOX or (b(selected_gui).element_type = GUI_DROP_DOWN AND b(selected_gui).drop_flag) then
+  if b(selected_gui).scroll_held = -1 then 'hors
+    b(selected_gui).scroll_loc_hors = GUI_mx
+    if b(selected_gui).scroll_loc_hors - b(selected_gui).col1 - 2 < 0 then
+      b(selected_gui).scroll_loc_hors = b(selected_gui).col1 + 2
     end if
+    if b(selected_gui).scroll_loc_hors > b(selected_gui).col2 - 2 then
+      b(selected_gui).scroll_loc_hors = b(selected_gui).col2 - 2
+    end if
+    GUI_calc_hors_offset b(selected_gui)
+    b(selected_gui).updated = -1
+  elseif b(selected_gui).scroll_held = -2 then 'vert
+    b(selected_gui).scroll_loc_vert = GUI_my
+    if b(selected_gui).scroll_loc_vert - b(selected_gui).row1 - 2 < 0 then
+      b(selected_gui).scroll_loc_vert = b(selected_gui).row1 + 2
+    end if
+    if b(selected_gui).scroll_loc_vert > b(selected_gui).row2 - 2 then
+      b(selected_gui).scroll_loc_vert = b(selected_gui).row2 - 2
+    end if
+    GUI_calc_vert_offset b(selected_gui)
+    b(selected_gui).updated = -1
+  end if
     'if GUI_mx = b(selected_gui).col2 AND (b(selected_gui).scroll AND 1) then
     '  if GUI_my >= b(selected_gui).row1 + 2 and GUI_my <= b(selected_gui).row2 - 2 then
     '    b(selected_gui).scroll_loc_vert = GUI_my
@@ -855,10 +888,11 @@ IF GUI_but AND GUI_butflag THEN 'Mouse held
     '    b(selected_gui).scroll_offset_hors = ((GUI_mx - b(selected_gui).col1 - 2) / (b(selected_gui).col2 - b(selected_gui).col1 - 2)) * (b(selected_gui).scroll_max_hors - (b(selected_gui).col2 - b(selected_gui).col1 - 4))
     '  end if
     'end if
-  end if
+  'end if
   EXIT FUNCTION
 ELSE
   GUI_butflag = 0
+  b(selected_gui).scroll_held = 0
 END IF
 IF GUI_but = 0 THEN EXIT FUNCTION
 GUI_butflag = -1
@@ -911,7 +945,7 @@ FOR x = 1 TO boxnum
         end if
       end if
     case GUI_CHECKBOX
-      IF GUI_my = b(x).row1 AND GUI_mx >= b(x).col1 AND GUI_mx <= b(x).col1 + 2 + LEN(get_str$(b(x).nam)) THEN
+      IF GUI_my = b(x).row1 AND GUI_mx >= b(x).col1 AND GUI_mx <= b(x).col1 + 2 + LEN(MEM_get_str$(b(x).nam)) THEN
         if k > current_layer then
           found = x
           current_layer = k
@@ -928,13 +962,13 @@ FOR x = 1 TO boxnum
         row1 = b(x).row1
         for m = 1 to b(x).selected
           men = _MEMGET(b(x).menu, b(x).menu.OFFSET + len(men) * (m - 1), GUI_menu_item_type)
-          if m < b(x).selected then col1 = col1 + len(get_str$(men.nam)) + 2
+          if m < b(x).selected then col1 = col1 + len(MEM_get_str$(men.nam)) + 1
         next m
         men_len = 0
         for m = 1 to men.sub_menu_length
           mtmp = _MEMGET(men.sub_menu, men.sub_menu.OFFSET + len(mtmp) * (m - 1), GUI_menu_item_type)
-          if len(get_str$(mtmp.nam)) > men_len then
-            men_len = len(get_str$(mtmp.nam))
+          if len(MEM_get_str$(mtmp.nam)) > men_len then
+            men_len = len(MEM_get_str$(mtmp.nam))
           end if
         next m
         row2 = row1 + men.sub_menu_length + 2
@@ -947,14 +981,14 @@ FOR x = 1 TO boxnum
         end if
       end if
     case GUI_BUTTON
-      IF GUI_my = b(x).row1 AND GUI_mx >= b(x).col1 AND GUI_mx <= b(x).col1 + LEN(get_str$(b(x).nam)) + 1 THEN
+      IF GUI_my = b(x).row1 AND GUI_mx >= b(x).col1 AND GUI_mx <= b(x).col1 + LEN(MEM_get_str$(b(x).nam)) + 1 THEN
         if k > current_layer then
           found = x
           current_layer = k
         end if
       END IF
     case GUI_RADIO_BUTTON
-      if GUI_my = b(x).row1 AND GUI_mx >= b(x).col1 AND GUI_mx <= b(x).col1 + 2 + LEN(get_str$(b(x).nam)) THEN
+      if GUI_my = b(x).row1 AND GUI_mx >= b(x).col1 AND GUI_mx <= b(x).col1 + 2 + LEN(MEM_get_str$(b(x).nam)) THEN
         if k > current_layer then
           found = x
           current_layer = k
@@ -1029,13 +1063,13 @@ if found > 0 then
           c = b(found).col1 + b(found).menu_padding
           for x = 1 to b(found).length
             men = _MEMGET(b(found).menu, b(found).menu.OFFSET + len(men) * (x - 1), GUI_menu_item_type)
-            if GUI_mx >= c and GUI_mx <= c + GUI_menu_len(get_str$(men.nam)) + 2 then
+            if GUI_mx >= c and GUI_mx <= c + GUI_menu_len(MEM_get_str$(men.nam)) + 2 then
               b(found).selected = x
               b(found).menu_open = -1
               men.selected = 1
               _MEMPUT b(found).menu, b(found).menu.OFFSET + len(men) * (x - 1), men
             end if
-            c = c + 2 + GUI_menu_len(get_str$(men.nam))
+            c = c + 2 + GUI_menu_len(MEM_get_str$(men.nam))
           next x
         end if
       elseif b(found).menu_open = -1 then
@@ -1044,7 +1078,7 @@ if found > 0 then
           if GUI_mx > col1 and GUI_mx < col2 then
             s = GUI_my - row1 - 1
             mtmp = _MEMGET(men.sub_menu, men.sub_menu.OFFSET + len(men) * (s - 1), GUI_menu_item_type)
-            if get_str$(mtmp.nam) <> "-" then
+            if MEM_get_str$(mtmp.nam) <> "-" then
               mtmp.selected = s
               b(found).selected = 0
               b(found).menu_open = 0
@@ -1104,7 +1138,7 @@ if found > 0 then
             b(found).scroll_offset_vert = b(found).scroll_offset_vert + 1
             calc_flag = -1
           end if
-        elseif GUI_mx = b(found).scroll_loc_vert then
+        elseif GUI_my = b(found).scroll_loc_vert then
           b(found).scroll_held = -2
         end if
       end if
@@ -1113,6 +1147,16 @@ if found > 0 then
   if calc_flag then GUI_calc_scroll b(found).row1, b(found).col1, b(found).row2, b(found).col2, b(found)
 end if
 
+END SUB
+
+SUB GUI_calc_vert_offset (g as GUI_element_type)
+l = g.scroll_loc_vert - g.row1 - 2
+g.scroll_offset_vert = ( l / (g.row2 - g.row1 - 4)) * (g.length - (g.row2 - g.row1 - 1))
+END SUB
+
+SUB GUI_calc_hors_offset (g as GUI_element_type)
+l = g.scroll_loc_hors - g.col1 - 2
+g.scroll_offset_hors = ( l / (g.col2 - g.col1 - 4)) * (g.scroll_max_hors - (g.col2 - g.col1 - 1))
 END SUB
 
 SUB GUI_print_menu_no_hilight (a$) 'Prints a$ without the '#' and no hilighting
@@ -1142,12 +1186,12 @@ GUI_menu_char$ = MID$(a$, INSTR(a$, "#") + 1, 1)
 END FUNCTION
 
 SUB GUI_add_character (b AS GUI_element_type, ch$)
-t$ = get_str$(b.text)
+t$ = MEM_get_str$(b.text)
 t$ = MID$(t$, 1, b.text_position) + ch$ + MID$(t$, b.text_position + 1)
 'print "T="; t$;
 '_DISPLAY
 'sleep
-put_str b.text, t$
+MEM_put_str b.text, t$
 b.text_position = b.text_position + 1
 IF b.text_position > b.scroll_offset_hors + (b.col2 - b.col1 - 2) THEN
   b.scroll_offset_hors = b.scroll_offset_hors + 1
@@ -1155,10 +1199,10 @@ END IF
 END SUB
 
 SUB GUI_del_character (b AS GUI_element_type)
-t$ = get_str$(b.text)
+t$ = MEM_get_str$(b.text)
 IF LEN(t$) > 0 AND b.text_position > 0 THEN
   t$ = MID$(t$, 1, b.text_position - 1) + MID$(t$, b.text_position + 1)
-  put_str b.text, t$
+  MEM_put_str b.text, t$
   b.text_position = b.text_position - 1
   IF b.text_position < b.scroll_offset_hors THEN
     b.scroll_offset_hors = b.scroll_offset_hors - 1
@@ -1167,7 +1211,7 @@ END IF
 END SUB
 
 SUB GUI_add_character_text_box (b AS GUI_element_type, ch$)
-t$ = get_str_array$(b.lines, b.selected)
+t$ = MEM_get_str_array$(b.lines, b.selected)
 if len(t$) >= b.text_position then
   t$ = MID$(t$, 1, b.text_position) + ch$ + MID$(t$, b.text_position + 1)
 else
@@ -1176,7 +1220,7 @@ end if
 'print "T="; t$;
 '_DISPLAY
 'sleep
-put_str_array b.lines, b.selected, t$
+MEM_put_str_array b.lines, b.selected, t$
 b.text_position = b.text_position + 1
 IF b.text_position > b.scroll_offset_hors + (b.col2 - b.col1 - 2) THEN
   b.scroll_offset_hors = b.scroll_offset_hors + 1
@@ -1184,10 +1228,10 @@ END IF
 END SUB
 
 SUB GUI_del_character_text_box (b AS GUI_element_type)
-t$ = get_str_array$(b.lines, b.selected)
+t$ = MEM_get_str_array$(b.lines, b.selected)
 IF LEN(t$) > 0 AND b.text_position > 0 and len(t$) >= b.text_position THEN
   t$ = MID$(t$, 1, b.text_position - 1) + MID$(t$, b.text_position + 1)
-  put_str_array b.lines, b.selected, t$
+  MEM_put_str_array b.lines, b.selected, t$
   b.text_position = b.text_position - 1
   IF b.text_position < b.scroll_offset_hors THEN
     b.scroll_offset_hors = b.scroll_offset_hors - 1
@@ -1201,13 +1245,13 @@ elseif len(t$) < b.text_position then
   loop
 elseif b.text_position = 0 and b.selected > 1 then
   'append text to line above, shift all lines below the selected one up, decrease selected line
-  k$ = get_str_array$(b.lines, b.selected - 1)
+  k$ = MEM_get_str_array$(b.lines, b.selected - 1)
   lengt = len(k$)
-  put_str_array b.lines, b.selected - 1, (k$ + t$)
+  MEM_put_str_array b.lines, b.selected - 1, (k$ + t$)
   for x = b.selected to b.length - 1
-    put_str_array b.lines, x, get_str_array$(b.lines, x + 1)
+    MEM_put_str_array b.lines, x, MEM_get_str_array$(b.lines, x + 1)
   next x
-  put_str_array b.lines, b.length, ""
+  MEM_put_str_array b.lines, b.length, ""
   b.selected = b.selected - 1
   b.length = b.length - 1
   b.text_position = lengt
@@ -1234,9 +1278,18 @@ next x
 END SUB
 
 SUB GUI_free_element (b as GUI_element_type)
-free_string b.nam
-free_string b.text
-free_array b.lines
+DIM m as GUI_menu_item_type
+MEM_free_string b.nam
+MEM_free_string b.text
+MEM_free_array b.lines
+IF b.element_type = GUI_MENU then
+  if b.length > 0 then
+    FOR x = 1 to b.length
+      m = _MEMGET(b.menu, b.menu.OFFSET + len(m) * (x - 1), GUI_menu_item_type)
+      GUI_free_menu m
+    next x
+  end if
+end if
 END SUB
 
 SUB GUI_attach_menu (menu_item as GUI_menu_item_type, item_num AS INTEGER, items as _OFFSET)
@@ -1252,12 +1305,24 @@ g.menu = _MEM(items, LEN(m) * item_num)
 g.length = item_num
 END SUB
 
+SUB GUI_free_menu(m as GUI_menu_item_type)
+DIM men as GUI_menu_item_type
+MEM_free_string m.nam 'First free name
+if m.has_sub then
+  FOR x = 1 to m.sub_menu_length 'free any sub menus of this item
+    men = _MEMGET(m.sub_menu, m.sub_menu.OFFSET + len(men) * (x - 1), GUI_menu_item_type)
+    GUI_free_menu men
+  next x
+end if
+'... I don't think I need to free the _MEM (m.sub_menu) because it points to a fixed array
+END SUB
+
 SUB GUI_draw_gui_menu (b as GUI_element_type, m as GUI_menu_item_type, row1, col1)
 DIM men as GUI_menu_item_type
 wid = 0
 for x = 1 to m.sub_menu_length
   men = _MEMGET(m.sub_menu, m.sub_menu.OFFSET + len(men) * (x - 1), GUI_menu_item_type)
-  l = GUI_menu_len(get_str$(men.nam))
+  l = GUI_menu_len(MEM_get_str$(men.nam))
   if l > wid then
     wid = l
   end if
@@ -1276,7 +1341,7 @@ for x = 1 to m.sub_menu_length
   locate x + row1, col1
   color b.mcolor.fr, b.mcolor.bk
   print chr$(179);
-  if get_str$(men.nam) = "-" then
+  if MEM_get_str$(men.nam) = "-" then
     if m.selected = x then
       color b.selcolor.fr, b.selcolor.bk
     else
@@ -1287,19 +1352,19 @@ for x = 1 to m.sub_menu_length
   else
     if m.selected = x then
       if GUI_alt_flag then
-        GUI_print_menu get_str$(men.nam), b.selcolor.fr, b.selcolor.bk, b.scroll_color.fr, b.selcolor.bk
+        GUI_print_menu MEM_get_str$(men.nam), b.selcolor.fr, b.selcolor.bk, b.scroll_color.fr, b.selcolor.bk
       else
         color b.selcolor.fr, b.selcolor.bk
-        GUI_print_menu_no_hilight get_str$(men.nam)
+        GUI_print_menu_no_hilight MEM_get_str$(men.nam)
       end if
     else
       if GUI_alt_flag then
-        GUI_print_menu get_str$(men.nam), b.mcolor.fr, b.mcolor.bk, b.scroll_color.fr, b.mcolor.bk
+        GUI_print_menu MEM_get_str$(men.nam), b.mcolor.fr, b.mcolor.bk, b.scroll_color.fr, b.mcolor.bk
       else
-        GUI_print_menu_no_hilight get_str$(men.nam)
+        GUI_print_menu_no_hilight MEM_get_str$(men.nam)
       end if
     end if
-    PRINT SPACE$(wid - GUI_menu_len(get_str$(men.nam)));
+    PRINT SPACE$(wid - GUI_menu_len(MEM_get_str$(men.nam)));
     color b.mcolor.fr, b.mcolor.bk
     print chr$(179);
   end if

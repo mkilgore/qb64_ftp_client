@@ -7,7 +7,7 @@
 'See file COPYING that should have been included with this source.
 
 TYPE GUI_menu_item_type
-  nam as string_type 'Displayed string for MENU choice
+  nam as MEM_string_type 'Displayed string for MENU choice
   ident as STRING * 5 'identifer string
   'The ident string will be returned in menu_choice
   'when a choice is chosen. Use the identifier to match
@@ -49,7 +49,7 @@ CONST GUI_RADIO_BUTTON = 9
 CONST GUI_LABEL = 10
 
 TYPE GUI_element_type
-  nam AS string_type 'name of item
+  nam AS MEM_string_type 'name of item
 
   element_type AS _BYTE
   '0 -- Nothing
@@ -93,7 +93,7 @@ TYPE GUI_element_type
 
   'text_box AS _BYTE '-1 then drawn as textbox (input box) -- always as row2 = row1 + 2
   
-  text AS string_type 'text drawn/edited in a Input-Box
+  text AS MEM_string_type 'text drawn/edited in a Input-Box
   text_position AS INTEGER 'position of the cursor in the input
   'text_offset AS INTEGER 'We display the string in the box starting at the text_offset character, to account for scrolling to the right
   
@@ -120,7 +120,7 @@ TYPE GUI_element_type
   length AS INTEGER ' Length of string array
   selected AS INTEGER 'selected line in list-box, drop-down, etc.
   selected_old AS INTEGER
-  lines AS array_type ' Array to store strings for list-box, drop-down, etc.
+  lines AS MEM_array_type ' Array to store strings for list-box, drop-down, etc.
   
   checked AS _BYTE 'If set then the check-box is checked
   
@@ -158,7 +158,7 @@ TYPE GUI_default_color_type 'holds colors
 END TYPE
 
 'shared variables for mouse
-COMMON SHARED GUI_MX AS INTEGER, GUI_MY AS INTEGER, GUI_BUT AS INTEGER, GUI_MTIMER AS SINGLE, GUI_MSCROLL AS INTEGER, GUI_BUTFLAG AS INTEGER
+COMMON SHARED GUI_MX AS INTEGER, GUI_MY AS INTEGER, GUI_BUT AS INTEGER GUI_MSCROLL AS INTEGER, GUI_BUTFLAG AS INTEGER
 COMMON SHARED GUI_CUR_ROW AS INTEGER, GUI_CUR_COL AS INTEGER, GUI_alt_flag AS INTEGER
 'default colors -- Values are set by GUI_init and are changable at any time
 COMMON SHARED GUI_DEFAULT_COLOR_BOX as GUI_default_color_type, GUI_DEFAULT_COLOR_INPUT as GUI_default_color_type

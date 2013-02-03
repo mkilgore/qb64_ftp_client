@@ -5,14 +5,14 @@
 'You are free to edit, copy, modify, and redistribute it under the terms
 'of the Do What You Want Public License, Version 1, as published by Matt Kilgore
 'See file COPYING that should have been included with this source.
-TYPE string_type
+TYPE MEM_string_type
   mem AS _MEM
   length AS LONG
   allocated AS LONG
   is_allocated AS _BYTE
 END TYPE
 
-TYPE array_type
+TYPE MEM_array_type
   mem AS _MEM
   length AS LONG
   allocated AS LONG
