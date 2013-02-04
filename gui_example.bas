@@ -3,6 +3,9 @@
 
 '$include:'mem_library/mem_lib.bi'
 '$include:'gui_library/gui_lib.bi'
+'$include:'dialogs/prompt.bi'
+
+$CONSOLE
 
 GUI_init
 
@@ -44,6 +47,7 @@ GUI_attach_base_menu main_gui(g), 4, _OFFSET(base_menu(1))
 m=0
 m=m+1: MEM_put_str file_menu(m).nam, "#New         ": file_menu(m).ident = "NEW  "
 m=m+1: MEM_put_str file_menu(m).nam, "#Open": file_menu(m).ident = "OPEN "
+m=m+1: MEM_put_str file_menu(m).nam, "#Connect": file_menu(m).ident = "CONEC"
 m=m+1: MEM_put_str file_menu(m).nam, "-"
 m=m+1: MEM_put_str file_menu(m).nam, "#Save": file_menu(m).ident = "SAVE "
 m=m+1: MEM_put_str file_menu(m).nam, "S#ave As": file_menu(m).ident = "SAVEA"
@@ -57,6 +61,7 @@ m=m+1: MEM_put_str edit_menu(m).nam, "#Copy": edit_menu(m).ident = "COPY "
 m=m+1: MEM_put_str edit_menu(m).nam, "#Paste": edit_menu(m).ident = "PASTE"
 m=m+1: MEM_put_str edit_menu(m).nam, "#Delete": edit_menu(m).ident = "DELET"
 m=m+1: MEM_put_str edit_menu(m).nam, "-"
+m=m+1: MEM_put_str edit_menu(m).nam, "#Rename": edit_menu(m).ident = "RENAM"
 m=m+1: MEM_put_str edit_menu(m).nam, "#Select All": edit_menu(m).ident = "SELAL"
 GUI_attach_menu base_menu(2), m, _OFFSET(edit_menu(1))
 
@@ -285,7 +290,27 @@ DO 'Main loop
     MEM_put_str main_gui(labels(4)).nam, "Menu Chosen: " + main_gui(1).menu_choice
     main_gui(1).menu_chosen = 0 'Reset the menu so we don't enter this IF again
     i$ = main_gui(1).menu_choice
+    
+    'Redraw screen so menu doesn't show before opening menu choice
+    GUI_draw_element_array main_gui(), gui_num, selected_gui
+    main_gui(1).updated = -1 'set menu to updated
+    
     if i$ = "EXIT " then exit_flag = -1 '"EXIT " is for the EXIT menu option -- So set our exit_flag variable
+    if i$ = "ABOUT" then
+      about_dialog
+    end if
+    if i$ = "RENAM" then
+      rename_file_GUI 0
+    end if
+    if i$ = "OPEN " then
+      prompt = prompt_dialog("Test Dialog"+chr$(13) + "Line 2", 10, OK_BUTTON OR CLOSE_BUTTON, OK_BUTTON)
+    end if
+    if i$ = "CONEC" then
+      Connect_To_FTP
+    end if
+    if i$ = "HELP " then
+      popup_dialog_gui "Not Implemented Yet."
+    end if
   end if
 LOOP UNTIL exit_flag = -1 or _EXIT
 
@@ -294,5 +319,16 @@ GUI_free_element_array main_gui()
 
 SYSTEM
 
+sub debug_print (p$)
+_DEST _CONSOLE
+print p$
+_DEST 0
+END SUB
+
 '$include:'mem_library/mem_lib.bm'
 '$include:'gui_library/gui_lib.bm'
+'$include:'dialogs/about.bm'
+'$include:'dialogs/rename_file.bm'
+'$include:'dialogs/prompt.bm'
+'$include:'dialogs/ftp_connect.bm'
+'$include:'dialogs/dialog_simple.bm'

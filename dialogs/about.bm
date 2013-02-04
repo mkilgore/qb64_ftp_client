@@ -7,48 +7,53 @@
 'See file COPYING that should have been included with this source.
 
 SUB about_dialog () 'Displays 'about' box
-DIM box AS box_type, ok_button(1) AS box_type
-'box.nam = "About"
-put_str box.nam, "About"
-box.row1 = _HEIGHT(0) \ 2 - 3
-box.row2 = box.row1 + 7
-box.col1 = _WIDTH(0) \ 2 - 20
-box.col2 = _WIDTH(0) \ 2 + 20
-box.shadow = -1
-box.c1 = box_c1
-box.c2 = box_c2
-box.text_box = -1
 
-ok_button(1).button = -1
-ok_button(1).row1 = box.row2 - 1
-'ok_button(1).nam = "Close"
-put_str ok_button(1).nam, "Close"
-ok_button(1).col1 = box.col1 + (box.col2 - box.col1) \ 2 - 2
-ok_button(1).c1 = box_c1
-ok_button(1).c2 = box_c2
-ok_button(1).sc1 = box_sel_c1
-ok_button(1).sc2 = box_sel_c2
+gui_num = 4
+DIM gui(gui_num) AS GUI_element_type
 
-update = -1
+gui(1).element_type = GUI_BOX
+gui(1).dialog = -1
+GUI_init_element gui(1), "About"
+gui(1).row1 = _HEIGHT(0) \ 2 - 3
+gui(1).row2 = gui(1).row1 + 7
+gui(1).col1 = _WIDTH(0) \ 2 - 20
+gui(1).col2 = _WIDTH(0) \ 2 + 20
+gui(1).shadow = -1
+gui(1).layer = -1 'Set in background
+
+gui(2).element_type = GUI_LABEL
+gui(2).dialog = -1
+GUI_init_element gui(2), "GUI Example Program"
+gui(2).row1 = gui(1).row1 + 2
+gui(2).col1 = _WIDTH(0) \ 2 - len(MEM_Get_str$(gui(2).nam)) \ 2
+
+gui(3).element_type = GUI_LABEL
+gui(3).dialog = -1
+GUI_init_element gui(3), "Written by Matt Kilgore in QB64"
+gui(3).row1 = gui(1).row1 + 4
+gui(3).col1 = _WIDTH(0) \ 2 - len(MEM_Get_str$(gui(3).nam)) \ 2
+
+gui(4).element_type = GUI_BUTTON
+gui(4).dialog = -1
+GUI_init_element gui(4), "Close"
+gui(4).row1 = gui(1).row2 - 1
+gui(4).col1 = gui(1).col1 + (gui(1).col2 - gui(1).col1) \ 2 - 2
+
 exit_gui_flag = 0
-DO: _LIMIT 100
-  m = mouse_range(ok_button(), 1)
-  IF update THEN
-    update = 0
-    draw_box box, 0
-    draw_box ok_button(1), 1
-    COLOR box_c1, box_c2
-    d$ = "FTP Client version " + VER$
-    LOCATE box.row1 + 2, _WIDTH(0) \ 2 - LEN(d$) \ 2
-    PRINT d$;
-    d$ = "Written by Matt Kilgore in QB64"
-    LOCATE box.row1 + 4, _WIDTH(0) \ 2 - LEN(d$) \ 2
-    PRINT d$;
-    _AUTODISPLAY
-    LOCATE ok_button(1).row1, ok_button(1).col1 + 1, 1
-  END IF
-  IF m = 1 OR INKEY$ > "" THEN: LOCATE , , 0: exit_gui_flag = -1
-LOOP until exit_gui_flag
-free_gui_element box
-free_gui_array ok_button()
+selected_gui = 4
+
+DO
+  _LIMIT 100
+  if GUI_update_screen(gui(), gui_num, selected_gui) then
+    GUI_draw_element_array gui(), gui_num, selected_gui
+  end if
+  
+  GUI_mouse_range gui(), gui_num, selected_gui
+  
+  key$ = GUI_inkey$(gui(), gui_num, selected_gui)
+  
+  if gui(4).pressed then exit_gui_flag = -1
+  
+LOOP until exit_gui_flag or key$ = CHR$(27)
+GUI_free_element_array gui()
 END SUB

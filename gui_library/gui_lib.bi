@@ -81,6 +81,7 @@ TYPE GUI_element_type
   
   pressed AS _BYTE ' set if button pressed -- needs to be reset if you intend to do something else
 
+  dialog AS _BYTE 'If set, dialog defaults will be used instead of normal default colors
 
   'text_box AS _BYTE '-1 then drawn as textbox (input box) -- always as row2 = row1 + 2
   
@@ -157,5 +158,12 @@ COMMON SHARED GUI_DEFAULT_COLOR_TEXT as GUI_default_color_type, GUI_DEFAULT_COLO
 COMMON SHARED GUI_DEFAULT_COLOR_DROP as GUI_default_color_type, GUI_DEFAULT_COLOR_CHECKBOX as GUI_default_color_type
 COMMON SHARED GUI_DEFAULT_COLOR_MENU as GUI_default_color_type, GUI_DEFAULT_COLOR_BUTTON as GUI_default_color_type
 COMMON SHARED GUI_DEFAULT_COLOR_RADIO as GUI_default_color_type, GUI_DEFAULT_COLOR_LABEL as GUI_default_color_type
+
+'Default colors for dialogs 
+COMMON SHARED GUI_DEFAULT_DIALOG_COLOR_BOX as GUI_default_color_type, GUI_DEFAULT_DIALOG_COLOR_INPUT as GUI_default_color_type
+COMMON SHARED GUI_DEFAULT_DIALOG_COLOR_TEXT as GUI_default_color_type, GUI_DEFAULT_DIALOG_COLOR_LIST as GUI_default_color_type
+COMMON SHARED GUI_DEFAULT_DIALOG_COLOR_DROP as GUI_default_color_type, GUI_DEFAULT_DIALOG_COLOR_CHECKBOX as GUI_default_color_type
+COMMON SHARED GUI_DEFAULT_DIALOG_COLOR_MENU as GUI_default_color_type, GUI_DEFAULT_DIALOG_COLOR_BUTTON as GUI_default_color_type
+COMMON SHARED GUI_DEFAULT_DIALOG_COLOR_RADIO as GUI_default_color_type, GUI_DEFAULT_DIALOG_COLOR_LABEL as GUI_default_color_type
 
 DIM SHARED GUI_alt_codes$(51) ' thanks to Galleon for alt-code stuff

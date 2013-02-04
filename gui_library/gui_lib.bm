@@ -57,6 +57,53 @@ GUI_DEFAULT_COLOR_RADIO.selcolor.fr = 15
 GUI_DEFAULT_COLOR_RADIO.selcolor.bk = 1
 GUI_DEFAULT_COLOR_LABEL.mcolor.fr = 7
 GUI_DEFAULT_COLOR_LABEL.mcolor.bk = 1
+
+GUI_DEFAULT_DIALOG_COLOR_BOX.mcolor.fr = 0
+GUI_DEFAULT_DIALOG_COLOR_BOX.mcolor.bk =7
+GUI_DEFAULT_DIALOG_COLOR_BOX.selcolor.fr = 7
+GUI_DEFAULT_DIALOG_COLOR_BOX.selcolor.bk = 0
+GUI_DEFAULT_DIALOG_COLOR_BUTTON.mcolor.fr = 0
+GUI_DEFAULT_DIALOG_COLOR_BUTTON.mcolor.bk = 7
+GUI_DEFAULT_DIALOG_COLOR_BUTTON.selcolor.fr = 15
+GUI_DEFAULT_DIALOG_COLOR_BUTTON.selcolor.bk = 7
+GUI_DEFAULT_DIALOG_COLOR_DROP.mcolor.fr = 0
+GUI_DEFAULT_DIALOG_COLOR_DROP.mcolor.bk = 7
+GUI_DEFAULT_DIALOG_COLOR_DROP.selcolor.fr = 7
+GUI_DEFAULT_DIALOG_COLOR_DROP.selcolor.bk = 0
+GUI_DEFAULT_DIALOG_COLOR_DROP.scroll_color.fr = 0
+GUI_DEFAULT_DIALOG_COLOR_DROP.scroll_color.bk = 7
+GUI_DEFAULT_DIALOG_COLOR_CHECKBOX.mcolor.fr = 0
+GUI_DEFAULT_DIALOG_COLOR_CHECKBOX.mcolor.bk = 7
+GUI_DEFAULT_DIALOG_COLOR_CHECKBOX.selcolor.fr = 15
+GUI_DEFAULT_DIALOG_COLOR_CHECKBOX.selcolor.bk = 7
+GUI_DEFAULT_DIALOG_COLOR_INPUT.mcolor.fr = 0
+GUI_DEFAULT_DIALOG_COLOR_INPUT.mcolor.bk = 7
+GUI_DEFAULT_DIALOG_COLOR_INPUT.selcolor.fr = 15
+GUI_DEFAULT_DIALOG_COLOR_INPUT.selcolor.bk = 7
+GUI_DEFAULT_DIALOG_COLOR_LIST.mcolor.fr = 0
+GUI_DEFAULT_DIALOG_COLOR_LIST.mcolor.bk = 7
+GUI_DEFAULT_DIALOG_COLOR_LIST.selcolor.fr = 7
+GUI_DEFAULT_DIALOG_COLOR_LIST.selcolor.bk = 0
+GUI_DEFAULT_DIALOG_COLOR_LIST.scroll_color.fr = 0
+GUI_DEFAULT_DIALOG_COLOR_LIST.scroll_color.bk = 7
+GUI_DEFAULT_DIALOG_COLOR_MENU.mcolor.fr = 0
+GUI_DEFAULT_DIALOG_COLOR_MENU.mcolor.bk = 7
+GUI_DEFAULT_DIALOG_COLOR_MENU.selcolor.fr = 7
+GUI_DEFAULT_DIALOG_COLOR_MENU.selcolor.bk = 0
+GUI_DEFAULT_DIALOG_COLOR_MENU.scroll_color.fr = 15
+GUI_DEFAULT_DIALOG_COLOR_MENU.scroll_color.bk = 7
+GUI_DEFAULT_DIALOG_COLOR_TEXT.mcolor.fr = 0
+GUI_DEFAULT_DIALOG_COLOR_TEXT.mcolor.bk = 7
+GUI_DEFAULT_DIALOG_COLOR_TEXT.selcolor.fr = 7
+GUI_DEFAULT_DIALOG_COLOR_TEXT.selcolor.bk = 0
+GUI_DEFAULT_DIALOG_COLOR_TEXT.scroll_color.fr = 0
+GUI_DEFAULT_DIALOG_COLOR_TEXT.scroll_color.bk = 7
+GUI_DEFAULT_DIALOG_COLOR_RADIO.mcolor.fr = 0
+GUI_DEFAULT_DIALOG_COLOR_RADIO.mcolor.bk = 7
+GUI_DEFAULT_DIALOG_COLOR_RADIO.selcolor.fr = 15
+GUI_DEFAULT_DIALOG_COLOR_RADIO.selcolor.bk = 7
+GUI_DEFAULT_DIALOG_COLOR_LABEL.mcolor.fr = 0
+GUI_DEFAULT_DIALOG_COLOR_LABEL.mcolor.bk = 7
 END SUB
 
 FUNCTION GUI_move_to_next_gui (movement$, current_selected, gui() AS GUI_element_type, gui_num AS INTEGER)
@@ -150,7 +197,7 @@ END FUNCTION
 FUNCTION GUI_update_screen (gui() AS GUI_element_type, gui_num AS INTEGER, sel AS INTEGER)
 FOR x = 1 to gui_num
   if gui(x).element_type = GUI_DROP_DOWN and x <> sel and gui(x).drop_flag then gui(x).drop_flag = 0: GUI_update_screen = -1
-  if gui(x).updated then GUI_update_screen = -1
+  if gui(x).updated then GUI_update_screen = -1: gui(x).updated = 0
 NEXT x
 END FUNCTION
 
@@ -170,6 +217,8 @@ IF (keys) AND GUI_alt_flag = 0 THEN 'Hold
         sel = x 'change selected
       end if
     next x
+  elseif gui(sel).element_type = GUI_MENU and gui(sel).menu_open = -1 then
+    gui(sel).updated = -1
   end if
 END IF
 IF keys = 0 AND GUI_alt_flag THEN 'Release
@@ -184,6 +233,8 @@ IF keys = 0 AND GUI_alt_flag THEN 'Release
       sel = gui(sel).selected_old
       gui(sel).updated = -1
     end if
+  elseif gui(sel).menu_open = -1 then
+    gui(sel).updated = -1
   end if
 END IF
 ch$ = INKEY$
@@ -282,6 +333,9 @@ SELECT CASE ch$
     elseif gui(sel).element_type = GUI_DROP_DOWN then
       gui(sel).drop_flag = not gui(sel).drop_flag
       gui(sel).updated = -1
+    elseif gui(sel).element_type = GUI_LIST_BOX then
+      gui(sel).pressed = -1
+      gui(sel).updated = -1
     end if
   CASE CHR$(0) + CHR$(80) 'DOWN
     if gui(sel).element_type = GUI_LIST_BOX OR gui(sel).element_type = GUI_TEXT_BOX OR (gui(sel).element_type = GUI_DROP_DOWN AND gui(sel).drop_flag) then
@@ -354,6 +408,7 @@ SELECT CASE ch$
       men = _MEMGET(gui(sel).menu, gui(sel).menu.OFFSET + len(men) * (gui(sel).selected - 1), GUI_menu_item_type)
       men.selected = 1
       _MEMPUT gui(sel).menu, gui(sel).menu.OFFSET + len(men) * (gui(sel).selected - 1), men
+      gui(sel).updated = -1
       'end if
     end if
   CASE CHR$(0) + CHR$(77) 'RIGHT
@@ -380,6 +435,7 @@ SELECT CASE ch$
       men = _MEMGET(gui(sel).menu, gui(sel).menu.OFFSET + len(men) * (gui(sel).selected - 1), GUI_menu_item_type)
       men.selected = 1
       _MEMPUT gui(sel).menu, gui(sel).menu.OFFSET + len(men) * (gui(sel).selected - 1), men
+      gui(sel).updated = -1
       'end if
     END IF
   CASE CHR$(0) + CHR$(73) 'PageUp
@@ -407,6 +463,7 @@ SELECT CASE ch$
           if ucase$(k$) = ucase$(GUI_menu_char$(MEM_get_str$(men.nam))) then
             gui(sel).selected = x
             gui(sel).menu_open = -1
+            gui(sel).updated = -1
             men.selected = 1
             _MEMPUT gui(sel).menu, gui(sel).menu.OFFSET + len(men) * (x - 1), men
           end if
@@ -438,39 +495,92 @@ SUB GUI_init_element (g as GUI_element_type, nam$)
 MEM_put_str g.nam, nam$
 SELECT CASE g.element_type
   case GUI_BOX
-    g.mcolor = GUI_DEFAULT_COLOR_BOX.mcolor
-    g.selcolor = GUI_DEFAULT_COLOR_BOX.selcolor
+    if g.dialog then
+      g.mcolor = GUI_DEFAULT_DIALOG_COLOR_BOX.mcolor
+      g.selcolor = GUI_DEFAULT_DIALOG_COLOR_BOX.selcolor
+    else
+      g.mcolor = GUI_DEFAULT_COLOR_BOX.mcolor
+      g.selcolor = GUI_DEFAULT_COLOR_BOX.selcolor
+    end if
   CASE GUI_BUTTON
-    g.mcolor = GUI_DEFAULT_COLOR_BUTTON.mcolor
-    g.selcolor = GUI_DEFAULT_COLOR_BUTTON.selcolor
+    if g.dialog then
+      g.mcolor = GUI_DEFAULT_DIALOG_COLOR_BUTTON.mcolor
+      g.selcolor = GUI_DEFAULT_DIALOG_COLOR_BUTTON.selcolor
+    else
+      g.mcolor = GUI_DEFAULT_COLOR_BUTTON.mcolor
+      g.selcolor = GUI_DEFAULT_COLOR_BUTTON.selcolor
+    end if
   CASE GUI_DROP_DOWN
-    g.mcolor = GUI_DEFAULT_COLOR_DROP.mcolor
-    g.selcolor = GUI_DEFAULT_COLOR_DROP.selcolor
-    g.scroll_color = GUI_DEFAULT_COLOR_DROP.scroll_color
+    if g.dialog then
+      g.mcolor = GUI_DEFAULT_DIALOG_COLOR_DROP.mcolor
+      g.selcolor = GUI_DEFAULT_DIALOG_COLOR_DROP.selcolor
+      g.scroll_color = GUI_DEFAULT_DIALOG_COLOR_DROP.scroll_color
+    else
+      g.mcolor = GUI_DEFAULT_COLOR_DROP.mcolor
+      g.selcolor = GUI_DEFAULT_COLOR_DROP.selcolor
+      g.scroll_color = GUI_DEFAULT_COLOR_DROP.scroll_color
+    end if
   CASE GUI_CHECKBOX
-    g.mcolor = GUI_DEFAULT_COLOR_CHECKBOX.mcolor
-    g.selcolor = GUI_DEFAULT_COLOR_CHECKBOX.selcolor
+    if g.dialog then
+      g.mcolor = GUI_DEFAULT_DIALOG_COLOR_CHECKBOX.mcolor
+      g.selcolor = GUI_DEFAULT_DIALOG_COLOR_CHECKBOX.selcolor
+    else
+      g.mcolor = GUI_DEFAULT_COLOR_CHECKBOX.mcolor
+      g.selcolor = GUI_DEFAULT_COLOR_CHECKBOX.selcolor
+    end if
   CASE GUI_INPUT_BOX
-    g.mcolor = GUI_DEFAULT_COLOR_INPUT.mcolor
-    g.selcolor = GUI_DEFAULT_COLOR_INPUT.selcolor
+    if g.dialog then
+      g.mcolor = GUI_DEFAULT_DIALOG_COLOR_INPUT.mcolor
+      g.selcolor = GUI_DEFAULT_DIALOG_COLOR_INPUT.selcolor
+    else
+      g.mcolor = GUI_DEFAULT_COLOR_INPUT.mcolor
+      g.selcolor = GUI_DEFAULT_COLOR_INPUT.selcolor
+    end if
   CASE GUI_LIST_BOX
-    g.mcolor = GUI_DEFAULT_COLOR_LIST.mcolor
-    g.selcolor = GUI_DEFAULT_COLOR_LIST.selcolor
-    g.scroll_color = GUI_DEFAULT_COLOR_LIST.scroll_color
+    if g.dialog then
+      g.mcolor = GUI_DEFAULT_DIALOG_COLOR_LIST.mcolor
+      g.selcolor = GUI_DEFAULT_DIALOG_COLOR_LIST.selcolor
+      g.scroll_color = GUI_DEFAULT_DIALOG_COLOR_LIST.scroll_color
+    else
+      g.mcolor = GUI_DEFAULT_COLOR_LIST.mcolor
+      g.selcolor = GUI_DEFAULT_COLOR_LIST.selcolor
+      g.scroll_color = GUI_DEFAULT_COLOR_LIST.scroll_color
+    end if
   CASE GUI_MENU
-    g.mcolor = GUI_DEFAULT_COLOR_MENU.mcolor
-    g.selcolor = GUI_DEFAULT_COLOR_MENU.selcolor
-    g.scroll_color = GUI_DEFAULT_COLOR_MENU.scroll_color
+    if g.dialog then
+      g.mcolor = GUI_DEFAULT_DIALOG_COLOR_MENU.mcolor
+      g.selcolor = GUI_DEFAULT_DIALOG_COLOR_MENU.selcolor
+      g.scroll_color = GUI_DEFAULT_DIALOG_COLOR_MENU.scroll_color
+    else
+      g.mcolor = GUI_DEFAULT_COLOR_MENU.mcolor
+      g.selcolor = GUI_DEFAULT_COLOR_MENU.selcolor
+      g.scroll_color = GUI_DEFAULT_COLOR_MENU.scroll_color
+    end if
     g.skip = -1
   CASE GUI_TEXT_BOX
-    g.mcolor = GUI_DEFAULT_COLOR_TEXT.mcolor
-    g.selcolor = GUI_DEFAULT_COLOR_TEXT.selcolor
-    g.scroll_color = GUI_DEFAULT_COLOR_TEXT.scroll_color
+    if g.dialog then
+      g.mcolor = GUI_DEFAULT_DIALOG_COLOR_TEXT.mcolor
+      g.selcolor = GUI_DEFAULT_DIALOG_COLOR_TEXT.selcolor
+      g.scroll_color = GUI_DEFAULT_DIALOG_COLOR_TEXT.scroll_color
+    else
+      g.mcolor = GUI_DEFAULT_COLOR_TEXT.mcolor
+      g.selcolor = GUI_DEFAULT_COLOR_TEXT.selcolor
+      g.scroll_color = GUI_DEFAULT_COLOR_TEXT.scroll_color
+    end if
   CASE GUI_RADIO_BUTTON
-    g.mcolor = GUI_DEFAULT_COLOR_RADIO.mcolor
-    g.selcolor = GUI_DEFAULT_COLOR_RADIO.selcolor
-  CASE GUI_LABEL
-    g.mcolor = GUI_DEFAULT_COLOR_LABEL.mcolor
+    if g.dialog then
+      g.mcolor = GUI_DEFAULT_DIALOG_COLOR_RADIO.mcolor
+      g.selcolor = GUI_DEFAULT_DIALOG_COLOR_RADIO.selcolor
+    else
+      g.mcolor = GUI_DEFAULT_COLOR_RADIO.mcolor
+      g.selcolor = GUI_DEFAULT_COLOR_RADIO.selcolor
+    end if
+  CASE GUI_LABEL  
+    if g.dialog then
+      g.mcolor = GUI_DEFAULT_DIALOG_COLOR_LABEL.mcolor
+    else
+      g.mcolor = GUI_DEFAULT_COLOR_LABEL.mcolor
+    end if
     g.skip = -1
 END SELECT
 g.updated = -1
@@ -1029,10 +1139,16 @@ if found > 0 then
     case GUI_LIST_BOX
       selected_gui = found
       IF GUI_my >= b(found).row1 + 1 and GUI_my <= b(found).row2 - 1 THEN
-        IF GUI_mx >= b(found).col1 + 1 AND GUI_mx <= b(found).col2 - 1 THEN
-          b(found).selected = GUI_my - b(found).row1 + b(found).scroll_offset_vert
+        IF GUI_mx >= b(found).col1 + 1 AND GUI_mx <= b(found).col2 - 1 then
+          s = GUI_my - b(found).row1 + b(found).scroll_offset_vert
+          if b(found).selected <> s then
+            b(found).selected = s
+          else
+            b(found).pressed = -1
+          end if
         END IF
       END IF
+      if b(found).selected > b(found).length then b(found).selected = b(found).length
       check_scroll = -1
       b(found).updated = -1
     case GUI_DROP_DOWN

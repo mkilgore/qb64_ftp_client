@@ -17,9 +17,9 @@ IF local_or_remote = 0 AND is_connected = 0 THEN
 END IF
 
 IF local_or_remote = 0 THEN
-  file$ = RTRIM$(get_str$(Remote_files(boxes(2).selected).nam))
+  file$ = RTRIM$(MEM_get_str$(Remote_files(boxes(2).selected).nam))
 ELSE
-  file$ = RTRIM$(get_str$(Local_files(boxes(1).selected).nam))
+  file$ = RTRIM$(MEM_get_str$(Local_files(boxes(1).selected).nam))
 END IF
 
 IF file$ = ".." THEN EXIT SUB 'we can't delete '..'

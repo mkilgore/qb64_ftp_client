@@ -12,469 +12,142 @@ SUB main () 'main loop for GUI, etc.
 
 get_new_dir
 refresh_Local_files
-update = -1
-selected_box = 1
+global_selected_gui = 1
+
 print_files boxes(1), Local_files()
 print_files boxes(2), Remote_files()
+
 DO
-  _LIMIT 200
-  m = mouse_range(boxes(), BOXES) 'check key presses
-  IF m > 0 THEN
-    IF selected_box <> 3 THEN
-      selected_box = m
-      update = -1
-    ELSEIF m <> 3 THEN
-      IF my < menux.row1 OR my > menux.row2 OR mx < menux.col1 OR mx > menux.col2 THEN
-        selected_box = m
-        update = -1
-      END IF
-    END IF
-  END IF
-  IF but AND TIMER - mtimer > .1 THEN
-    mtimer = TIMER
-    'Click
-    IF m > 0 AND m < 3 AND selected_box < 3 THEN
-      IF mx > boxes(m).col1 AND mx < boxes(m).col2 THEN
-        IF my > boxes(m).row1 AND my < boxes(m).row2 THEN
-          selec = boxes(m).offset + my - boxes(m).row1
-          IF boxes(m).selected = selec THEN
-            IF Local_files(boxes(1).selected).flag_cwd AND m = 1 THEN
-              CHDIR RTRIM$(get_str$(Local_files(boxes(1).selected).nam))
-              get_new_dir
-              refresh_Local_files
-              update = -1
-            ELSEIF m = 2 THEN
-              IF is_connected THEN
-                IF Remote_files(boxes(2).selected).flag_cwd THEN
-                  change_remote_dir RTRIM$(get_str$(Remote_files(boxes(2).selected).nam))
-                  Update_Remote_Files
-                  update = -1
-                END IF
-              END IF
-            END IF
-          ELSE
-            boxes(m).selected = selec
-          END IF
-        END IF
-      ELSEIF mx = boxes(m).col2 THEN 'Scroll bar
-        IF my = boxes(m).row1 + 1 THEN
-          IF boxes(m).selected > 1 THEN
-            update = -1
-            boxes(m).selected = boxes(m).selected - 1
-            IF boxes(m).offset + 1 > boxes(m).selected THEN
-              boxes(m).offset = boxes(m).offset - 1
-            END IF
-          END IF
-        ELSEIF my = boxes(m).row2 - 1 THEN
-          IF boxes(m).selected < boxes(m).length THEN
-            update = -1
-            boxes(m).selected = boxes(m).selected + 1
-            IF boxes(m).offset + (boxes(m).row2 - boxes(m).row1 - 1) < boxes(m).selected THEN
-              boxes(m).offset = boxes(m).offset + 1
-            END IF
-          END IF
-        ELSEIF my > boxes(m).scroll_loc THEN
-          IF boxes(m).selected < boxes(m).length THEN
-            update = -1
-            boxes(m).selected = boxes(m).selected + (boxes(m).row2 - boxes(m).row1)
-            IF boxes(m).selected > boxes(m).length THEN boxes(m).selected = boxes(m).length
-
-            IF boxes(m).offset + (boxes(m).row2 - boxes(m).row1 - 1) < boxes(m).selected THEN
-              boxes(m).offset = (boxes(m).selected - (boxes(m).row2 - boxes(m).row1 - 1))
-            END IF
-          END IF
-        ELSEIF my < boxes(m).scroll_loc THEN
-          IF boxes(m).selected > 1 THEN
-            update = 1
-            boxes(m).selected = boxes(m).selected - (boxes(m).row2 - boxes(m).row1)
-            IF boxes(m).selected <= 0 THEN boxes(m).selected = 1
-            IF boxes(m).offset + 1 > boxes(m).selected THEN
-              boxes(m).offset = boxes(m).selected - 1
-            END IF
-          END IF
-        END IF
-      END IF
-      IF boxes(selected_box).selected > boxes(selected_box).length THEN boxes(selected_box).selected = boxes(selected_box).length
-    ELSEIF m = 3 THEN
-      temp_menu_sel = 0
-      k = 2
-      FOR x = 1 TO g_menu_c
-        IF mx > k AND mx <= k + menu_len(Global_Menu$(x)) THEN
-          global_menu_sel = x
-          menu_sel = 1
-          menux.text_box = -1
-          'menux.nam = ""
-          put_str menux.nam, ""
-          menux.row1 = 2
-          menux.row2 = 3 + Menun(global_menu_sel)
-          menux.col1 = k
-          menux.col2 = menux.col1 + menu_max_len(global_menu_sel)
-          menux.c1 = menu_c1
-          menux.c2 = menu_c2
-          menux.shadow = -1
-          update = -1
-          EXIT FOR
-        END IF
-        k = k + menu_len(Global_Menu$(x))
-      NEXT x
-    END IF
-    IF selected_box = 3 THEN
-      IF my > menux.row1 AND my < menux.row2 THEN
-        IF mx > menux.col1 AND mx < menux.col2 THEN
-          sel = my - menux.row1
-          IF sel = menu_sel THEN
-            menu_clicked = -1
-          END IF
-          IF Menu$(global_menu_sel, sel) <> "-" THEN
-            menu_sel = sel
-            update = -1
-            menu_clicked = -1
-          END IF
-        END IF
-      END IF
-    END IF
-
-  END IF
-  IF mscroll <> 0 THEN 'scroll wheel
-    boxes(selected_box).offset = boxes(selected_box).offset + mscroll
-    IF boxes(selected_box).offset > (boxes(selected_box).length - (boxes(selected_box).row2 - boxes(selected_box).row1 - 1)) THEN boxes(selected_box).offset = boxes(selected_box).length - (boxes(selected_box).row2 - boxes(selected_box).row1 - 1)
-    IF boxes(selected_box).offset < 0 THEN boxes(selected_box).offset = 0
-    update = -1
-  END IF
-  a$ = INKEY$
-  SELECT CASE a$
-    CASE CHR$(0) + CHR$(72)
-      IF selected_box < 3 THEN
-        IF boxes(selected_box).selected > 1 THEN update = -1: boxes(selected_box).selected = boxes(selected_box).selected - 1: IF boxes(selected_box).offset + 1 > boxes(selected_box).selected THEN boxes(selected_box).offset = boxes(selected_box).offset - 1
-      ELSE
-        menu_sel = menu_sel - 1
-        IF menu_sel < 1 THEN menu_sel = Menun(global_menu_sel)
-        IF Menu$(global_menu_sel, menu_sel) = "-" THEN menu_sel = menu_sel - 1
-        update = -1
-      END IF
-
-    CASE CHR$(0) + CHR$(80)
-      IF selected_box < 3 THEN
-        IF boxes(selected_box).selected < boxes(selected_box).length THEN update = -1: boxes(selected_box).selected = boxes(selected_box).selected + 1: IF boxes(selected_box).offset + (boxes(selected_box).row2 - boxes(selected_box).row1 - 1) < boxes(selected_box).selected THEN boxes(selected_box).offset = boxes(selected_box).offset + 1
-      ELSEIF temp_menu_sel = 0 AND global_menu_sel > 0 THEN
-        menu_sel = (menu_sel MOD Menun(global_menu_sel)) + 1
-        IF Menu$(global_menu_sel, menu_sel) = "-" THEN menu_sel = menu_sel + 1
-        update = -1
-      ELSEIF temp_menu_sel > 0 THEN
-        global_menu_sel = temp_menu_sel
-        temp_menu_sel = 0
-        menu_sel = 1
-        menux.text_box = -1
-        '        menux.nam = ""
-        put_str menux.nam, ""
-        menux.row1 = 2
-        menux.row2 = 3 + Menun(global_menu_sel)
-        menux.col1 = 2
-        FOR x = 1 TO global_menu_sel - 1
-          menux.col1 = menux.col1 + menu_len(Global_Menu$(x))
-        NEXT x
-
-        menux.col2 = menux.col1 + menu_max_len(global_menu_sel)
-        menux.c1 = menu_c1
-        menux.c2 = menu_c2
-        menux.shadow = -1
-        update = -1
-
-      END IF
-    CASE CHR$(0) + CHR$(75)
-      IF selected_box < 3 THEN
-        selected_box = (selected_box MOD 2) + 1
-        update = -1
-      ELSEIF selected_box = 3 AND temp_menu_sel = 0 AND global_menu_sel > 0 THEN
-        global_menu_sel = global_menu_sel - 1
-        IF global_menu_sel = 0 THEN global_menu_sel = g_menu_c
-        menu_sel = 1
-        menux.text_box = -1
-        '                menux.nam = ""
-        put_str menux.nam, ""
-        menux.row1 = 2
-        menux.row2 = 3 + Menun(global_menu_sel)
-        menux.col1 = 2
-        FOR x = 1 TO global_menu_sel - 1
-          menux.col1 = menux.col1 + menu_len(Global_Menu$(x))
-        NEXT x
-        menux.col2 = menux.col1 + menu_max_len(global_menu_sel)
-        menux.c1 = menu_c1
-        menux.c2 = menu_c2
-        menux.shadow = -1
-
-        update = -1
-      ELSEIF temp_menu_sel > 0 THEN
-        temp_menu_sel = temp_menu_sel - 1
-        IF temp_menu_sel = 0 THEN temp_menu_sel = g_menu_c
-        update = -1
-      END IF
-    CASE CHR$(0) + CHR$(77)
-      IF selected_box < 3 THEN
-        selected_box = (selected_box MOD 2) + 1
-        update = -1
-      ELSEIF selected_box = 3 AND temp_menu_sel = 0 AND global_menu_sel > 0 THEN
-        global_menu_sel = (global_menu_sel MOD g_menu_c) + 1
-        menu_sel = 1
-        menux.text_box = -1
-        '        menux.nam = ""
-        put_str menux.nam, ""
-        menux.row1 = 2
-        menux.row2 = 3 + Menun(global_menu_sel)
-        menux.col1 = 2
-        FOR x = 1 TO global_menu_sel - 1
-          menux.col1 = menux.col1 + menu_len(Global_Menu$(x))
-        NEXT x
-
-        menux.col2 = menux.col1 + menu_max_len(global_menu_sel)
-        menux.c1 = menu_c1
-        menux.c2 = menu_c2
-        menux.shadow = -1
-        update = -1
-      ELSEIF temp_menu_sel > 0 THEN
-        temp_menu_sel = temp_menu_sel + 1
-        IF temp_menu_sel = g_menu_c + 1 THEN temp_menu_sel = 1
-        update = -1
-      END IF
-    CASE CHR$(13) 'ENTER
-      IF selected_box = 1 THEN 'Local File system
-        IF Local_files(boxes(1).selected).flag_cwd THEN
-          CHDIR RTRIM$(get_str$(Local_files(boxes(1).selected).nam))
-          get_new_dir
-          refresh_Local_files
-          update = -1
-        END IF
-      ELSEIF selected_box = 2 THEN
-        IF is_connected THEN
-          IF Remote_files(boxes(2).selected).flag_cwd THEN
-            change_remote_dir RTRIM$(get_str$(Remote_files(boxes(2).selected).nam))
-            Update_Remote_Files
-            update = -1
-          END IF
-        END IF
-      ELSEIF selected_box = 3 THEN
-        menu_clicked = -1
-      END IF
-
-    CASE CHR$(0) + CHR$(16) TO CHR$(0) + CHR$(50)
-      k$ = alt_codes$(ASC(a$, 2))
-      IF selected_box = 3 AND alt_flag_1 THEN
-        IF temp_menu_sel > 0 THEN
-          FOR x = 1 TO g_menu_c
-            IF UCASE$(k$) = UCASE$(menu_char$(Global_Menu$(x))) THEN
-              global_menu_sel = x
-              temp_menu_sel = 0
-              menu_sel = 1
-              menux.text_box = -1
-              '  menux.nam = ""
-              put_str menux.nam, ""
-              menux.row1 = 2
-              menux.row2 = 3 + Menun(global_menu_sel)
-              menux.col1 = 2
-              FOR x = 1 TO global_menu_sel - 1
-                menux.col1 = menux.col1 + menu_len(Global_Menu$(x))
-              NEXT x
-              menux.col2 = menux.col1 + menu_max_len(global_menu_sel)
-              menux.c1 = menu_c1
-              menux.c2 = menu_c2
-              menux.shadow = -1
-              update = -1
-            END IF
-          NEXT x
-        ELSE
-          men = 0
-          FOR x = 1 TO Menun(global_menu_sel)
-            IF UCASE$(k$) = UCASE$(menu_char$(Menu$(global_menu_sel, x))) THEN
-              menu_sel = x
-              temp_menu_sel = 0
-              menu_clicked = -1
-              update = -1
-              men = -1
-            END IF
-          NEXT x
-          IF men = 0 THEN
-            FOR x = 1 TO g_menu_c
-              IF UCASE$(k$) = UCASE$(menu_char$(Global_Menu$(x))) THEN
-                global_menu_sel = x
-                temp_menu_sel = 0
-                menu_sel = 1
-                menux.text_box = -1
-                '                menux.nam = ""
-                put_str menux.nam, ""
-                menux.row1 = 2
-                menux.row2 = 3 + Menun(global_menu_sel)
-                menux.col1 = 2
-                FOR x = 1 TO global_menu_sel - 1
-                  menux.col1 = menux.col1 + menu_len(Global_Menu$(x))
-                NEXT x
-                menux.col2 = menux.col1 + menu_max_len(global_menu_sel)
-                menux.c1 = menu_c1
-                menux.c2 = menu_c2
-                menux.shadow = -1
-                update = -1
-              END IF
-            NEXT x
-          END IF
-        END IF
-
-      END IF
-
-    CASE CHR$(9) 'TAB
-      selected_box = (selected_box MOD (BOXES - 1)) + 1
-      update = -1
-      'boxes(selected_box).selected = boxes(selected_box).offset + 1
-    CASE CHR$(18)
-      global_menu_sel = 2
-      menu_sel = 1
-      menu_clicked = -1
-
-    CASE CHR$(0) + CHR$(73) ' PAGE UP
-      IF sselected_box < 3 THEN
-        IF boxes(selected_box).selected > 1 THEN
-          update = 1
-          boxes(selected_box).selected = boxes(selected_box).selected - (boxes(selected_box).row2 - boxes(selected_box).row1)
-          IF boxes(selected_box).selected <= 0 THEN boxes(selected_box).selected = 1
-          IF boxes(selected_box).offset + 1 > boxes(selected_box).selected THEN
-            boxes(selected_box).offset = boxes(selected_box).selected - 1
-          END IF
-        END IF
-      END IF
-    CASE CHR$(0) + CHR$(81) ' PAGE DOWN
-      IF selected_box < 3 THEN
-        IF boxes(selected_box).selected < boxes(selected_box).length THEN
-          update = -1
-          boxes(selected_box).selected = boxes(selected_box).selected + (boxes(selected_box).row2 - boxes(selected_box).row1)
-          IF boxes(selected_box).selected > boxes(selected_box).length THEN boxes(selected_box).selected = boxes(selected_box).length
-
-          IF boxes(selected_box).offset + (boxes(selected_box).row2 - boxes(selected_box).row1 - 1) < boxes(selected_box).selected THEN
-            boxes(selected_box).offset = (boxes(selected_box).selected - (boxes(selected_box).row2 - boxes(selected_box).row1 - 1))
-          END IF
-        END IF
-      END IF
-  END SELECT
-  'Credit to Galleon for ALT key stuff
-  keys = _KEYDOWN(100307) + _KEYDOWN(100308) * 2
-  IF (keys) AND alt_flag_1 = 0 THEN 'Hold
-    IF selected_box <> 3 THEN
-      selected_box = 3
-      temp_menu_sel = g_menu_c + 1
-      update = -1
-      'else
-      '       selected_box = 4
-      '           temp_menu_sel = 0
-      '           update = -1
-    END IF
-    alt_flag_1 = -1
-  END IF
-  IF keys = 0 AND alt_flag_1 THEN 'Release
-    IF temp_menu_sel > 0 AND temp_menu_sel < g_menu_c + 1 THEN
-      selected_box = 4
-      temp_menu_sel = 0
-      update = -1
-    ELSEIF temp_menu_sel = g_menu_c + 1 THEN
-      temp_menu_sel = 1
-      update = -1
-    END IF
-    alt_flag_1 = 0
-  END IF
-  IF menu_clicked THEN
-    menu_clicked = 0
-    selected_box = 4
-    temp_menu_sel = 0
+  _LIMIT 100
+  
+  if GUI_update_screen(boxes(), BOXES, global_selected_gui) then
+    'GUI_draw_element_array boxes(), BOXES, global_selected_gui
     update_scrn
-    _DISPLAY 'So menu updates
-    IF global_menu_sel = 1 THEN 'this is where we decide what to do based on what is selected in the menu
-      IF menu_sel = 1 THEN
-        Connect_To_FTP
-        update = -1
-      ELSEIF menu_sel = 2 THEN
-        is_connected = 0
-        CLOSE command_connect&
-        status$ = "Not Connected."
-        boxes(2).length = 0
-        update = -1
-      ELSEIF menu_sel = 3 THEN
-        command_line
-        update_scrn
-        IF is_connected THEN Update_Remote_Files
-        refresh_Local_files
-        update = -1
-      ELSEIF menu_sel = 5 THEN
-        SYSTEM
-      END IF
-    ELSEIF global_menu_sel = 2 THEN
-      IF menu_sel = 1 THEN
-        refresh_Local_files
-        update = -1
-      ELSEIF menu_sel = 3 THEN
-        rename_file_GUI 1 '1 = local rename file
-        refresh_Local_files
-        update = -1
-      ELSEIF menu_sel = 4 THEN
-        delete_file_GUI 1 '1 = local delete file
-        update = -1
-      ELSEIF menu_sel = 5 THEN
-        show_hidden_local = NOT show_hidden_local
-        refresh_Local_files
-        update = -1
-      END IF
-    ELSEIF global_menu_sel = 3 THEN
-      IF menu_sel = 1 THEN
-        Update_Remote_Files
-        update = -1
-      ELSEIF menu_sel = 3 THEN
-        rename_file_GUI 0 '0 = remote delete file
-        Update_Remote_Files
-        update = -1
-      ELSEIF menu_sel = 4 THEN
-        delete_file_GUI 0 '0 = remote delete file
-        Update_Remote_Files
-        update = -1
-      ELSEIF menu_sel = 5 THEN
-        show_hidden_remote = NOT show_hidden_remote
-        Update_Remote_Files
-        update = -1
-      END IF
-    ELSEIF global_menu_sel = 4 THEN
-      IF menu_sel = 1 THEN
-        send_file get_str$(Local_files(boxes(2).selected).nam)
-        refresh_Local_files
-        update = -1
-      ELSEIF menu_sel = 2 THEN
-        get_file get_str$(Remote_files(boxes(2).selected).nam)
-        refresh_Local_files
-        update = -1
-      END IF
-    ELSEIF global_menu_sel = 5 THEN
-      IF menu_sel = 1 THEN 'help
-        test = prompt_dialog("Test", 10, OK_BUTTON OR CANCEL_BUTTON OR NO_BUTTON OR CLOSE_BUTTON OR YES_BUTTON, 10)
-      ELSEIF menu_sel = 2 THEN
-        settings_dialog
-        IF is_connected THEN Update_Remote_Files
-        refresh_Local_files
-        update = -1
-      ELSE
-        IF menu_sel = 4 THEN 'about
-          about_dialog
-          update = -1
-        END IF
-      END IF
-    END IF
-    menu_clicked = 0
-    selected_box = 4
-    temp_menu_sel = 0
-    global_menu_sel = 0
-    menu_sel = 0
-    update = -1
-  END IF
-  IF update THEN
-    'draw_menu
+  end if
+  
+  GUI_mouse_range boxes(), BOXES, global_selected_gui
+  
+  key$ = GUI_inkey$(boxes(), BOXES, global_selected_gui)
+  
+  if boxes(1).pressed then
+    boxes(1).pressed = 0
+    CHDIR MEM_get_str$(Local_files(boxes(1).selected).nam)
+    get_new_dir
+    refresh_Local_files
+    boxes(1).updated = -1
+  end if
+  if boxes(2).pressed then
+    boxes(2).pressed = 0
+    change_remote_dir RTRIM$(MEM_get_str$(Remote_files(boxes(2).selected).nam))
+    Update_Remote_Files
+    boxes(2).updated = -1
+    'update remote files
+  end if
+  
+  IF boxes(6).menu_chosen then
+    boxes(6).menu_chosen = 0
     update_scrn
-
-    _DISPLAY
-    update = 0
-  END IF
-LOOP 'UNTIL a$ = CHR$(27)
+    boxes(6).updated = -1
+    i$ = boxes(6).menu_choice
+    if i$ = "EXIT " then 
+      exit_flag = -1
+    elseif i$ = "ABOUT" then
+      about_dialog
+    elseif i$ = "CONEC" then
+      Connect_To_FTP
+    end if
+  end if
+  'IF menu_clicked THEN
+  '  menu_clicked = 0
+  '  selected_box = 4
+  '  temp_menu_sel = 0
+  '  update_scrn
+  '  _DISPLAY 'So menu updates
+  '  IF global_menu_sel = 1 THEN 'this is where we decide what to do based on what is selected in the menu
+  '    IF menu_sel = 1 THEN
+  '      Connect_To_FTP
+  '      update = -1
+  '    ELSEIF menu_sel = 2 THEN
+  '      is_connected = 0
+  '      CLOSE command_connect&
+  '      status$ = "Not Connected."
+  '      boxes(2).length = 0
+  '      update = -1
+  '    ELSEIF menu_sel = 3 THEN
+  '      command_line
+  '      update_scrn
+  '      IF is_connected THEN Update_Remote_Files
+  '      refresh_Local_files
+  '      update = -1
+  '    ELSEIF menu_sel = 5 THEN
+  '      SYSTEM
+  '    END IF
+  '  ELSEIF global_menu_sel = 2 THEN
+  '    IF menu_sel = 1 THEN
+  '      refresh_Local_files
+  '      update = -1
+  '    ELSEIF menu_sel = 3 THEN
+  '      rename_file_GUI 1 '1 = local rename file
+  '      refresh_Local_files
+  '      update = -1
+  '    ELSEIF menu_sel = 4 THEN
+  '      delete_file_GUI 1 '1 = local delete file
+  '      update = -1
+  '    ELSEIF menu_sel = 5 THEN
+  '      show_hidden_local = NOT show_hidden_local
+  '      refresh_Local_files
+  '      update = -1
+  '    END IF
+  '  ELSEIF global_menu_sel = 3 THEN
+  '    IF menu_sel = 1 THEN
+  '      Update_Remote_Files
+  '      update = -1
+  '    ELSEIF menu_sel = 3 THEN
+  '      rename_file_GUI 0 '0 = remote delete file
+  '      Update_Remote_Files
+  '      update = -1
+  '    ELSEIF menu_sel = 4 THEN
+  '      delete_file_GUI 0 '0 = remote delete file
+  '      Update_Remote_Files
+  '      update = -1
+  '    ELSEIF menu_sel = 5 THEN
+  '      show_hidden_remote = NOT show_hidden_remote
+  '      Update_Remote_Files
+  '      update = -1
+  '    END IF
+  '  ELSEIF global_menu_sel = 4 THEN
+  '    IF menu_sel = 1 THEN
+  '      send_file get_str$(Local_files(boxes(2).selected).nam)
+  '      refresh_Local_files
+  '      update = -1
+  '    ELSEIF menu_sel = 2 THEN
+  '      get_file get_str$(Remote_files(boxes(2).selected).nam)
+  '      refresh_Local_files
+  '      update = -1
+  '    END IF
+  '  ELSEIF global_menu_sel = 5 THEN
+  '    IF menu_sel = 1 THEN 'help
+  '      test = prompt_dialog("Test", 10, OK_BUTTON OR CANCEL_BUTTON OR NO_BUTTON OR CLOSE_BUTTON OR YES_BUTTON, 10)
+  '    ELSEIF menu_sel = 2 THEN
+  '      settings_dialog
+  '      IF is_connected THEN Update_Remote_Files
+  '      refresh_Local_files
+  '      update = -1
+  '    ELSE
+  '      IF menu_sel = 4 THEN 'about
+  '        about_dialog
+  '        update = -1
+  '      END IF
+  '    END IF
+  '  END IF
+  '  menu_clicked = 0
+  '  selected_box = 4
+  '  temp_menu_sel = 0
+  '  global_menu_sel = 0
+  '  menu_sel = 0
+  '  update = -1
+  'END IF
+LOOP UNTIL key$ = CHR$(27) or _EXIT or exit_flag
 END SUB
 
 SUB setup_main_GUI () 'sets up the main GUI
@@ -483,45 +156,53 @@ SUB setup_main_GUI () 'sets up the main GUI
 'SCREEN scrn&
 
 'boxes(1).nam = "Local"
-put_str boxes(1).nam, "Local"
+'put_str boxes(1).nam, "Local"
+
 boxes(1).col1 = 1
 boxes(1).col2 = _WIDTH(0) \ 2
 boxes(1).row1 = 2
 boxes(1).row2 = _HEIGHT(0) - 2
-boxes(1).c1 = main_gui_c1
-boxes(1).c2 = main_gui_c2
-boxes(1).sc1 = main_gui_sel_c1
-boxes(1).sc2 = main_gui_sel_c2
-boxes(1).scroll = -1
-'boxes(1).length = 0
+boxes(1).scroll = 1
 boxes(1).selected = 1
-boxes(1).multi_text_box = -1
+boxes(1).mcolor = GUI_DEFAULT_COLOR_LIST.mcolor
+boxes(1).selcolor = GUI_DEFAULT_COLOR_LIST.selcolor
+boxes(1).scroll_color = GUI_DEFAULT_COLOR_LIST.scroll_color
 
-'boxes(2).nam = "Remote"
-put_str boxes(2).nam, "Remote"
 boxes(2).col1 = _WIDTH(0) \ 2 + 1
 boxes(2).col2 = _WIDTH(0)
 boxes(2).row1 = 2
 boxes(2).row2 = _HEIGHT(0) - 2
-boxes(2).c1 = main_gui_c1
-boxes(2).c2 = main_gui_c2
-boxes(2).sc1 = main_gui_sel_c1
-boxes(2).sc2 = main_gui_sel_c2
-boxes(2).scroll = -1
-'boxes(2).length = 0
-boxes(2).selected = 0
-boxes(2).multi_text_box = -1
+boxes(2).scroll = 1
+boxes(2).selected = 1
+boxes(2).mcolor = GUI_DEFAULT_COLOR_LIST.mcolor
+boxes(2).selcolor = GUI_DEFAULT_COLOR_LIST.selcolor
+boxes(2).scroll_color = GUI_DEFAULT_COLOR_LIST.scroll_color
 
-'boxes(3).nam = "MENU" 'Not actually drawn on the screen
-put_str boxes(3).nam, "MENU"
-boxes(3).row1 = 1
-boxes(3).row2 = 1
 boxes(3).col1 = 1
-boxes(3).col2 = scrnw
-boxes(3).menu = -1
+boxes(3).row1 = _HEIGHT(0)
+boxes(3).mcolor.fr = status_c1
+boxes(3).mcolor.bk = status_c2
 
-menux.c1 = menu_c1
-menux.c2 = menu_c2
+boxes(4).row1 = boxes(2).row2 + 1
+boxes(4).col1 = 1
+
+boxes(5).row1 = boxes(2).row2 + 1
+boxes(5).col1 = boxes(2).col1
+
+boxes(6).col1 = 1
+boxes(6).col2 = _WIDTH(0)
+boxes(6).row1 = 1
+boxes(6).menu_padding = 2
+boxes(6).mcolor = GUI_DEFAULT_COLOR_MENU.mcolor
+boxes(6).selcolor = GUI_DEFAULT_COLOR_MENU.selcolor
+boxes(6).scroll_color = GUI_DEFAULT_COLOR_MENU.scroll_color
+
+boxes(7).row1 = 2
+boxes(7).row2 = 24
+boxes(7).col1 = 1
+boxes(7).col2 = 80
+'menux.c1 = menu_c1
+'menux.c2 = menu_c2
 
 
 END SUB
@@ -529,41 +210,12 @@ END SUB
 
 
 SUB update_scrn () 'updates screen -- draws main gui
-COLOR 7, 1
-FOR x = 2 TO _HEIGHT(0) - 1
-  LOCATE x, 1
-  PRINT SPACE$(_WIDTH(0));
-NEXT x
-COLOR status_c1, status_c2
-LOCATE _HEIGHT(0), 1
-PRINT SPACE$(_WIDTH(0));
-LOCATE _HEIGHT(0), 1
-PRINT "Status: "; status$;
-if selected_Box = 1 then
-  boxes(1).sc1 = main_gui_sel_c1
-  boxes(1).sc2 = main_gui_sel_c2
-  boxes(2).sc1 = file_non_sel
-  boxes(2).sc2 = main_gui_c2
-elseif selected_Box = 2 then
-  boxes(2).sc1 = main_gui_sel_c1
-  boxes(2).sc2 = main_gui_sel_c2
-  boxes(1).sc1 = file_non_sel
-  boxes(1).sc2 = main_gui_c2
-else
-  boxes(1).sc1 = file_non_sel
-  boxes(1).sc2 = main_gui_c2
-  boxes(2).sc1 = file_non_sel
-  boxes(2).sc2 = main_gui_c2
-end if
-draw_box boxes(1), selected_box = 1
-draw_box boxes(2), selected_box = 2
-COLOR main_gui_c1, main_gui_c2
-LOCATE _HEIGHT(0) - 1, 1
-PRINT SPACE$(_WIDTH(0));
-LOCATE _HEIGHT(0) - 1, 1
+
+MEM_put_str boxes(3).nam, status$ + space$(_WIDTH(0) - len(status$))
+
 leng = _WIDTH(0) \ 2 - 1
 IF LEN(Local_dir$) < leng THEN
-  PRINT Local_dir$;
+  l$ = Local_dir$
 ELSE
   IF INSTR(Local_dir$, ":") THEN
     'Windows dir
@@ -571,78 +223,34 @@ ELSE
   ELSE
     dir$ = "/..." + RIGHT$(Local_dir$, leng - 4)
   END IF
-  PRINT dir$;
+  l$ = dir$
 END IF
-LOCATE _HEIGHT(0) - 1, leng + 3
 IF LEN(Remote_dir$) < leng THEN
-  PRINT Remote_dir$;
+  r$ = remote_dir$
 ELSE
   IF INSTR(Local_dir$, ":") THEN
     dir$ = LEFT$(Remote_dir$, 3) + "..." + RIGHT$(Remote_dir$, leng - 6)
   ELSE
     dir$ = "/..." + RIGHT$(Remote_dir$, leng - 4)
   END IF
-  PRINT dir$;
+  r$ = dir$
 END IF
 
-IF selected_box = 3 THEN
-  IF global_menu_sel > 0 AND temp_menu_sel = 0 THEN
-    COLOR menu_c1, menu_c2
-    LOCATE 1, 1
-    PRINT SPACE$(_WIDTH(0));
-    LOCATE 1, 1
-    PRINT "  ";
-    FOR x = 1 TO g_menu_c
-      IF global_menu_sel = x THEN COLOR menu_sel_c1, menu_sel_c2: k = menu_sel_c1 ELSE COLOR menu_c1, menu_c2: k = menu_c1
-      print_menu_no_hilight Global_Menu$(x)
-    NEXT x
-    draw_box menux, 0
-    FOR x = 1 TO Menun(global_menu_sel)
-      LOCATE menux.row1 + x, menux.col1 + 1
-      IF menu_sel = x THEN
-        COLOR menu_sel_c1, menu_sel_c2: k = menu_sel_c1
-      ELSE
-        COLOR menu_c1, menu_c2: k = menu_c1
-      END IF
-      IF Menu$(global_menu_sel, x) = "-" THEN
-        p = POS(0): LOCATE , p - 1
-        PRINT CHR$(195); STRING$(menu_max_len(global_menu_sel) - 1, 196); CHR$(180);
-      ELSE
-        print_menu Menu$(global_menu_sel, x) + SPACE$(menu_max_len(global_menu_sel) - LEN(Menu$(global_menu_sel, x))), k
-      END IF
-    NEXT x
-  ELSE
-    COLOR menu_c1, menu_c2
-    LOCATE 1, 1
-    PRINT SPACE$(_WIDTH(0));
-    LOCATE 1, 1
-    PRINT "  ";
-    FOR x = 1 TO g_menu_c
-      IF temp_menu_sel = x THEN COLOR menu_sel_c1, menu_sel_c2: k = menu_sel_c1 ELSE COLOR menu_c1, menu_c2: k = menu_c1
-      print_menu Global_Menu$(x), k
-    NEXT x
-  END IF
-ELSE
-  COLOR menu_c1, menu_c2
-  LOCATE 1, 1
-  PRINT SPACE$(_WIDTH(0));
-  LOCATE 1, 1
-  PRINT "  ";
-  FOR x = 1 TO g_menu_c
-    print_menu_no_hilight Global_Menu$(x)
-  NEXT x
-END IF
+MEM_put_str boxes(4).nam, l$
+MEM_put_str boxes(5).nam, r$
+
+GUI_draw_element_array boxes(), BOXES, global_selected_gui
 
 END SUB
 
-SUB print_files (b AS box_type, f() AS filedir_type) 'Displays files f() in box b()
-'DIM s as string_type
-if b.length > b.multi_line.length then
-  reallocate_array b.multi_line, b.length + 2
+SUB print_files (b AS GUI_element_type, f() AS filedir_type) 'Displays files f() in box b
+
+if b.length > b.lines.length then
+  MEM_reallocate_array b.lines, b.length + 2
 end if
-FOR x = 1 to b.multi_line.length 'b.row2 - b.row1 - 1
+FOR x = 1 to b.lines.length 'b.row2 - b.row1 - 1
   if x <= b.length then
-    k$ = get_Str$(f(x).nam)
+    k$ = MEM_get_Str$(f(x).nam)
     if len(k$) > b.col2 - b.col1 - 4 then
       k$ = mid$(k$, 1, b.col2 - b.col1 - 4)
     else
@@ -655,17 +263,9 @@ FOR x = 1 to b.multi_line.length 'b.row2 - b.row1 - 1
     else
       k$ = k$ + "   "
     end if
-    put_str_array b.multi_line, x - 1, k$
+    MEM_put_str_array b.lines, x, k$
   else
-    put_str_array b.multi_line, x - 1, ""
+    MEM_put_str_array b.lines, x, ""
   end if
 next x
-
-'free_string s
-'COLOR b.c1, b.c2
-'FOR x = 1 TO b.row2 - b.row1 - 1
-'  LOCATE x + b.row1, b.col1 + 1
-'  IF x + b.offset = b.selected AND selected THEN COLOR b.sc1, b.sc2 ELSE IF x + b.offset = b.selected THEN COLOR file_non_sel, b.c2 ELSE COLOR b.c1, b.c2
-'  IF x + b.offset <= b.length THEN PRINT USING "\" + SPACE$(b.col2 - b.col1 - 8) + "\ \ \ "; get_str$(f(x + b.offset).nam); f(x + b.offset).dir; ELSE PRINT SPACE$(b.col2 - b.col1 - 1);
-'NEXT x
 END SUB

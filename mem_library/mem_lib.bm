@@ -63,11 +63,11 @@ $CHECKING:OFF
 IF NOT a.is_allocated THEN
   'not already allocated
   a.element_size = element_size
-  a.length = number_of_elements + 1 'add one to make it go from 0 to number_of_elements as BASIC programers would expect
+  a.length = number_of_elements 'add one to make it go from 0 to number_of_elements as BASIC programers would expect
   a.is_allocated = -1
-  a.allocated = a.length * element_size
-  a.mem = _MEMNEW(a.length * element_size)
-  _MEMFILL a.mem, a.mem.OFFSET, a.length * element_size, 0 as _byte
+  a.allocated = (a.length + 1) * element_size
+  a.mem = _MEMNEW((a.length + 1) * element_size)
+  _MEMFILL a.mem, a.mem.OFFSET, (a.length + 1) * element_size, 0 as _byte
 elseif a.element_size = element_size then
   MEM_reallocate_array a, number_of_elements
 END IF

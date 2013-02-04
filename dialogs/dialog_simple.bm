@@ -5,27 +5,39 @@
 'You are free to edit, copy, modify, and redistribute it under the terms
 'of the Do What You Want Public License, Version 1, as published by Matt Kilgore
 'See file COPYING that should have been included with this source.
-SUB dialog_disp (dialog$) 'Displays a dialog box with the text dialog$ inside
-IF NOT cmd_mode THEN
-  DIM box AS box_type
-  'box.nam = ""
-  put_str box.nam, ""
-  box.row1 = _HEIGHT(0) \ 2 - 1
-  box.row2 = _HEIGHT(0) \ 2 + 1
-  box.col1 = _WIDTH(0) \ 2 - (LEN(dialog$) + 2) \ 2
-  box.col2 = _WIDTH(0) \ 2 + (LEN(dialog$) + 2) \ 2
-  box.shadow = -1
-  box.c1 = box_c1
-  box.c2 = box_c2
-  box.text_box = -1
-  draw_box box, 0
-  LOCATE box.row1 + 1, _WIDTH(0) \ 2 - LEN(dialog$) \ 2
-END IF
-PRINT dialog$
-IF NOT cmd_mode THEN
-  _DISPLAY
-  t# = TIMER
-  DO: _LIMIT 100: LOOP UNTIL INKEY$ > "" OR TIMER - t# > 1.5
-  free_gui_element box
-END IF
+SUB popup_dialog_gui (dialog$) 'Displays a dialog box with the text dialog$ inside
+'IF NOT cmd_mode THEN
+'  DIM box AS box_type
+DIM box(2) as GUI_element_type
+'box.nam = ""
+box(1).element_type = GUI_BOX
+box(1).dialog = -1
+GUI_init_element box(1), ""
+box(1).row1 = _HEIGHT(0) \ 2 - 1
+box(1).row2 = _HEIGHT(0) \ 2 + 1
+box(1).col1 = _WIDTH(0) \ 2 - (LEN(dialog$) + 2) \ 2
+box(1).col2 = _WIDTH(0) \ 2 + (LEN(dialog$) + 2) \ 2
+box(1).shadow = -1
+
+box(2).element_type = GUI_LABEL
+box(2).dialog = -1
+GUI_init_element box(2), dialog$
+box(2).row1 = box(1).row1 + 1
+box(2).col1 = box(1).col1 + 2
+
+GUI_draw_element_array box(), 2, 0
+
+t# = TIMER
+DO: _LIMIT 100: LOOP UNTIL INKEY$ > "" OR TIMER - t# > 5
+
+GUI_free_element_array box()
+
+'END IF
+'PRINT dialog$
+'IF NOT cmd_mode THEN
+'  _DISPLAY
+'  t# = TIMER
+'  DO: _LIMIT 100: LOOP UNTIL INKEY$ > "" OR TIMER - t# > 1.5
+'  free_gui_element box
+'END IF
 END SUB

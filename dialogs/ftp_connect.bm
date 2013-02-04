@@ -7,176 +7,192 @@
 'See file COPYING that should have been included with this source.
 
 SUB Connect_To_FTP () 'GUI for connecting to FTP and opens the connection with FTP server
-selected_gui = 1
-DIM main_ide AS box_type
+gui_num = 6
+
+DIM gui(gui_num) as GUI_element_type
+
 'main_ide.nam = "Connect to FTP Server"
-put_str main_ide.nam, "Connect to FTP Server"
-main_ide.c1 = box_c1
-main_ide.c2 = box_c2
-main_ide.text_box = -1
-main_ide.shadow = -1
+gui(1).element_type = GUI_BOX
+gui(1).dialog = -1
+GUI_init_element gui(1), "Connect to FTP Server"
+gui(1).shadow = -1
+gui(1).skip = -1
+gui(1).layer = -1
 rows = 12
 cols = 46
-main_ide.row1 = _HEIGHT(0) \ 2 - rows \ 2
-main_ide.row2 = main_ide.row1 + rows
-main_ide.col1 = _WIDTH(0) \ 2 - cols \ 2
-main_ide.col2 = main_ide.col1 + cols
+gui(1).row1 = _HEIGHT(0) \ 2 - rows \ 2
+gui(1).row2 = gui(1).row1 + rows
+gui(1).col1 = _WIDTH(0) \ 2 - cols \ 2
+gui(1).col2 = gui(1).col1 + cols
 
-DIM gui(5) AS box_type
 'DIM gui_text$(3)
-r = main_ide.row1 + 1
-c = main_ide.col1 + 4
+r = gui(1).row1 + 1
+c = gui(1).col1 + 4
 
-gui(1).row1 = main_ide.row1 + 1
-gui(1).col1 = main_ide.col1 + 3
-gui(1).row2 = gui(1).row1 + 2
-gui(1).col2 = gui(1).col1 + 40
-gui(1).text_box = -1
-gui(1).c1 = box_c1
-gui(1).c2 = box_c2
-gui(1).sc1 = box_c1
-gui(1).sc2 = box_c2
-'gui(1).nam = "Server"
-put_str gui(1).nam, "Server"
-
-gui(2).row1 = gui(1).row2 + 1
-gui(2).col1 = gui(1).col1
+gui(2).element_type = GUI_INPUT_BOX
+gui(2).dialog = -1
+GUI_init_element gui(2), "Server"
+gui(2).row1 = gui(1).row1 + 1
+gui(2).col1 = gui(1).col1 + 3
 gui(2).row2 = gui(2).row1 + 2
 gui(2).col2 = gui(2).col1 + 40
-gui(2).text_box = -1
-gui(2).c1 = box_c1
-gui(2).c2 = box_c2
-gui(2).sc1 = box_c1
-gui(2).sc2 = box_c2
-'gui(2).nam = "Username"
-put_str gui(2).nam, "Username"
 
+
+gui(3).element_type = GUI_INPUT_BOX
+gui(3).dialog = -1
+GUI_init_element gui(3), "Username"
 gui(3).row1 = gui(2).row2 + 1
 gui(3).col1 = gui(2).col1
 gui(3).row2 = gui(3).row1 + 2
 gui(3).col2 = gui(3).col1 + 40
-gui(3).text_box = -1
-gui(3).c1 = box_c1
-gui(3).c2 = box_c2
-gui(3).sc1 = box_c1
-gui(3).sc2 = box_c2
-'gui(3).nam = "Password"
-put_str gui(3).nam, "Password"
-gui(3).hide = -1
 
-gui(4).row1 = gui(3).row1 + 3
-'gui(4).nam = "Connect"
-put_str gui(4).nam, "Connect"
-gui(4).col1 = main_ide.col1 + cols \ 3 - LEN(get_str$(gui(4).nam)) \ 2
-gui(4).button = -1
-gui(4).c1 = box_c1
-gui(4).c2 = box_c2
-gui(4).sc1 = box_sel_c1
-gui(4).sc2 = box_sel_c2
+gui(4).element_type = GUI_INPUT_BOX
+gui(4).dialog = -1
+GUI_init_element gui(4), "Password"
+gui(4).row1 = gui(3).row2 + 1
+gui(4).col1 = gui(3).col1
+gui(4).row2 = gui(4).row1 + 2
+gui(4).col2 = gui(4).col1 + 40
+gui(4).hide = -1
 
-gui(5).row1 = gui(4).row1
-'gui(5).nam = "Quit"
-put_str gui(5).nam, "Quit"
-gui(5).col1 = gui(4).col1 + cols \ 3 - LEN(get_str$(gui(5).nam)) \ 2
-gui(5).button = -1
-gui(5).c1 = box_c1
-gui(5).c2 = box_c2
-gui(5).sc1 = box_sel_c1
-gui(5).sc2 = box_sel_c2
-LOCATE , , 1
-locrow = 1
-loccol = 1
 
-update = -1
+gui(5).element_type  = GUI_BUTTON
+gui(5).dialog = -1
+GUI_init_element gui(5), "Connect"
+gui(5).row1 = gui(1).row2 - 1
+gui(5).col1 = gui(1).col1 + cols \ 3 - LEN(MEM_get_str$(gui(5).nam)) \ 2
+
+
+gui(6).element_type = GUI_BUTTON
+gui(6).dialog = -1
+GUI_init_element gui(6), "Exit"
+gui(6).row1 = gui(5).row1
+gui(6).col1 = gui(5).col1 + cols \ 3 - LEN(MEM_get_str$(gui(6).nam)) \ 2
+
+
 exit_gui_flag = 0
+selected_gui = 2
 DO
-  _LIMIT 500
-  m = mouse_range(gui(), 5)
-  IF m <> selected_gui AND m > 0 THEN selected_gui = m: update = -1
-  IF gui(selected_gui).updated THEN gui(selected_gui).updated = 0: update = -1
-  IF but THEN
-    IF selected_gui = 4 THEN
-      server$ = get_str$(gui(1).text) 'gui_text$(1)
-      IF INSTR(server$, ":") THEN
-        port$ = MID$(server$, INSTR(server$, ":") + 1)
-        server$ = MID$(server$, 1, INSTR(server$, ":") - 1)
-      ELSE
-        port$ = "21"
-      END IF
-      username$ = get_str$(gui(2).text) ' gui_text$(2)
-      password$ = get_str$(gui(3).text) 'gui_text$(3)
+  _LIMIT 200
+  
+  if GUI_update_screen(gui(), gui_num, selected_gui) then
+    GUI_draw_element_array gui(), gui_num, selected_gui
+  end if
+  
+  GUI_mouse_range gui(), gui_num, selected_gui
+  
+  a$ = GUI_inkey$(gui(), gui_num, selected_gui)
+  
+  select case a$
+    case chr$(27)
+      exit_gui_flag =-1
+  end select
+  
+  if gui(5).pressed then
+    gui(5).pressed = 0
+    server$ = MEM_get_str$(gui(2).text)
+    if INSTR(server$, ":") then
+      port$ = MID$(server$, INSTR(server$, ":") + 1)
+      server$ = mid$(server$, 1, instr(server$, ":") - 1)
+    else
+      port$ = "21"
+    end if
+    username$ = MEM_get_str$(gui(3).text)
+    password$ = MEM_get_str$(gui(4).text)
+    if username$ = "" then username$ = "anonymous"
+    'Start_ftp_connect
+    if is_connected then exit_gui_flag = -1
+    gui(1).updated = -1
+  end if
+  
+  if gui(6).pressed then
+    exit_gui_flag = -1
+  end if
+  'm = mouse_range(gui(), 5)
+  'IF m <> selected_gui AND m > 0 THEN selected_gui = m: update = -1
+  'IF gui(selected_gui).updated THEN gui(selected_gui).updated = 0: update = -1
+  'IF but THEN
+  '  IF selected_gui = 4 THEN
+  '    server$ = get_str$(gui(1).text) 'gui_text$(1)
+  '    IF INSTR(server$, ":") THEN
+  '      port$ = MID$(server$, INSTR(server$, ":") + 1)
+  '      server$ = MID$(server$, 1, INSTR(server$, ":") - 1)
+  '    ELSE
+  '      port$ = "21"
+  '    END IF
+  '    username$ = get_str$(gui(2).text) ' gui_text$(2)
+  '    password$ = get_str$(gui(3).text) 'gui_text$(3)
 
-      Start_ftp_connect
-      IF is_connected THEN LOCATE , , 0: _DISPLAY: exit_gui_flag = -1
-      update = -1
-    ELSEIF selected_gui = 5 THEN
-      LOCATE , , 0
-      _DISPLAY
-      exit_gui_flag = -1
-    END IF
-  END IF
-  a$ = INKEY$
-  IF a$ > "" THEN
-    test = update_input_boxes(gui(), selected_gui, a$)
-    IF test THEN
-      update = -1
-    ELSE
-      SELECT CASE a$
-        CASE CHR$(9)
-          selected_gui = selected_gui + 1
-          IF selected_gui > 5 THEN selected_gui = 1
-          update = -1
-        CASE CHR$(13)
-          IF selected_gui <= 3 THEN
-            selected_gui = selected_gui + 1
-            update = -1
-          ELSEIF selected_gui > 3 THEN
-            IF selected_gui = 4 THEN
-              'GOSUB connect
-              server$ = get_str$(gui(1).text) 'gui_text$(1)
-              IF INSTR(server$, ":") THEN
-                port$ = MID$(server$, INSTR(server$, ":") + 1)
-                server$ = MID$(server$, 1, INSTR(server$, ":") - 1)
-              ELSE
-                port$ = "21"
-              END IF
-              username$ = get_str$(gui(2).text) 'gui_text$(2)
-              password$ = get_str$(gui(3).text) 'gui_text$(3)
+  '    Start_ftp_connect
+  '    IF is_connected THEN LOCATE , , 0: _DISPLAY: exit_gui_flag = -1
+  '    update = -1
+  '  ELSEIF selected_gui = 5 THEN
+  '    LOCATE , , 0
+  '    _DISPLAY
+  '    exit_gui_flag = -1
+  '  END IF
+  'END IF
+  'a$ = INKEY$
+  'IF a$ > "" THEN
+  '  test = update_input_boxes(gui(), selected_gui, a$)
+  '  IF test THEN
+  '    update = -1
+  '  ELSE
+  '    SELECT CASE a$
+  '      CASE CHR$(9)
+  '        selected_gui = selected_gui + 1
+  '        IF selected_gui > 5 THEN selected_gui = 1
+  '        update = -1
+  '      CASE CHR$(13)
+  '        IF selected_gui <= 3 THEN
+  '          selected_gui = selected_gui + 1
+  '          update = -1
+  '        ELSEIF selected_gui > 3 THEN
+  '          IF selected_gui = 4 THEN
+  '            'GOSUB connect
+  '            server$ = get_str$(gui(1).text) 'gui_text$(1)
+  '            IF INSTR(server$, ":") THEN
+  '              port$ = MID$(server$, INSTR(server$, ":") + 1)
+  '              server$ = MID$(server$, 1, INSTR(server$, ":") - 1)
+  '            ELSE
+  '              port$ = "21"
+  '            END IF
+  '            username$ = get_str$(gui(2).text) 'gui_text$(2)
+  '            password$ = get_str$(gui(3).text) 'gui_text$(3)
 
-              Start_ftp_connect
-              IF is_connected THEN LOCATE , , 0: _DISPLAY: exit_gui_flag = -1
-              update = -1
-            ELSE
-              LOCATE , , 0
-              _DISPLAY
-              exit_gui_flag = -1
+  '            Start_ftp_connect
+  '            IF is_connected THEN LOCATE , , 0: _DISPLAY: exit_gui_flag = -1
+  '            update = -1
+  '          ELSE
+  '            LOCATE , , 0
+  '            _DISPLAY
+  '            exit_gui_flag = -1
 
-            END IF
-          END IF
-      END SELECT
-    END IF
-  END IF
-  IF update THEN
-    _DISPLAY
-    update = 0
-    update_scrn
-    draw_box main_ide, 0
-    FOR x = 1 TO 5
-      draw_box gui(x), selected_gui = x
-      IF x < 4 AND selected_gui = x THEN
-        locrow = gui(x).row1 + 1
-        loccol = gui(x).col1 + gui(x).text_position - gui(x).text_offset + 1
-      ELSEIF selected_gui = x THEN
-        locrow = gui(x).row1
-        loccol = gui(x).col1 + 1
-      END IF
-    NEXT x
+  '          END IF
+  '        END IF
+  '    END SELECT
+  '  END IF
+  'END IF
+  'IF update THEN
+  '  _DISPLAY
+  '  update = 0
+  '  update_scrn
+  '  draw_box main_ide, 0
+  '  FOR x = 1 TO 5
+  '    draw_box gui(x), selected_gui = x
+  '    IF x < 4 AND selected_gui = x THEN
+  '      locrow = gui(x).row1 + 1
+  '      loccol = gui(x).col1 + gui(x).text_position - gui(x).text_offset + 1
+  '    ELSEIF selected_gui = x THEN
+  '      locrow = gui(x).row1
+  '      loccol = gui(x).col1 + 1
+  '    END IF
+  '  NEXT x
 
-    LOCATE locrow, loccol
-    _AUTODISPLAY
-  END IF
+  '  LOCATE locrow, loccol
+  '  _AUTODISPLAY
+  'END IF
 LOOP until exit_gui_flag
 
-free_gui_element main_ide
-free_gui_array gui()
+GUI_free_element_array gui()
 END SUB

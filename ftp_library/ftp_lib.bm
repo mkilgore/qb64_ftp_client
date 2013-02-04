@@ -26,9 +26,9 @@ END SUB
 SUB refresh_Local_files () 'Refreshes the local file listing
 boxes(1).length = 1
 boxes(1).selected = 1
-boxes(1).offset = 0
-put_str Local_files(boxes(1).length).nam, ".."
-Local_files(boxes(1).length).dir = "DIR"
+'boxes(1).offset = 0
+MEM_put_str Local_files(boxes(1).length).nam, ".."
+'Local_files(boxes(1).length).dir = "DIR"
 Local_files(boxes(1).length).flag_cwd = -1
 Local_files(boxes(1).length).flag_retr = 0
 IF opper$ = "NIX" THEN
@@ -40,15 +40,15 @@ IF opper$ = "NIX" THEN
     IF a$ > "" THEN
       IF RIGHT$(a$, 1) = "/" AND a$ <> "../" AND a$ <> "./" THEN
         boxes(1).length = boxes(1).length + 1
-        put_str Local_files(boxes(1).length).nam, a$
-        Local_files(boxes(1).length).dir = "DIR"
+        MEM_put_str Local_files(boxes(1).length).nam, a$
+        'Local_files(boxes(1).length).dir = "DIR"
         Local_files(boxes(1).length).flag_cwd = -1
         Local_files(boxes(1).length).flag_retr = 0
       END IF
       IF RIGHT$(a$, 1) = "@" THEN
         boxes(1).length = boxes(1).length + 1
-        put_str Local_files(boxes(1).length).nam, LEFT$(a$, LEN(a$) - 1) + "/"
-        Local_files(boxes(1).length).dir = "DIR"
+        MEM_put_str Local_files(boxes(1).length).nam, LEFT$(a$, LEN(a$) - 1) + "/"
+        'Local_files(boxes(1).length).dir = "DIR"
         Local_files(boxes(1).length).flag_cwd = -1
         Local_files(boxes(1).length).flag_retr = 0
       END IF
@@ -63,8 +63,8 @@ IF opper$ = "NIX" THEN
       IF RIGHT$(a$, 1) <> "/" AND RIGHT$(a$, 1) <> "@" THEN
         IF RIGHT$(a$, 1) = "*" THEN a$ = LEFT$(a$, LEN(a$) - 1)
         boxes(1).length = boxes(1).length + 1
-        put_str Local_files(boxes(1).length).nam, a$
-        Local_files(boxes(1).length).dir = ""
+        MEM_put_str Local_files(boxes(1).length).nam, a$
+        'Local_files(boxes(1).length).dir = ""
         Local_files(boxes(1).length).flag_cwd = 0
         Local_files(boxes(1).length).flag_retr = -1
       END IF
@@ -80,8 +80,8 @@ ELSE 'I guess I better add that Windows code at some point...
     DO
       LINE INPUT #1, file$
       boxes(1).length = boxes(1).length + 1
-      put_str Local_files(boxes(1).length).nam, file$
-      Local_files(boxes(1).length).dir = ""
+      MEM_put_str Local_files(boxes(1).length).nam, file$
+      'Local_files(boxes(1).length).dir = ""
       Local_files(boxes(1).length).flag_cwd = 0
       Local_files(boxes(1).length).flag_retr = -1
     LOOP UNTIL EOF(1)
@@ -93,8 +93,8 @@ ELSE 'I guess I better add that Windows code at some point...
     DO
       LINE INPUT #1, dir$
       boxes(1).length = boxes(1).length + 1
-      put_str Local_files(boxes(1).length).nam, dir$ + sep$
-      Local_files(boxes(1).length).dir = "DIR"
+      MEM_put_str Local_files(boxes(1).length).nam, dir$ + sep$
+      'Local_files(boxes(1).length).dir = "DIR"
       Local_files(boxes(1).length).flag_cwd = -1
       Local_files(boxes(1).length).flag_retr = 0
     LOOP UNTIL EOF(1)
@@ -124,27 +124,28 @@ END IF
 END SUB
 
 SUB send_file (file$) 'Sends local file to FTP server -- NOT IMPLEMENTED YET
-IF NOT cmd_mode THEN
-  DIM box AS box_type
+'IF NOT cmd_mode THEN
+'  DIM box AS box_type
   'box.nam = "Send File"
-  put_str box.nam, "Send File"
-  box.row1 = _HEIGHT(0) \ 2 - 1
-  box.row2 = _HEIGHT(0) \ 2 + 1
-  box.col1 = _WIDTH(0) \ 2 - 25
-  box.col2 = _WIDTH(0) \ 2 + 25
-  box.shadow = -1
-  box.c1 = box_c1
-  box.c2 = box_c2
-  box.text_box = -1
-  draw_box box, 0
-END IF
+'  put_str box.nam, "Send File"
+'  box.row1 = _HEIGHT(0) \ 2 - 1
+'  box.row2 = _HEIGHT(0) \ 2 + 1
+'  box.col1 = _WIDTH(0) \ 2 - 25
+'  box.col2 = _WIDTH(0) \ 2 + 25
+'  box.shadow = -1
+'  box.c1 = box_c1
+'  box.c2 = box_c2
+'  box.text_box = -1
+'  draw_box box, 0
+'END IF
 text$ = "Sending files is not yet possible, sorry."
+dialog_disp text$
 'IF is_connected THEN IF Local_files(boxes(1).selected).dir = "DIR" THEN text$ = "Error: Please select a file, not a directory." ELSE text$ = "Sending file..." ELSE text$ = "Please connect to a FTP Server first."
-IF NOT cmd_mode THEN LOCATE box.row1 + 1, _WIDTH(0) \ 2 - LEN(text$) \ 2
-PRINT text$
-IF NOT cmd_mode THEN _DISPLAY
-t# = TIMER
-IF NOT cmd_mode THEN DO: _LIMIT 100: LOOP UNTIL INKEY$ > "" OR TIMER - t# > 2
+'IF NOT cmd_mode THEN LOCATE box.row1 + 1, _WIDTH(0) \ 2 - LEN(text$) \ 2
+'PRINT text$
+'IF NOT cmd_mode THEN _DISPLAY
+'t# = TIMER
+'IF NOT cmd_mode THEN DO: _LIMIT 100: LOOP UNTIL INKEY$ > "" OR TIMER - t# > 2
 EXIT SUB
 
 IF is_connected = 0 OR NOT Local_files(boxes(1).selected).flag_retr THEN
@@ -159,14 +160,14 @@ DO: _LIMIT 1000
   GET command_connect&, , b$
   b2$ = b2$ + b$
 LOOP UNTIL INSTR(b2$, crlf$)
-stor$ = "STOR " + RTRIM$(get_str$(Local_files(boxes(1).selected).nam)) + crlf$
+stor$ = "STOR " + RTRIM$(MEM_get_str$(Local_files(boxes(1).selected).nam)) + crlf$
 PUT command_connect&, , stor$
 DO: _LIMIT 1000
   GET command_connect&, , a$
   a2$ = a2$ + a$
   'IF LEFT$(a2$, 1) <> "2" AND INSTR(a2$, crlf$) THEN a2$ = MID$(a2$, INSTR(a2$, crlf$) + 2)
 LOOP UNTIL INSTR(a2$, crlf$)
-OPEN RTRIM$(get_str$(Local_files(boxes(1).selected).nam)) FOR BINARY AS #1
+OPEN RTRIM$(MEM_get_str$(Local_files(boxes(1).selected).nam)) FOR BINARY AS #1
 dat$ = SPACE$(LOF(1))
 GET #1, , dat$
 
@@ -186,7 +187,7 @@ _DISPLAY
 SLEEP
 
 a2$ = ""
-draw_box box, 0
+'draw_box box, 0
 text$ = "Waiting for Server to respond..."
 LOCATE box.row1 + 1, _WIDTH(0) \ 2 - LEN(text$) \ 2
 PRINT text$;
@@ -201,7 +202,7 @@ ELSE
   text$ = "Transfer failed..."
 END IF
 SLEEP
-draw_box box, 0
+'draw_box box, 0
 LOCATE box.row1 + 1, _WIDTH(0) \ 2 - LEN(text$) \ 2
 PRINT text$;
 t# = TIMER
@@ -212,24 +213,30 @@ END SUB
 SUB Update_Remote_Files () 'Refreshes the remote file listing
 
 IF NOT is_connected THEN boxes(2).length = 0: EXIT SUB
+t$ = "Updating listing of remote files..."
 IF NOT cmd_mode THEN
-  DIM box AS box_type
-  'box.nam = ""
-  put_str box.nam, ""
-  box.row1 = _HEIGHT(0) \ 2 - 1
-  box.row2 = _HEIGHT(0) \ 2 + 1
-  box.col1 = _WIDTH(0) \ 2 - 25
-  box.col2 = _WIDTH(0) \ 2 + 25
-  box.shadow = -1
-  box.c1 = 0
-  box.c2 = 7
-  box.text_box = -1
-  draw_box box, 0
-  text$ = "Updating remote files list..."
-  LOCATE box.row1 + 1, _WIDTH(0) \ 2 - LEN(text$) \ 2
+  DIM gui(2) as GUI_element_type
+  
+  gui(1).element_type = GUI_BOX
+  gui(1).dialog = -1
+  GUI_init_element gui(1), ""
+  gui(1).row1 = _HEIGHT(0) \ 2 - 1
+  gui(1).row2 = _HEIGHT(0) \ 2 + 1
+  gui(1).col1 = _WIDTH(0) \ 2 - 25
+  gui(1).col2 = _WIDTH(0) \ 2 + 25
+  gui(1).shadow = -1
+  gui(1).skip = -1
+  
+  gui(2).element_type = GUI_LABEL
+  gui(2).dialog = -1
+  GUI_init_element gui(2), t$
+  gui(2).row1 = gui(1).row1
+  gui(2).col1 = _width(0) \ 2 - len(t$) \ 2
+
+  GUI_draw_element_array gui(), 2, 0
+else
+  print t$
 END IF
-PRINT text$;
-IF NOT cmd_mode THEN _DISPLAY
 upd$ = "PWD" + crlf$
 PUT command_connect&, , upd$
 a2$ = get_response_code$
@@ -259,9 +266,9 @@ SELECT CASE n$
   CASE "450", "500", "501", "502", "530"
     boxes(2).length = 2
     boxes(2).selected = 1
-    boxes(2).offset = 0
-    put_str Remote_files(1).nam, "FTP Server doesn't support LIST"
-    put_str Remote_files(2).nam, "Try using the command line"
+    'boxes(2).offset = 0
+    MEM_put_str Remote_files(1).nam, "FTP Server doesn't support LIST"
+    MEM_put_str Remote_files(2).nam, "Try using the command line"
 END SELECT
 
 t# = TIMER
@@ -292,9 +299,9 @@ SELECT CASE n$
   CASE "226", "250", ""
     boxes(2).length = 1
     boxes(2).selected = 1
-    boxes(2).offset = 0
-    put_str Remote_files(1).nam, ".."
-    Remote_files(1).dir = "DIR"
+    'boxes(2).offset = 0
+    MEM_put_str Remote_files(1).nam, ".."
+    'Remote_files(1).dir = "DIR"
     Remote_files(1).flag_cwd = -1
     Remote_files(1).flag_retr = 0
     'OPEN temp_dir$ + sep$ + "temp.tmp" FOR OUTPUT AS #1
@@ -306,18 +313,18 @@ SELECT CASE n$
         di$ = MID$(dirs$, 1, INSTR(dirs$, crlf$) - 1)
         dirs$ = MID$(dirs$, INSTR(dirs$, crlf$) + 2)
         x = boxes(2).length + 1
-        put_str Remote_files(x).lin, di$
+        MEM_put_str Remote_files(x).lin, di$
         k = FTP_Parse_Line(Remote_files(x))
-        IF get_str$(Remote_files(x).nam) <> ".." AND get_str$(Remote_files(x).nam) <> "." and get_str$(Remote_files(x).nam) > "" THEN boxes(2).length = x
+        IF MEM_get_str$(Remote_files(x).nam) <> ".." AND MEM_get_str$(Remote_files(x).nam) <> "." and MEM_get_str$(Remote_files(x).nam) > "" THEN boxes(2).length = x
       LOOP UNTIL dirs$ = ""
       sort_dir_listing Remote_files(), boxes(2).length
     END IF
   CASE "425", "426", "451"
     boxes(2).length = 2
     boxes(2).selected = 1
-    boxes(2).offset = 0
-    put_str Remote_files(1).nam, "FTP Server doesn't support NlST"
-    put_str Remote_files(2).nam, "Try using the command line"
+    'boxes(2).offset = 0
+    MEM_put_str Remote_files(1).nam, "FTP Server doesn't support NlST"
+    MEM_put_str Remote_files(2).nam, "Try using the command line"
 END SELECT
 print_files boxes(2), Remote_files()
 update_scrn
@@ -356,28 +363,34 @@ END SUB
 SUB get_file (file$) 'Gets a file from the FTP server and saves it in the local DIR
 'grab data in 1 MB chunks
 
-
 IF NOT cmd_mode THEN
-  DIM box AS box_type
-  'box.nam = n$
-  put_str box.nam, n$
-  box.row1 = _HEIGHT(0) \ 2 - 1
-  box.row2 = _HEIGHT(0) \ 2 + 1
-  box.col1 = _WIDTH(0) \ 2 - 25
-  box.col2 = _WIDTH(0) \ 2 + 25
-  box.shadow = -1
-  box.c1 = box_c1
-  box.c2 = box_c2
-  box.text_box = -1
-  draw_box box, 0
+  DIM gui(2) as GUI_element_type
+  
+  gui(1).element_type = GUI_BOX
+  gui(1).dialog = -1
+  GUI_init_element gui(1), ""
+  gui(1).row1 = _HEIGHT(0) \ 2 - 1
+  gui(1).row2 = _HEIGHT(0) \ 2 + 1
+  gui(1).col1 = _WIDTH(0) \ 2 - 25
+  gui(1).col2 = _WIDTH(0) \ 2 + 25
+  gui(1).shadow = -1
+  gui(1).skip = -1
+  
+  gui(2).element_type = GUI_LABEL
+  gui(2).dialog = -1
+  GUI_init_element gui(2), ""
+  gui(2).row1 = gui(1).row1
+  gui(2).col1 = _width(0) \ 2 - len(t$) \ 2
+  
 END IF
 file$ = RTRIM$(file$)
-IF cmd_mode AND is_connected THEN PRINT "Getting file: "; Local_dir$ + sep$ + file$
+IF cmd_mode AND is_connected THEN text$ = "Getting file: " + Local_dir$ + sep$ + file$
 IF is_connected = 0 THEN text$ = "Please connect to a FTP Server first." ELSE text$ = "Recieving File...()"
 
-IF NOT cmd_mode THEN LOCATE box.row1 + 1, _WIDTH(0) \ 2 - LEN(text$) \ 2
-PRINT text$;
-IF NOT cmd_mode THEN _DISPLAY
+if NOT cmd_mode then MEM_put_str gui(2).nam, text$: GUI_draw_element_array gui(), 2, 0 else print text$
+'IF NOT cmd_mode THEN LOCATE box.row1 + 1, _WIDTH(0) \ 2 - LEN(text$) \ 2
+'PRINT text$;
+'IF NOT cmd_mode THEN _DISPLAY
 
 IF (is_connected = 0 AND NOT cmd_mode) THEN
   t# = TIMER
@@ -453,15 +466,17 @@ DO
     text$ = "Recieving File...(" + s$ + STR$(kbpers) + " KB/s)"
     
     IF NOT cmd_mode THEN
-      draw_box box, 0
-      IF NOT CLI THEN
-        LOCATE box.row1 + 1, _WIDTH(0) \ 2 - LEN(text$) \ 2
-      ELSE
-        LOCATE , 1
-      END IF
+      MEM_put_str gui(2).nam, text$
+      GUI_draw_element_array gui(), 2, 0
+      'draw_box box, 0
+      'IF NOT CLI THEN
+      '  LOCATE box.row1 + 1, _WIDTH(0) \ 2 - LEN(text$) \ 2
+      'ELSE
+      '  LOCATE , 1
+      'END IF
     END IF
-    PRINT text$
-    IF NOT cmd_mode THEN _DISPLAY
+    'PRINT text$
+    'IF NOT cmd_mode THEN _DISPLAY
     'PRINT "got here!!!!"
     'k = k + 1
 
@@ -497,11 +512,17 @@ IF cmd_mode THEN PRINT
 SELECT CASE LEFT$(a2$, 3)
   CASE "226", "250"
     CLOSE data_connect&
-    IF NOT cmd_mode THEN draw_box box, 0
+    'IF NOT cmd_mode THEN draw_box box, 0
     text$ = "File Sucessfully Recieved!"
-    IF NOT cmd_mode THEN LOCATE box.row1 + 1, _WIDTH(0) \ 2 - LEN(text$) \ 2
-    PRINT text$
-    IF NOT cmd_mode THEN _DISPLAY
+    if not cmd_mode then
+      MEM_put_Str gui(2).nam, text$
+      GUI_draw_element_array gui(), 2, 0
+    else
+      PRINT text$
+    end if
+    'IF NOT cmd_mode THEN LOCATE box.row1 + 1, _WIDTH(0) \ 2 - LEN(text$) \ 2
+    'PRINT text$
+    'IF NOT cmd_mode THEN _DISPLAY
     IF NOT cmd_mode THEN
       t# = TIMER
       DO: _LIMIT 100: LOOP UNTIL INKEY$ > "" OR TIMER - t# > 1.5
@@ -509,11 +530,12 @@ SELECT CASE LEFT$(a2$, 3)
     END IF
   CASE "425", "426", "451"
     CLOSE data_connect&
-    KILL Local_dir$ + sep$ + RTRIM$(get_str$(Remote_files(boxes(2).selected).nam))
+    KILL Local_dir$ + sep$ + RTRIM$(MEM_get_str$(Remote_files(boxes(2).selected).nam))
     dialog_disp "Error: File could not be recieved."
 
 END SELECT
 IF cmd_mode THEN PRINT "File Recieved"
+GUI_free_element_array gui()
 END SUB
 
 FUNCTION get_response_code$ () 'Get's a response code from the FTP server
@@ -595,25 +617,31 @@ IF username$ = "" THEN username$ = "anonymous" 'dialog_disp "Please give a Usern
 IF password$ = "" THEN password$ = "" 'dialog_disp "Please give a password.": EXIT SUB
 IF port$ = "" THEN port$ = "21" 'dialog_disp "Please give a port number.": EXIT SUB
 IF NOT cmd_mode THEN
-  DIM disp_box AS box_type
-  disp_box.row1 = _HEIGHT(0) \ 2 - 1
-  disp_box.row2 = _HEIGHT(0) \ 2 + 1
-  disp_box.c1 = 0
-  disp_box.c2 = 7
-  disp_box.text_box = -1
-  'disp_box.nam = ""
-  put_str disp_box.nam, ""
-  disp_box.col1 = _WIDTH(0) \ 2 - 20
-  disp_box.col2 = disp_box.col1 + 40
-  disp_box.shadow = -1
+  DIM gui(2) as GUI_element_type
+  
+  gui(1).element_type = GUI_BOX
+  gui(1).dialog = -1
+  GUI_init_element gui(1), ""
+  gui(1).row1 = _HEIGHT(0) \ 2 - 1
+  gui(1).row2 = _HEIGHT(0) \ 2 + 1
+  gui(1).col1 = _WIDTH(0) \ 2 - 25
+  gui(1).col2 = _WIDTH(0) \ 2 + 25
+  gui(1).shadow = -1
+  gui(1).skip = -1
+  
+  gui(2).element_type = GUI_LABEL
+  gui(2).dialog = -1
+  GUI_init_element gui(2), t$
+  gui(2).row1 = gui(1).row1
+  gui(2).col1 = _width(0) \ 2 - len(t$) \ 2
 END IF
 text$ = "Connecting to FTP server..."
 IF NOT cmd_mode THEN
-  draw_box disp_box, 0
-  LOCATE disp_box.row1 + 1, disp_box.col1 + 20 - LEN(text$) \ 2
+  MEM_put_str gui(2).nam, text$
+  GUI_draw_element_array gui(), 2, 0
+else
+  print text$
 END IF
-PRINT text$
-IF NOT cmd_mode THEN _DISPLAY
 is_connected = 0
 t# = TIMER
 IF command_connect& <> 0 THEN CLOSE command_connect&: command_connect& = 0
@@ -691,12 +719,13 @@ ELSE
   status$ = "Not Connected."
 END IF
 IF NOT cmd_mode THEN
-  draw_box disp_box, 0
-  LOCATE disp_box.row1 + 1, disp_box.col1 + 20 - LEN(text$) \ 2
+  MEM_put_str gui(2).nam, text$
+  GUI_draw_element_array gui(), 2, 0
+else
+  print text$
 END IF
-PRINT text$
-IF NOT cmd_mode THEN _DISPLAY ELSE IF is_connected THEN PRINT "Server type: "; server_syst$
-free_gui_element disp_box
+IF cmd_mode and is_connected THEN PRINT "Server type: "; server_syst$
+GUI_free_element_array gui()
 END SUB
 
 SUB Get_remote_dir () 'Get's the remote DIR
@@ -724,7 +753,7 @@ FUNCTION FTP_Parse_Line (f AS filedir_type)
 'Implementatin of that C code in QB64 (With some modifications)
 f.flag_cwd = 0
 f.flag_retr = 0
-l$ = get_str$(f.lin)
+l$ = MEM_get_str$(f.lin)
 length = LEN(l$)
 IF LEN(l$) < 2 THEN EXIT FUNCTION 'Empty name
 a$ = LCASE$(LEFT$(l$, 1))
@@ -784,7 +813,7 @@ SELECT CASE a$
             'end if
             namelen = length - j
             name_str$ = RIGHT$(l$, namelen)
-            put_str f.nam, name_str$
+            MEM_put_str f.nam, name_str$
             state = 8
           CASE 8
 
@@ -807,7 +836,7 @@ SELECT CASE a$
       'next i
       k = INSTR(name_str$, " -> ")
       name_str$ = MID$(name_str$, 1, k - 1)
-      put_str f.nam, name_str$
+      MEM_put_str f.nam, name_str$
       namelen = LEN(name_str$)
     END IF
     
@@ -815,7 +844,7 @@ SELECT CASE a$
       IF namelen > 3 THEN
         IF LEFT$(name_str$, 3) = "   " THEN
           name_str$ = MID$(name_str$, 4)
-          put_str f.nam, name_str$
+          MEM_put_str f.nam, name_str$
           namelen = namelen - 3
         END IF
       END IF
@@ -835,19 +864,19 @@ NEXT i
 IF i < length THEN
   name_str$ = MID$(name_str$, 1, i)
   namelen = i
-  put_str f.nam, name_str$
+  MEM_put_str f.nam, name_str$
   IF i > 4 THEN
     IF MID$(l$, i - 4, 4) = ".DIR" THEN
       name_str$ = MID$(name_str$, 1, namelen - 4)
       namelen = namelen - 4
       f.flag_cwd = -1
-      put_str f.nam, name_str$
+      MEM_put_str f.nam, name_str$
     END IF
   END IF
   IF NOT f.flag_cwd THEN
     f.flag_retr = -1
   END IF
-  put_str f.nam, name_str$
+  MEM_put_str f.nam, name_str$
   
   FTP_Parse_Line = -1
   EXIT FUNCTION
@@ -884,7 +913,7 @@ IF LEFT$(l$, 1) >= "0" AND LEFT$(l$, 1) <= "9" THEN
   LOOP
   namelen = length - j
   name_str$ = MID$(l$, j, namelen)
-  put_str f.nam, name_str$
+  MEM_put_str f.nam, name_str$
   FTP_Parse_Line = -1
   EXIT FUNCTION
 END IF
@@ -945,20 +974,20 @@ END SUB
 SUB quick_sort_filedir_type (f() AS filedir_type, low, high)
 IF low < high THEN
   IF high - low = 1 THEN
-    IF LCASE$(get_str$(f(low).nam)) > LCASE$(get_str$(f(high).nam)) THEN
+    IF LCASE$(MEM_get_str$(f(low).nam)) > LCASE$(MEM_get_str$(f(high).nam)) THEN
       SWAP f(low), f(high)
     END IF
   ELSE
     pivot = INT(RND * (high - low + 1)) + low
     SWAP f(high), f(pivot)
-    p$ = LCASE$(get_str$(f(high).nam))
+    p$ = LCASE$(MEM_get_str$(f(high).nam))
     DO
       l = low
       h = high
-      DO WHILE (l < h) AND (LCASE$(get_str$(f(l).nam)) <= p$)
+      DO WHILE (l < h) AND (LCASE$(MEM_get_str$(f(l).nam)) <= p$)
         l = l + 1
       LOOP
-      DO WHILE (h > l) AND (LCASE$(get_str$(f(h).nam)) >= p$)
+      DO WHILE (h > l) AND (LCASE$(MEM_get_str$(f(h).nam)) >= p$)
         h = h - 1
       LOOP
       IF l < h THEN
