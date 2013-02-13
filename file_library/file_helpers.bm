@@ -1,0 +1,61 @@
+
+
+SUB sort_dir_listing (f() AS filedir_type, file_num)
+'quicksort type of thing. First, move all of the DIR's to the top (Ignore listing 1, as it's always ".."
+nex = 0
+DO: nex = nex + 1: loop until nex = file_num or MEM_get_Str$(f(nex).nam) = ".."
+if MEM_Get_str$(f(nex).nam) = ".." then swap f(nix), f(1)
+DO: nex = nex + 1: LOOP UNTIL NOT f(nex).flag_cwd OR nex = file_num 'loop until f(nex) is not a directory
+m = nex + 1
+IF m < file_num THEN
+  FOR x = m TO file_num 'loop through files
+    IF f(x).flag_cwd THEN 'found a directory
+      SWAP f(nex), f(x) 'swap the directory we found with the first entry that's not a directory, so we move the directory to the top
+      DO: nex = nex + 1: LOOP UNTIL NOT f(nex).flag_cwd OR nex > file_num 'find the next non-directory
+      x = nex + 1
+    END IF
+  NEXT x
+END IF
+'nex now equals the very last DIRectory
+'_AUTODISPLAY
+'cls
+'print "NEX="; nex
+'print "X  ="; x
+'sleep
+IF nex > 4 AND nex < file_num - 1 THEN
+  quick_sort_filedir_type f(), 2, nex - 1
+END IF
+IF nex < file_num - 1 THEN
+  quick_sort_filedir_type f(), nex, file_num
+END IF
+END SUB
+
+SUB quick_sort_filedir_type (f() AS filedir_type, low, high)
+IF low < high THEN
+  IF high - low = 1 THEN
+    IF LCASE$(MEM_get_str$(f(low).nam)) > LCASE$(MEM_get_str$(f(high).nam)) THEN
+      SWAP f(low), f(high)
+    END IF
+  ELSE
+    pivot = INT(RND * (high - low + 1)) + low
+    SWAP f(high), f(pivot)
+    p$ = LCASE$(MEM_get_str$(f(high).nam))
+    DO
+      l = low
+      h = high
+      DO WHILE (l < h) AND (LCASE$(MEM_get_str$(f(l).nam)) <= p$)
+        l = l + 1
+      LOOP
+      DO WHILE (h > l) AND (LCASE$(MEM_get_str$(f(h).nam)) >= p$)
+        h = h - 1
+      LOOP
+      IF l < h THEN
+        SWAP f(l), f(h)
+      END IF
+    LOOP WHILE l < h
+    SWAP f(l), f(high)
+    quick_sort_filedir_type f(), low, l - 1
+    quick_sort_filedir_type f(), l + 1, high
+  END IF
+END IF
+END SUB

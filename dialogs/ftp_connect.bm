@@ -100,7 +100,7 @@ DO
     username$ = MEM_get_str$(gui(3).text)
     password$ = MEM_get_str$(gui(4).text)
     if username$ = "" then username$ = "anonymous"
-    'Start_ftp_connect
+    Start_ftp_connect
     if is_connected then exit_gui_flag = -1
     gui(1).updated = -1
   end if

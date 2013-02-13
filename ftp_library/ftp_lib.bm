@@ -216,7 +216,7 @@ IF NOT is_connected THEN boxes(2).length = 0: EXIT SUB
 t$ = "Updating listing of remote files..."
 IF NOT cmd_mode THEN
   DIM gui(2) as GUI_element_type
-  
+
   gui(1).element_type = GUI_BOX
   gui(1).dialog = -1
   GUI_init_element gui(1), ""
@@ -226,7 +226,7 @@ IF NOT cmd_mode THEN
   gui(1).col2 = _WIDTH(0) \ 2 + 25
   gui(1).shadow = -1
   gui(1).skip = -1
-  
+
   gui(2).element_type = GUI_LABEL
   gui(2).dialog = -1
   GUI_init_element gui(2), t$
@@ -365,7 +365,7 @@ SUB get_file (file$) 'Gets a file from the FTP server and saves it in the local 
 
 IF NOT cmd_mode THEN
   DIM gui(2) as GUI_element_type
-  
+
   gui(1).element_type = GUI_BOX
   gui(1).dialog = -1
   GUI_init_element gui(1), ""
@@ -375,13 +375,13 @@ IF NOT cmd_mode THEN
   gui(1).col2 = _WIDTH(0) \ 2 + 25
   gui(1).shadow = -1
   gui(1).skip = -1
-  
+
   gui(2).element_type = GUI_LABEL
   gui(2).dialog = -1
   GUI_init_element gui(2), ""
   gui(2).row1 = gui(1).row1
   gui(2).col1 = _width(0) \ 2 - len(t$) \ 2
-  
+
 END IF
 file$ = RTRIM$(file$)
 IF cmd_mode AND is_connected THEN text$ = "Getting file: " + Local_dir$ + sep$ + file$
@@ -460,11 +460,11 @@ DO
     PUT #1, , filef$
     filef$ = ""
     kbpers = (c) / 1024 / tsav# 'c is how much we downloaded in our last loop
-    
+
     IF file_size& = 0 THEN s$ = STR$(c) + " Bytes," ELSE s$ = STR$(INT(c / file_size& * 100) / 100) + "%,"
-    
+
     text$ = "Recieving File...(" + s$ + STR$(kbpers) + " KB/s)"
-    
+
     IF NOT cmd_mode THEN
       MEM_put_str gui(2).nam, text$
       GUI_draw_element_array gui(), 2, 0
@@ -618,7 +618,7 @@ IF password$ = "" THEN password$ = "" 'dialog_disp "Please give a password.": EX
 IF port$ = "" THEN port$ = "21" 'dialog_disp "Please give a port number.": EXIT SUB
 IF NOT cmd_mode THEN
   DIM gui(2) as GUI_element_type
-  
+
   gui(1).element_type = GUI_BOX
   gui(1).dialog = -1
   GUI_init_element gui(1), ""
@@ -628,7 +628,7 @@ IF NOT cmd_mode THEN
   gui(1).col2 = _WIDTH(0) \ 2 + 25
   gui(1).shadow = -1
   gui(1).skip = -1
-  
+
   gui(2).element_type = GUI_LABEL
   gui(2).dialog = -1
   GUI_init_element gui(2), t$
@@ -655,6 +655,7 @@ IF command_connect& <> 0 THEN
     CASE "220" 'Good connection
     CASE "421" 'Bad connection
       text$ = "Error: FTP Service was closed by the Server"
+      goto exit_f
   END SELECT
   a2$ = ""
   user$ = "USER " + username$ + crlf$
@@ -725,7 +726,7 @@ else
   print text$
 END IF
 IF cmd_mode and is_connected THEN PRINT "Server type: "; server_syst$
-GUI_free_element_array gui()
+if NOT cmd_mode then GUI_free_element_array gui()
 END SUB
 
 SUB Get_remote_dir () 'Get's the remote DIR
@@ -747,7 +748,6 @@ Remote_dir$ = MID$(a2$, INSTR(a2$, CHR$(34)) + 1)
 Remote_dir$ = MID$(Remote_dir$, 1, INSTR(Remote_dir$, CHR$(34)) - 1)
 END SUB
 
-
 FUNCTION FTP_Parse_Line (f AS filedir_type)
 'Please see http://cr.yp.to/ftpparse.html
 'Implementatin of that C code in QB64 (With some modifications)
@@ -759,13 +759,13 @@ IF LEN(l$) < 2 THEN EXIT FUNCTION 'Empty name
 a$ = LCASE$(LEFT$(l$, 1))
 SELECT CASE a$
   CASE "+" 'assume EPLF
-  
+
   CASE "b", "c", "d", "l", "p", "s", "-" 'UNIX style
     'UNIX style is usually just a direct output from ls, which is meant to be human readable
     IF a$ = "d" THEN f.flag_cwd = -1
     IF a$ = "-" THEN f.flag_retr = -1
     IF a$ = "l" THEN f.flag_cwd = -1: f.flag_retr = -1
-    
+
     state = 1
     i = 0
     FOR j = 2 TO length
@@ -815,7 +815,7 @@ SELECT CASE a$
             name_str$ = RIGHT$(l$, namelen)
             MEM_put_str f.nam, name_str$
             state = 8
-          CASE 8
+          'CASE 8
 
             ' uh...
             ' Nothing left to do it seems. Not sure how we got here...
@@ -827,7 +827,7 @@ SELECT CASE a$
       END IF
     NEXT j
     IF state <> 8 THEN EXIT FUNCTION
-    
+
     IF LEFT$(l$, 1) = "l" THEN
       'for i = 0 to 3 + namelen
       '  if left$(name_str$, 4) = " -> " then
@@ -839,7 +839,7 @@ SELECT CASE a$
       MEM_put_str f.nam, name_str$
       namelen = LEN(name_str$)
     END IF
-    
+
     IF LEFT$(l$, 1) = " " OR LEFT$(l$, 1) = "[" THEN
       IF namelen > 3 THEN
         IF LEFT$(name_str$, 3) = "   " THEN
@@ -849,7 +849,7 @@ SELECT CASE a$
         END IF
       END IF
     END IF
-    
+
     FTP_Parse_Line = -1
     EXIT FUNCTION
 END SELECT
@@ -877,7 +877,7 @@ IF i < length THEN
     f.flag_retr = -1
   END IF
   MEM_put_str f.nam, name_str$
-  
+
   FTP_Parse_Line = -1
   EXIT FUNCTION
 END IF
@@ -886,7 +886,7 @@ END IF
 IF LEFT$(l$, 1) >= "0" AND LEFT$(l$, 1) <= "9" THEN
   i = 0
   j = 20
-  
+
   'don't bother getting the date and time, I don't use it
   DO WHILE MID$(l$, j, 1) = " "
     j = j + 1
@@ -942,62 +942,4 @@ IF LEN(m$) = 3 THEN
 END IF
 get_month = -1
 END FUNCTION
-
-SUB sort_dir_listing (f() AS filedir_type, file_num)
-'quicksort type of thing. First, move all of the DIR's to the top (Ignore listing 1, as it's always ".."
-nex = 1
-DO: nex = nex + 1: LOOP UNTIL NOT f(nex).flag_cwd OR nex = file_num 'loop until f(nex) is not a directory
-m = nex + 1
-IF m < file_num THEN
-  FOR x = m TO file_num 'loop through files
-    IF f(x).flag_cwd THEN 'found a directory
-      SWAP f(nex), f(x) 'swap the directory we found with the first entry that's not a directory, so we move the directory to the top
-      DO: nex = nex + 1: LOOP UNTIL NOT f(nex).flag_cwd OR nex > file_num 'find the next non-directory
-      x = nex + 1
-    END IF
-  NEXT x
-END IF
-'nex now equals the very last DIRectory
-'_AUTODISPLAY
-'cls
-'print "NEX="; nex
-'print "X  ="; x
-'sleep
-IF nex > 4 AND nex < file_num - 1 THEN
-  quick_sort_filedir_type f(), 2, nex - 1
-END IF
-IF nex < file_num - 1 THEN
-  quick_sort_filedir_type f(), nex, file_num
-END IF
-END SUB
-
-SUB quick_sort_filedir_type (f() AS filedir_type, low, high)
-IF low < high THEN
-  IF high - low = 1 THEN
-    IF LCASE$(MEM_get_str$(f(low).nam)) > LCASE$(MEM_get_str$(f(high).nam)) THEN
-      SWAP f(low), f(high)
-    END IF
-  ELSE
-    pivot = INT(RND * (high - low + 1)) + low
-    SWAP f(high), f(pivot)
-    p$ = LCASE$(MEM_get_str$(f(high).nam))
-    DO
-      l = low
-      h = high
-      DO WHILE (l < h) AND (LCASE$(MEM_get_str$(f(l).nam)) <= p$)
-        l = l + 1
-      LOOP
-      DO WHILE (h > l) AND (LCASE$(MEM_get_str$(f(h).nam)) >= p$)
-        h = h - 1
-      LOOP
-      IF l < h THEN
-        SWAP f(l), f(h)
-      END IF
-    LOOP WHILE l < h
-    SWAP f(l), f(high)
-    quick_sort_filedir_type f(), low, l - 1
-    quick_sort_filedir_type f(), l + 1, high
-  END IF
-END IF
-END SUB
 

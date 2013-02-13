@@ -17,9 +17,10 @@
 $SCREENHIDE
 $CONSOLE
 
-CONST VER$ = "0.96"
+CONST VER$ = "0.97"
 
 '$include:'mem_library/mem_lib.bi'
+'$include:'file_library/file_helpers.bi'
 '$include:'gui_library/gui_lib.bi'
 '$include:'ftp_library/ftp_lib.bi'
 '$include:'dialogs/prompt.bi'
@@ -141,7 +142,7 @@ Menu(n, g).ident = "RETRF": MEM_put_str Menu(n, g).nam, "#Recieve File    "
 Menun(g) = n
 
 g = g + 1: MEM_put_str Global_Menu(g).nam, "#Help": n = 1
-Menu(n, g).ident = "HELP ": MEM_put_str Menu(n, g).nam, "#Help               ": n = n + 1 
+Menu(n, g).ident = "HELP ": MEM_put_str Menu(n, g).nam, "#Help               ": n = n + 1
 Menu(n, g).ident = "SETIN": MEM_put_str Menu(n, g).nam, "#Change Settings    ": n = n + 1
 MEM_put_str Menu(n, g).nam, "-": n = n + 1
 Menu(n, g).ident = "ABOUT": MEM_put_str Menu(n, g).nam, "#About              "
@@ -150,7 +151,7 @@ Menun(g) = n
 GUI_attach_base_menu boxes(6), g, _OFFSET(Global_Menu(1))
 FOR x = 1 to g
   GUI_attach_menu Global_Menu(x), Menun(x), _OFFSET(Menu(1, x))
-next x 
+next x
 
 RANDOMIZE TIMER
 status$ = "Not Connected."
@@ -173,6 +174,9 @@ RESUME NEXT
 
 'MEM
 '$include:'mem_library/mem_lib.bm'
+
+'FILES
+'$include:'file_library/file_helpers.bm'
 
 'GUI
 '$include:'gui_library/gui_lib.bm'

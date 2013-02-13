@@ -23,7 +23,7 @@ gui(1).layer = -1 'Set in background
 
 gui(2).element_type = GUI_LABEL
 gui(2).dialog = -1
-GUI_init_element gui(2), "GUI Example Program"
+GUI_init_element gui(2), "FTP Client, Version: " + VER$
 gui(2).row1 = gui(1).row1 + 2
 gui(2).col1 = _WIDTH(0) \ 2 - len(MEM_Get_str$(gui(2).nam)) \ 2
 

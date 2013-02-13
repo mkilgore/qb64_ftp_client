@@ -278,18 +278,18 @@ SELECT CASE ch$
   CASE CHR$(13) 'Enter
     if gui(sel).element_type = GUI_TEXT_BOX then
       tex$ = mid$(MEM_get_str_array$(gui(sel).lines, gui(sel).selected), gui(sel).text_position + 1)
-      
+
       if gui(sel).length + 1 > gui(sel).lines.allocated and (gui(sel).length < gui(sel).max_lines OR gui(sel).max_lines = 0) then
         MEM_allocate_string_array gui(sel).lines, gui(sel).length + 10
         gui(sel).length = gui(sel).length + 1
       elseif gui(sel).length < gui(sel).max_lines OR gui(sel).max_lines = 0 then
         gui(sel).length = gui(sel).length + 1
       end if
-      
+
       for x = gui(sel).length to gui(sel).selected + 1 STEP -1
         MEM_put_str_array gui(sel).lines, x, MEM_get_str_array$(gui(sel).lines, x - 1)
       next x
-      
+
       MEM_put_str_array gui(sel).lines, gui(sel).selected + 1, tex$
       MEM_put_str_array gui(sel).lines, gui(sel).selected, mid$(MEM_get_str_array$(gui(sel).lines, gui(sel).selected), 1, gui(sel).text_position)
       gui(sel).selected = gui(sel).selected + 1
@@ -575,7 +575,7 @@ SELECT CASE g.element_type
       g.mcolor = GUI_DEFAULT_COLOR_RADIO.mcolor
       g.selcolor = GUI_DEFAULT_COLOR_RADIO.selcolor
     end if
-  CASE GUI_LABEL  
+  CASE GUI_LABEL
     if g.dialog then
       g.mcolor = GUI_DEFAULT_DIALOG_COLOR_LABEL.mcolor
     else
@@ -593,7 +593,7 @@ elseif gui.selected > gui.scroll_offset_vert + (gui.row2 - gui.row1 - 1) then
   gui.scroll_offset_vert = gui.selected  - (gui.row2 - gui.row1 - 1)
 end if
 if gui.scroll_offset_vert < 0 then gui.scroll_offset_vert = 0
-if gui.scroll_offset_vert + (gui.row2 - gui.row1 - 1) > gui.length then 
+if gui.scroll_offset_vert + (gui.row2 - gui.row1 - 1) > gui.length then
   gui.scroll_offset_vert = gui.length - (gui.row2 - gui.row1 - 1)
 end if
 END SUB
@@ -619,7 +619,7 @@ IF b.scroll AND 1 THEN
   '  b.scroll_loc_vert = INT((b.scroll_offset_vert) / (b.length - (row2 - row1 - 1)) * (row2 - row1 - 3 - b.scroll_wid_vert) + row1 + 2)
   'end if
 end if
-if b.scroll AND 2 then 
+if b.scroll AND 2 then
   'scr_len = col2 - col1 - 2
   'if scr_len * 2 <= b.scroll_max_hors then
   '  b.scroll_wid_hors = 1
@@ -695,7 +695,11 @@ for x = 1 to b.row2 - b.row1 - 1
   else
     color b.mcolor.fr, b.mcolor.bk
   end if
-  k$ = mid$(MEM_get_str_array$(b.lines, x + b.scroll_offset_vert), b.scroll_offset_hors + 1, b.col2 - b.col1 - 1)
+  if x + b.scroll_offset_vert <= b.length then
+    k$ = mid$(MEM_get_str_array$(b.lines, x + b.scroll_offset_vert), b.scroll_offset_hors + 1, b.col2 - b.col1 - 1)
+  else
+    k$ = ""
+  end if
   k$ = k$ + space$((b.col2 - b.col1 - 1) - len(k$))
   print k$;
 next x
@@ -750,7 +754,7 @@ END SUB
 SUB GUI_draw_element (b AS GUI_element_type, sel) 'Draws box b
 'Draws a box
 IF b.element_type = GUI_BOX THEN 'Plain box
-  if b.hide then 
+  if b.hide then
     color b.mcolor.fr, b.mcolor.bk
     for x = b.row1 to b.row2
       locate x, b.col1
@@ -761,31 +765,31 @@ IF b.element_type = GUI_BOX THEN 'Plain box
   end if
 ELSEIF b.element_type = GUI_INPUT_BOX THEN 'Input box
   GUI_draw_input_box b, sel
-  
+
 ELSEIF b.element_type = GUI_TEXT_BOX THEN 'TextBox -- not done yet
   GUI_draw_text_box b, sel
-  
+
 ELSEIF b.element_type = GUI_LIST_BOX THEN 'list box
   GUI_draw_list_box b, sel
-  
+
 ELSEIF b.element_type = GUI_DROP_DOWN THEN 'Dropdown
   GUI_draw_dropdown b, sel
-  
+
 ELSEIF b.element_type = GUI_CHECKBOX THEN 'Checkbox
   GUI_draw_checkbox b, sel
-  
+
 ELSEIF b.element_type = GUI_MENU THEN 'Menu
   GUI_draw_menu b, sel
-  
+
 ELSEIF b.element_type = GUI_BUTTON THEN 'Button
   GUI_draw_button b, sel
-  
+
 ELSEIF b.element_type = GUI_RADIO_BUTTON THEN 'Radio button
   GUI_draw_radio_button b, sel
 
 ELSEIF b.element_type = GUI_LABEL THEN 'Label
   GUI_draw_label b, sel
-  
+
 END IF
 END SUB
 
@@ -842,6 +846,7 @@ LOCATE b.row1, b.col1
 COLOR b.mcolor.fr, b.mcolor.bk
 if b.drop_flag then
   GUI_draw_box b.row1, b.col1, b.row2, b.col2, b
+  _CONTROLCHR OFF
 end if
 IF NOT b.drop_flag THEN PRINT "[";
 IF sel THEN COLOR b.selcolor.fr, b.selcolor.bk
@@ -856,8 +861,8 @@ _CONTROLCHR ON
 if s = 0 then
   b.cur_row = 0
   b.cur_col = 0
-else 
-  b.cur_row = s + b.row1 
+else
+  b.cur_row = s + b.row1
   b.cur_col = b.col1 + 1
 end if
 END SUB
@@ -887,7 +892,7 @@ for x = 1 to b.length
       GUI_print_menu_no_hilight MEM_get_str$(men.nam) ', b.mcolor.fr, b.mcolor.bk, b.scroll_color.fr, b.scroll_color.bk
     else
       GUI_print_menu MEM_get_str$(men.nam), b.selcolor.fr, b.selcolor.bk, b.scroll_color.fr, b.selcolor.bk
-    end if 
+    end if
   else
     color b.mcolor.fr, b.mcolor.bk
     if b.menu_open <> -2 then
@@ -957,7 +962,7 @@ IF GUI_mscroll and NOT GUI_but then 'handle scrolling
   IF b(selected_gui).element_type = GUI_LIST_BOX OR b(selected_gui).element_type = GUI_TEXT_BOX OR (b(selected_gui).element_type = GUI_DROP_DOWN AND b(selected_gui).drop_flag) then 'List box or open Drop-Down
     b(selected_gui).scroll_offset_vert = b(selected_gui).scroll_offset_vert + GUI_mscroll
     if b(selected_gui).scroll_offset_vert < 0 then b(selected_gui).scroll_offset_vert = 0
-    if b(selected_gui).scroll_offset_vert > b(selected_gui).length - (b(selected_gui).row2 - b(selected_gui).row1 - 1) then 
+    if b(selected_gui).scroll_offset_vert > b(selected_gui).length - (b(selected_gui).row2 - b(selected_gui).row1 - 1) then
       b(selected_gui).scroll_offset_vert = b(selected_gui).length - (b(selected_gui).row2 - b(selected_gui).row1 - 1)
     end if
     GUI_calc_scroll b(selected_gui).row1, b(selected_gui).col1, b(selected_gui).row2, b(selected_gui).col2, b(selected_gui)
@@ -1011,7 +1016,7 @@ found = 0
 FOR x = 1 TO boxnum
   k = GUI_get_layer(b(x))
   select case b(x).element_type
-    case GUI_BOX 
+    case GUI_BOX
       IF GUI_my <= b(x).row2 AND GUI_my >= b(x).row1 THEN
         IF GUI_mx >= b(x).col1 AND GUI_mx <= b(x).col2 THEN
           if k > current_layer then
@@ -1226,7 +1231,7 @@ if found > 0 then
   END SELECT
   if check_scroll then
     if b(found).scroll AND 2 then
-      if GUI_my = b(found).row2 then 
+      if GUI_my = b(found).row2 then
         if GUI_mx = b(found).col1 + 1 then
           if b(found).scroll_offset_hors > 0 then
             b(found).scroll_offset_hors = b(found).scroll_offset_hors - 1

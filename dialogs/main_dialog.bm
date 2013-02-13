@@ -18,7 +18,7 @@ print_files boxes(1), Local_files()
 print_files boxes(2), Remote_files()
 
 DO
-  _LIMIT 100
+  _LIMIT 200
   
   if GUI_update_screen(boxes(), BOXES, global_selected_gui) then
     'GUI_draw_element_array boxes(), BOXES, global_selected_gui
@@ -49,39 +49,39 @@ DO
     update_scrn
     boxes(6).updated = -1
     i$ = boxes(6).menu_choice
-    if i$ = "EXIT " then 
+    if i$ = "EXIT " then 'exit
       exit_flag = -1
-    elseif i$ = "ABOUT" then
+    elseif i$ = "ABOUT" then 'about
       about_dialog
-    elseif i$ = "CONEC" then
+    elseif i$ = "CONEC" then 'connect
       Connect_To_FTP
+    elseif i$ = "DISCO" then 'disconnect
+      is_connected = 0
+      CLOSE command_connect&
+      status$ = "Not Connected."
+      boxes(2).length = 0
+      boxes(2).updated = -1
+    elseif i$ = "CMDLN" then 'command line
+      command_line
+      if is_connected then update_remote_files
+      refresh_Local_files
+      boxes(1).updated = -1
+    elseif i$ = "LREFR" then 'local refresh 
+      refresh_Local_files
+      boxes(1).updated = -1
+    elseif i$ = "LDELE" then 'local delete
+      delete_file_GUI 1
+      boxes(1).updated = -1
+    elseif i$ = "LSHOH" then 'local show hidden
+      show_hidden_local = NOT show_hidden_local
+      refresh_Local_files
+      boxes(1).updated = -1
+    elseif i$ = "LMKDI" then 'local make directory
+    elseif i$ = "LRMDI" then 'local rename directory
+    elseif i$ = "LDLDI" then 'local delete directory
+    
     end if
   end if
-  'IF menu_clicked THEN
-  '  menu_clicked = 0
-  '  selected_box = 4
-  '  temp_menu_sel = 0
-  '  update_scrn
-  '  _DISPLAY 'So menu updates
-  '  IF global_menu_sel = 1 THEN 'this is where we decide what to do based on what is selected in the menu
-  '    IF menu_sel = 1 THEN
-  '      Connect_To_FTP
-  '      update = -1
-  '    ELSEIF menu_sel = 2 THEN
-  '      is_connected = 0
-  '      CLOSE command_connect&
-  '      status$ = "Not Connected."
-  '      boxes(2).length = 0
-  '      update = -1
-  '    ELSEIF menu_sel = 3 THEN
-  '      command_line
-  '      update_scrn
-  '      IF is_connected THEN Update_Remote_Files
-  '      refresh_Local_files
-  '      update = -1
-  '    ELSEIF menu_sel = 5 THEN
-  '      SYSTEM
-  '    END IF
   '  ELSEIF global_menu_sel = 2 THEN
   '    IF menu_sel = 1 THEN
   '      refresh_Local_files
@@ -207,8 +207,6 @@ boxes(7).col2 = 80
 
 END SUB
 
-
-
 SUB update_scrn () 'updates screen -- draws main gui
 
 MEM_put_str boxes(3).nam, status$ + space$(_WIDTH(0) - len(status$))
@@ -245,27 +243,25 @@ END SUB
 
 SUB print_files (b AS GUI_element_type, f() AS filedir_type) 'Displays files f() in box b
 
-if b.length > b.lines.length then
-  MEM_reallocate_array b.lines, b.length + 2
-end if
-FOR x = 1 to b.lines.length 'b.row2 - b.row1 - 1
-  if x <= b.length then
-    k$ = MEM_get_Str$(f(x).nam)
-    if len(k$) > b.col2 - b.col1 - 4 then
-      k$ = mid$(k$, 1, b.col2 - b.col1 - 4)
-    else
-      k$ = k$ + space$((b.col2 - b.col1 - 4) - len(k$))
-    end if
-    if f(x).flag_cwd and f(x).flag_retr then
-      k$ = k$ + "LNK"
-    elseif f(x).flag_cwd then
-      k$ = k$ + "DIR"
-    else
-      k$ = k$ + "   "
-    end if
-    MEM_put_str_array b.lines, x, k$
+b.scroll_offset_vert = 0
+b.selected = 0
+'if b.length > b.lines.length then
+MEM_reallocate_array b.lines, b.length + 2
+'end if
+FOR x = 1 to b.length 'b.row2 - b.row1 - 1
+  k$ = MEM_get_Str$(f(x).nam)
+  if len(k$) > b.col2 - b.col1 - 4 then
+    k$ = mid$(k$, 1, b.col2 - b.col1 - 4)
   else
-    MEM_put_str_array b.lines, x, ""
+    k$ = k$ + space$((b.col2 - b.col1 - 4) - len(k$))
   end if
+  if f(x).flag_cwd and f(x).flag_retr then
+    k$ = k$ + "LNK"
+  elseif f(x).flag_cwd then
+    k$ = k$ + "DIR"
+  else
+    k$ = k$ + "   "
+  end if
+  MEM_put_str_array b.lines, x, k$
 next x
 END SUB

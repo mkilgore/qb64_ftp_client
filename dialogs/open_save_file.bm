@@ -1,0 +1,146 @@
+'Open and save file dialogs
+
+
+'Dialog for opening a file
+FUNCTION open_file$(starting_directory$, File_name_options$)
+DIM gui_num as integer, f_options as INTEGER
+gui_num = 7
+
+f$ = File_name_options$
+DO
+  if instr(f$, "|") then
+    f_options = f_options + 1
+    f$ = mid$(f$, instr(f$, "|") + 1)
+    if instr(f$, "|") then
+      f$ = mid$(f$, instr(f$, "|") + 1)
+    end if
+  end if
+LOOP until instr(f$, "|") = 0
+
+if f_options = 0 then
+  f_options = 1
+  no_flags = -1
+end if
+
+DIM gui(gui_num) as GUI_element_type, file_options$(f_options), file_search$(f_options)
+
+if no_flags = 0 then
+  f$ = File_name_options$
+  fcount = 1
+  DO
+    file_options$(fcount) = mid$(f$, 1, instr(f$, "|") - 1)
+    f$ = mid$(f$, instr(f$, "|") + 1)
+    if instr(f$, "|") then
+      file_search$(fcount) = mid$(f$, 1, instr(f$, "|") - 1)
+      fcount = fcount + 1
+      f$ = mid$(f$, instr(f$, "|") + 1)
+    else
+      file_search$(fcount) = f$
+    end if
+  LOOP until instr(f$, "|") = 0
+else
+  file_options$(1) = "All Files"
+  file_search$(1) = "*"
+end if
+
+g = g + 1
+gui(g).element_type = GUI_BOX
+gui(g).dialog = -1
+GUI_init_element gui(g), "Open File"
+gui(g).row1 = 3
+gui(g).row2 = _HEIGHT(0) - 2
+gui(g).col1 = 3
+gui(g).col2 = _WIDTH(0) - 4
+gui(g).skip = -1
+gui(g).shadow = -1
+gui(g).layer = -1
+
+g = g + 1
+gui(g).element_type = GUI_BUTTON
+gui(g).dialog = -1
+GUI_init_element gui(g), "Open"
+gui(g).row1 = gui(1).row1 + 1
+gui(g).col1 = gui(1).col1 + (gui(1).col2 - gui(1).col1) \ 4 - 3
+
+g = g + 1
+gui(g).element_type = GUI_BUTTON
+gui(g).dialog = -1
+GUI_init_element gui(g), "Close"
+gui(g).row1 = gui(1).row1 + 1
+gui(g).col1 = gui(1).col1 + (gui(1).col2 - gui(1).col1) \ 2 - 4
+
+g = g + 1
+gui(g).element_type = GUI_DROP_DOWN
+gui(g).dialog = -1
+GUI_init_element gui(g), "Drop Down"
+MEM_allocate_string_array gui(g).lines, f_options
+for x = 1 to f_options
+  MEM_put_str_array gui(g).lines, x, file_options$(x)
+  if len(file_options$(x)) > max_len then
+    max_len = len(file_options$(x))
+  end if
+next x
+gui(g).length = f_options
+gui(g).selected = 1
+gui(g).scroll_max_hors = max_len
+gui(g).scroll = 1
+gui(g).shadow = -1
+gui(g).row1 = gui(1).row1 + 1
+if gui(g).row1 + f_options + 1 <= _HEIGHT(0) then
+  gui(g).row2 = gui(g).row1 + f_options + 1
+else
+  gui(g).row2 = _HEIGHT(0) - 1
+end if
+gui(g).col1 = (gui(1).col1 + (gui(1).col2 - gui(1).col1) \ 4) * 3 - max_len \ 2
+gui(g).col2 = gui(g).col1 + max_len + 3
+
+g = g + 1
+gui(g).element_type = GUI_LIST_BOX
+gui(g).dialog = -1
+GUI_init_element gui(g), "Folder"
+gui(g).scroll = 1
+gui(g).row1 = gui(1).row1 + 2
+gui(g).col1 = gui(1).col1 + 2
+gui(g).row2 = gui(1).row2 - 2
+gui(g).col2 = gui(1).col1 + (gui(1).col2 - gui(1).col1) \ 2
+
+g = g + 1
+gui(g).element_type = GUI_LIST_BOX
+gui(g).dialog = -1
+GUI_init_element gui(g), "File"
+gui(g).scroll = 1
+gui(g).row1 = gui(1).row1  + 2
+gui(g).col1 = gui(1).col1 + (gui(1).col2 - gui(1).col1) \ 2 + 1
+gui(g).row2 = gui(1).row2 - 2
+gui(g).col2 = gui(1).col2 - 2
+
+g = g + 1
+gui(g).element_type = GUI_LABEL
+gui(g).dialog = -1
+GUI_init_element gui(g), "path: " + starting_directory$
+gui(g).row1 = gui(1).row2 - 1
+gui(g).col1 = gui(1).col1 + 2
+
+DO
+
+  IF GUI_update_screen(gui(), gui_num, selected_gui) then
+    GUI_draw_element_array gui(), gui_num, selected_gui
+  end if
+
+  GUI_mouse_range gui(), gui_num, selected_gui
+
+  a$ = GUI_inkey$(gui(), gui_num, selected_gui)
+  SELECT CASE a$
+    case chr$(27)
+      exit_flag = -1
+  end select
+
+LOOP until exit_flag or _EXIT
+
+GUI_free_element_array gui()
+END FUNCTION
+
+'Dialog for saving a file
+FUNCTION save_file$(starting_directory$, File_name_options$)
+
+END FUNCTION

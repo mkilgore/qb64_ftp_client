@@ -12,7 +12,7 @@ GUI_init
 gui_num = 25
 
 DIM main_gui(gui_num) as GUI_element_type 'create 25 GUI elements
-DIM buttons(3) AS INTEGER 
+DIM buttons(3) AS INTEGER
 DIM labels(4) AS INTEGER 'Will hold the GUI numbers for 4 labels we have
 DIM click_count(3) AS INTEGER
 DIM base_menu(4) as GUI_menu_item_type
@@ -20,7 +20,7 @@ DIM base_menu(4) as GUI_menu_item_type
 DIM file_menu(10) as GUI_menu_item_type
 DIM edit_menu(10) as GUI_menu_item_type
 DIM search_menu(10) as GUI_menu_item_type
-DIM tools_menu(10) as GUI_menu_item_type 
+DIM tools_menu(10) as GUI_menu_item_type
 DIM help_menu(10) as GUI_menu_item_type
 
 'GUI(1) is our main dialog box and is going to be
@@ -81,7 +81,7 @@ GUI_attach_menu base_menu(4), m, _OFFSET(help_menu(1))
 
 g=g+1
 main_gui(g).element_type = GUI_BOX
-GUI_init_element main_gui(g), "Plain Box" 
+GUI_init_element main_gui(g), "Plain Box"
 main_gui(g).row1 = 2  'location
 main_gui(g).row2 = 25
 main_gui(g).col1 = 1
@@ -151,7 +151,7 @@ buttons(3) = g
 g=g+1
 main_gui(g).element_type = GUI_DROP_DOWN 'Initalize a drop-down selection
 GUI_init_element main_gui(g), "Drop Down"
-main_gui(g).row1 = 8 
+main_gui(g).row1 = 8
 main_gui(g).col1 = 2
 
 main_gui(g).row2 = 15 '<-- These cords will be used to draw the drop-down box when it is open
@@ -169,11 +169,11 @@ next x
 
 
 g=g+1
-main_gui(g).element_type = GUI_DROP_DOWN 'Almost exactly the same as before 
+main_gui(g).element_type = GUI_DROP_DOWN 'Almost exactly the same as before
 GUI_init_element main_gui(g), "Drop Down"
 main_gui(g).row1 = 9
 main_gui(g).col1 = 2
-main_gui(g).row2 = 24 'A larger row2 value will result in a bigger drop-down box 
+main_gui(g).row2 = 24 'A larger row2 value will result in a bigger drop-down box
 main_gui(g).col2 = 40
 main_gui(g).scroll = 1
 main_gui(g).shadow = -1
@@ -256,21 +256,21 @@ DO 'Main loop
   ' -- This program has 25 GUI elements, probably more then you'll ever come across, so with that in mind
   ' The Limit doesn't need to be that big.
   _LIMIT 200
-  
+
   'Check if we should update screen because an event happened or otherwise
-  if GUI_update_screen(main_gui(), gui_num, selected_gui) then 
+  if GUI_update_screen(main_gui(), gui_num, selected_gui) then
     'Redraw screen (May be improved in the future but currently redraws the entire screen)
     GUI_draw_element_array main_gui(), gui_num, selected_gui
   end if
 
   'Mouse events
   GUI_mouse_range main_gui(), gui_num, selected_gui
-  
+
   'Keyboard input events
   'Returns the INKEY$ result it got in-case you want to do extra actions
   ' -- For this reason don't use INKEY$ or _MOUSEINPUT outside of the GUI functions
   key$ = GUI_inkey$(main_gui(), gui_num, selected_gui)
-  
+
   SELECT CASE key$ 'In this example I'll do extra checking for the ESC key.
     CASE CHR$(27) 'ESC key
       exit_flag = -1
@@ -290,11 +290,11 @@ DO 'Main loop
     MEM_put_str main_gui(labels(4)).nam, "Menu Chosen: " + main_gui(1).menu_choice
     main_gui(1).menu_chosen = 0 'Reset the menu so we don't enter this IF again
     i$ = main_gui(1).menu_choice
-    
+
     'Redraw screen so menu doesn't show before opening menu choice
     GUI_draw_element_array main_gui(), gui_num, selected_gui
     main_gui(1).updated = -1 'set menu to updated
-    
+
     if i$ = "EXIT " then exit_flag = -1 '"EXIT " is for the EXIT menu option -- So set our exit_flag variable
     if i$ = "ABOUT" then
       about_dialog
@@ -306,7 +306,7 @@ DO 'Main loop
       prompt = prompt_dialog("Test Dialog"+chr$(13) + "Line 2", 10, OK_BUTTON OR CLOSE_BUTTON, OK_BUTTON)
     end if
     if i$ = "CONEC" then
-      Connect_To_FTP
+      'Connect_To_FTP
     end if
     if i$ = "HELP " then
       popup_dialog_gui "Not Implemented Yet."
@@ -330,5 +330,5 @@ END SUB
 '$include:'dialogs/about.bm'
 '$include:'dialogs/rename_file.bm'
 '$include:'dialogs/prompt.bm'
-'$include:'dialogs/ftp_connect.bm'
+''$include:'dialogs/ftp_connect.bm'
 '$include:'dialogs/dialog_simple.bm'
