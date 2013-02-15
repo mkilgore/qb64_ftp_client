@@ -55,8 +55,8 @@ Menun(g) = n
 g = g + 1: MEM_put_str Global_Menu(g).nam, "#Edit": n = 1
 Menu(n, g).ident = "CUT  ": MEM_put_str Menu(n, g).nam, "#Cut        ": n = n + 1
 Menu(n, g).ident = "COPY ": MEM_put_str Menu(n, g).nam, "C#opy        ": n = n + 1
-Menu(n, g).ident = "PASTE": MEM_put_str Menu(n, g).nam, "#Paste        ": n = n + 1
-
+Menu(n, g).ident = "PASTE": MEM_put_str Menu(n, g).nam, "#Paste        "
+Menun(g) = n
 
 g = g + 1: MEM_put_str Global_Menu(g).nam, "#Help": n = 1
 Menu(n, g).ident = "HELP ": MEM_put_str Menu(n, g).nam, "#Help               ": n = n + 1
@@ -92,7 +92,7 @@ DO
 
     if i$ = "EXIT " then exit_flag = -1
     if i$ = "OPEN " then
-      f$ = open_file$("/home/dsman195276", "QB64 File|.bas|QB64 Include|*.bm *.bi|C++ Source|*.cpp|C/C++ Header|*.h *.hpp|All Files|*")
+      f$ = open_file$("/home/dsman195276", "QB64 File|*.bas|QB64 Include|*.bm *.bi|C++ Source|*.cpp|C/C++ Header|*.h *.hpp|All Files|*")
     end if
   end if
 LOOP until exit_flag or _EXIT

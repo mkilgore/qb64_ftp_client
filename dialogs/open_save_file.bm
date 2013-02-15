@@ -1,7 +1,23 @@
 'Open and save file dialogs
 
-
+FUNCTION add_directory$(starting_directory$, dir_nam$)
+if instr(_OS$, "[LINUX]") then
+  if right$(starting_directory$, 1) <> "/" then
+    s$ = starting_directory$ + "/"
+  else
+    s$ = starting_directory$
+  end if
+else
+  if right$(starting_directory$, 1) <> "\" then
+    s$ = starting_directory$ + "\"
+  else
+    s$ = starting_directory$
+  end if
+end if
+s$ = s$ + dir_nam$
+END FUNCTION
 'Dialog for opening a file
+
 FUNCTION open_file$(starting_directory$, File_name_options$)
 DIM gui_num as integer, f_options as INTEGER
 gui_num = 7
@@ -23,7 +39,7 @@ if f_options = 0 then
 end if
 
 DIM gui(gui_num) as GUI_element_type, file_options$(f_options), file_search$(f_options)
-
+DIM l_files(500) as filedir_type
 if no_flags = 0 then
   f$ = File_name_options$
   fcount = 1
@@ -93,6 +109,7 @@ else
 end if
 gui(g).col1 = (gui(1).col1 + (gui(1).col2 - gui(1).col1) \ 4) * 3 - max_len \ 2
 gui(g).col2 = gui(g).col1 + max_len + 3
+gui_drop = g
 
 g = g + 1
 gui(g).element_type = GUI_LIST_BOX
@@ -103,6 +120,7 @@ gui(g).row1 = gui(1).row1 + 2
 gui(g).col1 = gui(1).col1 + 2
 gui(g).row2 = gui(1).row2 - 2
 gui(g).col2 = gui(1).col1 + (gui(1).col2 - gui(1).col1) \ 2
+dir_gui = g
 
 g = g + 1
 gui(g).element_type = GUI_LIST_BOX
@@ -113,6 +131,7 @@ gui(g).row1 = gui(1).row1  + 2
 gui(g).col1 = gui(1).col1 + (gui(1).col2 - gui(1).col1) \ 2 + 1
 gui(g).row2 = gui(1).row2 - 2
 gui(g).col2 = gui(1).col2 - 2
+file_gui = g
 
 g = g + 1
 gui(g).element_type = GUI_LABEL
@@ -120,8 +139,11 @@ gui(g).dialog = -1
 GUI_init_element gui(g), "path: " + starting_directory$
 gui(g).row1 = gui(1).row2 - 1
 gui(g).col1 = gui(1).col1 + 2
-
+update_files = -1
 DO
+  if update_files then
+    load_local_files l_files(), gui(dir_Gui), gui(file_gui), starting_directory$, file_search$(gui(gui_drop).selected), 0
+  end if
 
   IF GUI_update_screen(gui(), gui_num, selected_gui) then
     GUI_draw_element_array gui(), gui_num, selected_gui
@@ -144,3 +166,96 @@ END FUNCTION
 FUNCTION save_file$(starting_directory$, File_name_options$)
 
 END FUNCTION
+
+SUB load_Local_files (L_files() as filedir_type, dirs as GUI_element_type, fils as GUI_element_type, s_dir$, ext$, show_hidden) 'Refreshes the local file listing
+fils.length = 0
+fils.selected = 0
+dirs.length = 1
+dirs.selected = 1
+'boxes(1).offset = 0
+MEM_put_str L_files(dirs.length).nam, ".."
+'Local_files(boxes(1).length).dir = "DIR"
+L_files(dirs.length).flag_cwd = -1
+L_files(dirs.length).flag_retr = 0
+IF instr(_OS$, "[LINUX]") THEN
+  IF show_hidden THEN h$ = "a" ELSE h$ = ""
+  'if ext$ > "" then ex$ = "*." + ext$
+  SHELL _HIDE "ls -F" + h$ + " " + chr$(34) + s_dir$ + "/" + ext$ + chr$(34) + " > /tmp/dirtmp.tmp"
+  OPEN "/tmp/dirtmp.tmp" FOR INPUT AS #1
+  DO WHILE NOT EOF(1)
+    LINE INPUT #1, a$
+    IF a$ > "" THEN
+      IF RIGHT$(a$, 1) = "/" AND a$ <> "../" AND a$ <> "./" THEN
+        dirs.length = dirs.length + 1
+        MEM_put_str L_files(dirs.length + fils.length).nam, a$
+        'Local_files(boxes(1).length).dir = "DIR"
+        L_files(dirs.length + fils.length).flag_cwd = -1
+        L_files(dirs.length + fils.length).flag_retr = 0
+      END IF
+      IF RIGHT$(a$, 1) = "@" THEN
+        dirs.length = dirs.length + 1
+        MEM_put_str L_files(dirs.length + fils.length).nam, LEFT$(a$, LEN(a$) - 1) + "/"
+        'Local_files(boxes(1).length).dir = "DIR"
+        L_files(dirs.length + fils.length).flag_cwd = -1
+        L_files(dirs.length + fils.length).flag_retr = 0
+      END IF
+    END IF
+  LOOP
+  CLOSE #1
+
+  OPEN "/tmp/dirtmp.tmp" FOR INPUT AS #1
+  DO WHILE NOT EOF(1)
+    LINE INPUT #1, a$
+    IF a$ > "" THEN
+      IF RIGHT$(a$, 1) <> "/" AND RIGHT$(a$, 1) <> "@" THEN
+        IF RIGHT$(a$, 1) = "*" THEN a$ = LEFT$(a$, LEN(a$) - 1)
+        fils.length = fils.length + 1
+        MEM_put_str L_files(dirs.length + fils.length).nam, a$
+        'Local_files(boxes(1).length).dir = ""
+        L_files(dirs.length + fils.length).flag_cwd = 0
+        L_files(dirs.length + fils.length).flag_retr = -1
+      END IF
+    END IF
+  LOOP
+  CLOSE #1
+  KILL "/tmp/dirtmp.tmp"
+ELSE 'I guess I better add that Windows code at some point...
+  tmp_dir$ = ENVIRON$("temp")
+  SHELL _HIDE "cmd /c DIR " + CHR$(34) + s_dir$ + CHR$(34) + " /A:D /B > " + tmp_dir$ + "\dirtmp.tmp"
+  SHELL _HIDE "cmd /c DIR " + CHR$(34) + s_dir$ + CHR$(34) + " /A:-D /B > " + tmp_dir$ + "\filetmp.tmp"
+  OPEN tmp_dir$ + "\filetmp.tmp" FOR INPUT AS #1
+  IF NOT EOF(1) THEN
+    DO
+      LINE INPUT #1, file$
+      fils.length = fils.length + 1
+      MEM_put_str L_files(dirs.length + fils.length).nam, file$
+      'Local_files(boxes(1).length).dir = ""
+      L_files(dirs.length + fils.length).flag_cwd = 0
+      L_files(dirs.length + fils.length).flag_retr = -1
+    LOOP UNTIL EOF(1)
+  END IF
+  CLOSE #1
+  KILL tmp_dir$ + "\filetmp.tmp"
+  OPEN tmp_dir$ + "\dirtmp.tmp" FOR INPUT AS #1
+  IF NOT EOF(1) THEN
+    DO
+      LINE INPUT #1, dir$
+      dirs.length = dirs.length + 1
+      MEM_put_str L_files(dirs.length + fils.length).nam, dir$ + "\"
+      'Local_files(boxes(1).length).dir = "DIR"
+      L_files(dirs.length + fils.length).flag_cwd = -1
+      L_files(dirs.length + fils.length).flag_retr = 0
+    LOOP UNTIL EOF(1)
+    CLOSE #1
+  END IF
+  KILL tmp_dir$ + "\dirtmp.tmp"
+END IF
+sort_dir_listing L_files(), fils.length + dirs.length
+MEM_allocate_string_array dirs.lines, dirs.length
+for x = 1 to dirs.length
+  MEM_put_str_array dirs.lines, x, MEM_get_str$(L_files(x).nam)
+next x
+for x = 1 to fils.length
+  MEM_put_str_array fils.lines, x, MEM_get_str$(L_files(x + dirs.length).nam)
+next x
+END SUB
