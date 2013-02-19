@@ -120,15 +120,15 @@ t_count = tim
 selected_gui = 1
 DO
   _LIMIT 100
-  
+
   if GUI_update_screen(gui(), gui_num, selected_gui) then
     GUI_draw_element_array gui(), gui_num, selected_gui
   end if
-  
-  GUI_mouse_range gui(), gui_num, selected_gui
-  
+
+  g_chosen = GUI_mouse_range(gui(), gui_num, selected_gui)
+
   a$ = GUI_inkey$(gui(), gui_num, selected_gui)
-  
+
   select case a$
     case chr$(27)
       esc_flag = -1
@@ -136,7 +136,7 @@ DO
   end select
 
   for x = 1 to button_count
-    if gui(buttons(x)).pressed then
+    if buttons(x) = g_chosen then
       exit_flag = -1
     end if
   next x
@@ -149,7 +149,7 @@ DO
     gui(tim_label).updated = -1
     t# = TIMER
   end if
-  
+
 LOOP UNTIL exit_flag OR (t_count = 0 and tim > 0)
 
 IF (t_count > 0 AND tim > 0) or esc_flag THEN

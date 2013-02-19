@@ -31,8 +31,9 @@ main_gui(g).row1 = 1
 main_gui(g).col1 = 1
 main_gui(g).col2 = 80
 main_gui(g).menu_padding = 2
-main_gui(g).skip = -1
-main_gui(g).shadow = -1
+'main_gui(g).skip = -1
+'main_gui(g).shadow = -1
+main_gui(g).flags = main_gui(g).flags OR GUI_FLAG_SKIP OR GUI_FLAG_SHADOW
 
 MEM_put_str base_menu(1).nam, "#File"
 base_menu(1).ident = "File "
@@ -86,9 +87,10 @@ main_gui(g).row1 = 2  'location
 main_gui(g).row2 = 25
 main_gui(g).col1 = 1
 main_gui(g).col2 = 80
-main_gui(g).skip = -1 ' -- We don't want to be able to TAB to this gui element
 main_gui(g).layer = -1 ' -- Set in background. Layer 0 is the default
-main_gui(g).hide = -1 ' -- Don't draw box characters or box name, etc.
+'main_gui(g).skip = -1 ' -- We don't want to be able to TAB to this gui element
+'main_gui(g).hide = -1 ' -- Don't draw box characters or box name, etc.
+main_gui(g).flags = main_gui(g).flags OR GUI_FLAG_SKIP OR GUI_FLAG_HIDE
 
 g=g+1
 main_gui(g).element_type = GUI_INPUT_BOX
@@ -105,7 +107,9 @@ main_gui(g).row2 = 10
 main_gui(g).col1 = 41
 main_gui(g).col2 = 80
 'scroll = 1 means just vertical, scroll = 2 means just horisontal, scroll = 3 means both (Bit field)
-main_gui(g).scroll = 1
+'main_gui(g).scroll = 1
+main_gui(g).flags = main_gui(g).flags OR GUI_FLAG_SCROLL_V
+
 MEM_allocate_string_array main_gui(g).lines, 120
 main_gui(g).length = 80
 for x = 1 to 80
@@ -157,8 +161,9 @@ main_gui(g).col1 = 2
 main_gui(g).row2 = 15 '<-- These cords will be used to draw the drop-down box when it is open
 main_gui(g).col2 = 40 '<--
 
-main_gui(g).scroll = 1 '1 means just vertical scroll (No hoisontal)
-main_gui(g).shadow = -1 'Draws shadow under box when drop-down is opened
+'main_gui(g).scroll = 1 '1 means just vertical scroll (No hoisontal)
+'main_gui(g).shadow = -1 'Draws shadow under box when drop-down is opened
+main_gui(g).flags = main_gui(g).flags OR GUI_FLAG_SCROLL_V OR GUI_FLAG_SHADOW
 main_gui(g).selected = 1 'Set the default selected item
 'allocate space for the items in the drop-down
 MEM_allocate_string_array main_gui(g).lines, 80
@@ -175,8 +180,9 @@ main_gui(g).row1 = 9
 main_gui(g).col1 = 2
 main_gui(g).row2 = 24 'A larger row2 value will result in a bigger drop-down box
 main_gui(g).col2 = 40
-main_gui(g).scroll = 1
-main_gui(g).shadow = -1
+'main_gui(g).scroll = 1
+'main_gui(g).shadow = -1
+main_gui(g).flags = main_gui(g).flags OR GUI_FLAG_SCROLL_V OR GUI_FLAG_SHADOW
 main_gui(g).selected = 1
 MEM_allocate_string_array main_gui(g).lines, 80
 main_gui(g).length = 80
@@ -219,7 +225,8 @@ main_gui(g).row2 = 22
 main_gui(g).col1 = 41
 main_gui(g).col2 = 80
 'scroll = 1 means just vertical, scroll = 2 means just horisontal, scroll = 3 means both (Bit field)
-main_gui(g).scroll = 3
+'main_gui(g).scroll = 3
+main_gui(g).flags = main_gui(g).flags OR GUI_FLAG_SCROLL_V OR GUI_FLAG_SCROLL_H
 'We allocate 120 Lines for the array (main_gui(g).lines won't be allocated for you, but it may be reallocated if you allow it)
 'Just set this to a reasonable value for your program.
 MEM_allocate_string_array main_gui(g).lines, 120
@@ -264,7 +271,7 @@ DO 'Main loop
   end if
 
   'Mouse events
-  GUI_mouse_range main_gui(), gui_num, selected_gui
+  g_clicked = GUI_mouse_range(main_gui(), gui_num, selected_gui)
 
   'Keyboard input events
   'Returns the INKEY$ result it got in-case you want to do extra actions
@@ -278,12 +285,13 @@ DO 'Main loop
 
   'manage interactions here.
   for x = 1 to 3 'This loop checks the three buttons we have
-    if main_gui(buttons(x)).pressed then
+    if buttons(x) = g_clicked then
       click_count(x) = click_count(x) + 1
       'We're setting the string in a label and then marking it to be updated
-      MEM_put_str main_gui(labels(x)).nam, "Button" + str$(x) + " :" + str$(click_count(x)) + " Times!"
-      main_gui(labels(x)).updated = -1
-      main_gui(buttons(x)).pressed = 0 'Reset the button to 0 so we don't end up catching it a second time
+      MEM_put_str main_gui(labels(x)).text, "Button" + str$(x) + " :" + str$(click_count(x)) + " Times!"
+      'main_gui(labels(x)).updated = -1
+      main_gui(labels(x)).flags = main_gui(labels(x)).flags OR GUI_FLAG_UPDATED
+      'main_gui(buttons(x)).pressed = 0 'Reset the button to 0 so we don't end up catching it a second time
     end if
   next x
   if main_gui(1).menu_chosen then 'Check our menu
@@ -293,8 +301,8 @@ DO 'Main loop
 
     'Redraw screen so menu doesn't show before opening menu choice
     GUI_draw_element_array main_gui(), gui_num, selected_gui
-    main_gui(1).updated = -1 'set menu to updated
-
+    'main_gui(1).updated = -1 'set menu to updated
+    main_gui(1).flags = main_gui(1).flags OR GUI_FLAG_UPDATED
     if i$ = "EXIT " then exit_flag = -1 '"EXIT " is for the EXIT menu option -- So set our exit_flag variable
     if i$ = "ABOUT" then
       about_dialog

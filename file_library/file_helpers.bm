@@ -1,10 +1,11 @@
 
 
 SUB sort_dir_listing (f() AS filedir_type, file_num)
-'quicksort type of thing. First, move all of the DIR's to the top (Ignore listing 1, as it's always ".."
+'quicksort type of thing. First, move all of the DIR's to the top
 nex = 0
 DO: nex = nex + 1: loop until nex = file_num or MEM_get_Str$(f(nex).nam) = ".."
 if MEM_Get_str$(f(nex).nam) = ".." then swap f(nix), f(1)
+nex = 0
 DO: nex = nex + 1: LOOP UNTIL NOT f(nex).flag_cwd OR nex = file_num 'loop until f(nex) is not a directory
 m = nex + 1
 IF m < file_num THEN

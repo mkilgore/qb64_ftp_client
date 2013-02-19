@@ -6,6 +6,10 @@
 'of the Do What You Want Public License, Version 1, as published by Matt Kilgore
 'See file COPYING that should have been included with this source.
 
+CONST GUI_VERSION$ = ".75"
+
+CONST GUI_DEBUG = -1
+
 TYPE GUI_menu_item_type
   nam as MEM_string_type 'Displayed string for MENU choice
   ident as STRING * 5 'identifer string
@@ -39,6 +43,21 @@ CONST GUI_BUTTON = 8
 CONST GUI_RADIO_BUTTON = 9
 CONST GUI_LABEL = 10
 
+CONST GUI_FLAG_UPDATED = 1
+CONST GUI_FLAG_SKIP = 2
+CONST GUI_FLAG_SHADOW = 4
+CONST GUI_FLAG_DIALOG = 8
+CONST GUI_FLAG_HIDE = 16
+CONST GUI_FLAG_SCROLL_V = 32
+CONST GUI_FLAG_SCROLL_H = 64
+CONST GUI_FLAG_SCROLL_IS_HELD = 128
+CONST GUI_FLAG_TEXT_IS_SELECTED = 256
+CONST GUI_FLAG_DROP_FLAG = 512
+CONST GUI_FLAG_CHECKED = 1024
+CONST GUI_FLAG_MENU_OPEN = 2048 '-1
+CONST GUI_FLAG_MENU_ALT = 4096 '-2
+CONST GUI_FLAG_MENU_CHOSEN = 8192
+
 TYPE GUI_element_type
   nam AS MEM_string_type 'name of item
 
@@ -53,15 +72,29 @@ TYPE GUI_element_type
   '7 -- Menu handler         -- Indicates this element is a menu (Menus are a bit more complex -- see documentation)
   '8 -- Button               -- Just a simple button
   '9 -- Radio button         -- Like a checkbox, but they can be linked together so that only one in a group is selectable at a time
-  '10 - Label                -- Just plain text (Prints nam at row1, col1). skip is set by default
+  '10 - Label                -- Just plain text (Prints text at row1, col1). skip is set by default
   ' V -- not implemented just yet
-  ' -- Radio Buttons?
   ' -- Combo Box
 
   row1 AS INTEGER 'location
   col1 AS INTEGER
   row2 AS INTEGER
   col2 AS INTEGER
+
+  flags AS INTEGER '15 (0 to 15) bits flags (Will be expanded as needed as new flags are needed)
+  'bit 0  -- updated since last draw
+  'bit 1  -- skip
+  'bit 2  -- shadow
+  'bit 3  -- dialog
+  'bit 4  -- hide
+  'bit 5  -- scroll bar vert
+  'bit 6  -- scroll bar hors
+  'bit 7  -- scroll is held
+  'bit 8  -- text is selected
+  'bit 9  -- drop-down flag
+  'bit 10 -- checked
+  'bit 11 -- menu open
+  'bit 12 -- menu chosen
 
   mcolor as GUI_color_type
   'c1 AS _BYTE 'forcolor
@@ -75,24 +108,14 @@ TYPE GUI_element_type
   ' Default layer is zero. If you need something to be ontop of something else, put it in a higher layer
   layer AS _BYTE
 
-  skip AS _BYTE ' if -1 then will be skipped by TAB key
-
-  shadow AS _BYTE ' if -1 then a shadow will be drawn around the box
-
-  pressed AS _BYTE ' set if button pressed -- needs to be reset if you intend to do something else
-
-  dialog AS _BYTE 'If set, dialog defaults will be used instead of normal default colors
-
-  'text_box AS _BYTE '-1 then drawn as textbox (input box) -- always as row2 = row1 + 2
-
   text AS MEM_string_type 'text drawn/edited in a Input-Box
   text_position AS INTEGER 'position of the cursor in the input
   'text_offset AS INTEGER 'We display the string in the box starting at the text_offset character, to account for scrolling to the right
+  text_sel_row1 AS INTEGER
+  text_sel_row2 AS INTEGER
+  text_sel_col1 AS INTEGER
+  text_sel_col2 AS INTEGER
 
-  hide AS _BYTE 'For Input-box -- text will be drawn as "****" instead of "test" -- use for passwords, etc.
-  'For GUI_BOX, Box will not be drawn (Useful if you want to make a background a certain color -- just put a GUI_BOX in the background and then have it not draw the box part)
-
-  scroll AS _BYTE ' If set then scroll bar(s) are drawn
   scroll_color as GUI_color_type
   'scroll = 0 -- no scroll bars
   'scroll = 1 -- Vertical scroll bar only
@@ -100,8 +123,6 @@ TYPE GUI_element_type
   'scroll = 3 -- Vertical and Horisontal scroll bars
   scroll_offset_vert AS INTEGER 'current scroll offset -- calculated in draw_gui function
   scroll_offset_hors AS INTEGER
-
-  scroll_held AS _BYTE 'flag variable indicating a held scroll or not
 
   scroll_loc_hors AS INTEGER 'current location of scroll-bar
   scroll_loc_vert AS INTEGER
@@ -114,14 +135,10 @@ TYPE GUI_element_type
   selected_old AS INTEGER
   lines AS MEM_array_type ' Array to store strings for list-box, drop-down, etc.
 
-  checked AS _BYTE 'If set then the check-box is checked
-
-  drop_flag AS _BYTE ' If drop_flag is set, then the drop-down box is showing
-
   menu as _MEM ' Points to an actual array of menu_items
 
-  menu_open as _BYTE 'if -1 then 'selected' menu was chosen  -- -2 means Alt is being held
-  menu_chosen AS _BYTE
+  'menu_open as _BYTE 'if -1 then 'selected' menu was chosen  -- -2 means Alt is being held
+  'menu_chosen AS _BYTE
   menu_padding as INTEGER 'Spaces padded before start of menu
   menu_choice AS STRING * 5
 
@@ -130,7 +147,6 @@ TYPE GUI_element_type
   'Updated only applies to selected gui element, to ease the ease of checking.
   'You can assume that unless you change the values directly, no other gui's accept the selected gui
   'will be changed.
-  updated AS _BYTE 'If this is set, it indicates screen should be redrawn to reflect a change in this object
 
   cur_row AS INTEGER
   cur_col AS INTEGER
@@ -141,6 +157,19 @@ TYPE GUI_element_type
   'If this GUI is currently selected, then you should do a:
   'LOCATE cur_row, cur_col, 1
   'to locate the cursor
+
+  skip AS _BYTE ' if -1 then will be skipped by TAB key
+  shadow AS _BYTE ' if -1 then a shadow will be drawn around the box
+  dialog AS _BYTE 'If set, dialog defaults will be used instead of normal default colors
+  updated AS _BYTE 'If this is set, it indicates screen should be redrawn to reflect a change in this object
+  checked AS _BYTE 'If set then the check-box is checked
+  drop_flag AS _BYTE ' If drop_flag is set, then the drop-down box is showing
+  scroll_held AS _BYTE 'flag variable indicating a held scroll or not
+  scroll AS _BYTE ' If set then scroll bar(s) are drawn
+  hide AS _BYTE 'For Input-box -- text will be drawn as "****" instead of "test" -- use for passwords, etc.
+  '  For GUI_BOX, Box will not be drawn (Useful if you want to make a background a certain color -- just put a GUI_BOX in the background and then have it not draw the box part)
+  text_is_selected AS INTEGER
+
 END TYPE
 
 TYPE GUI_default_color_type 'holds colors
@@ -151,7 +180,7 @@ END TYPE
 
 'shared variables for mouse
 COMMON SHARED GUI_MX AS INTEGER, GUI_MY AS INTEGER, GUI_BUT AS INTEGER, GUI_MSCROLL AS INTEGER, GUI_BUTFLAG AS INTEGER
-COMMON SHARED GUI_CUR_ROW AS INTEGER, GUI_CUR_COL AS INTEGER, GUI_alt_flag AS INTEGER
+COMMON SHARED GUI_CUR_ROW AS INTEGER, GUI_CUR_COL AS INTEGER, GUI_alt_flag AS INTEGER, GUI_ctl_flag AS INTEGER
 'default colors -- Values are set by GUI_init and are changable at any time
 COMMON SHARED GUI_DEFAULT_COLOR_BOX as GUI_default_color_type, GUI_DEFAULT_COLOR_INPUT as GUI_default_color_type
 COMMON SHARED GUI_DEFAULT_COLOR_TEXT as GUI_default_color_type, GUI_DEFAULT_COLOR_LIST as GUI_default_color_type
@@ -165,5 +194,6 @@ COMMON SHARED GUI_DEFAULT_DIALOG_COLOR_TEXT as GUI_default_color_type, GUI_DEFAU
 COMMON SHARED GUI_DEFAULT_DIALOG_COLOR_DROP as GUI_default_color_type, GUI_DEFAULT_DIALOG_COLOR_CHECKBOX as GUI_default_color_type
 COMMON SHARED GUI_DEFAULT_DIALOG_COLOR_MENU as GUI_default_color_type, GUI_DEFAULT_DIALOG_COLOR_BUTTON as GUI_default_color_type
 COMMON SHARED GUI_DEFAULT_DIALOG_COLOR_RADIO as GUI_default_color_type, GUI_DEFAULT_DIALOG_COLOR_LABEL as GUI_default_color_type
+COMMON SHARED GUI_MOUSE_QUEUE$
 
 DIM SHARED GUI_alt_codes$(51) ' thanks to Galleon for alt-code stuff

@@ -92,7 +92,7 @@ DO
 
     if i$ = "EXIT " then exit_flag = -1
     if i$ = "OPEN " then
-      f$ = open_file$("/home/dsman195276", "QB64 File|*.bas|QB64 Include|*.bm *.bi|C++ Source|*.cpp|C/C++ Header|*.h *.hpp|All Files|*")
+      f$ = open_file$("/home/dsman195276", "All Files| |QB64 File|*.bas|QB64 Include|*.bm *.bi|C++ Source|*.cpp|C/C++ Header|*.h *.hpp")
     end if
   end if
 LOOP until exit_flag or _EXIT

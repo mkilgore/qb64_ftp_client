@@ -196,8 +196,8 @@ END FUNCTION
 
 FUNCTION GUI_update_screen (gui() AS GUI_element_type, gui_num AS INTEGER, sel AS INTEGER)
 FOR x = 1 to gui_num
-  if gui(x).element_type = GUI_DROP_DOWN and x <> sel and gui(x).drop_flag then gui(x).drop_flag = 0: GUI_update_screen = -1
-  if gui(x).updated then GUI_update_screen = -1: gui(x).updated = 0
+  if gui(x).element_type = GUI_DROP_DOWN and x <> sel and (gui(x).flags AND GUI_FLAG_DROP_FLAG) then gui(x).flags = gui(x).flags AND NOT GUI_FLAG_DROP_FLAG: GUI_update_screen = -1
+  if gui(x).flags AND GUI_FLAG_UPDATED then GUI_update_screen = -1: gui(x).flags = gui(x).flags AND NOT GUI_FLAG_UPDATED
 NEXT x
 END FUNCTION
 
@@ -205,23 +205,27 @@ FUNCTION GUI_inkey$ (gui() AS GUI_element_type, gui_num AS INTEGER, sel)
 DIM tempm AS GUI_menu_item_type, men AS GUI_menu_item_type
 'Credit to Galleon for ALT key stuff
 keys = _KEYDOWN(100307) + _KEYDOWN(100308) * 2
-IF (keys) AND GUI_alt_flag = 0 THEN 'Hold
+IF (keys) AND GUI_alt_flag = 0 THEN 'Alt Hold
+  GUI_debug_output "Alt Held"
   GUI_alt_flag = -1
   'Switch to menu item if one is in gui()
-  if gui(sel).element_type <> GUI_MENU or gui(sel).menu_open = 0 then
+  if gui(sel).element_type <> GUI_MENU or NOT (gui(sel).flags AND GUI_FLAG_MENU_OPEN AND GUI_FLAG_MENU_ALT) then
     for x = 1 to gui_num
       if gui(x).element_type = GUI_MENU then
-        gui(x).updated = -1
-        gui(x).menu_open = -2
+        'gui(x).updated = -1
+        'gui(x).menu_open = -2
+        gui(x).flags = (gui(x).flags OR GUI_FLAG_MENU_OPEN OR GUI_FLAG_UPDATED) AND NOT GUI_FLAG_MENU_DROP
         gui(x).selected_old = sel
         sel = x 'change selected
       end if
     next x
-  elseif gui(sel).element_type = GUI_MENU and gui(sel).menu_open = -1 then
-    gui(sel).updated = -1
+  elseif gui(sel).element_type = GUI_MENU and (gui(sel).flags AND GUI_FLAG_MENU_OPEN) then
+    'gui(sel).updated = -1
+    gui(sel).flags = gui(sel).flags OR GUI_FLAG_UPDATED
   end if
 END IF
-IF keys = 0 AND GUI_alt_flag THEN 'Release
+IF keys = 0 AND GUI_alt_flag THEN 'Alt Release
+  GUI_debug_output "Alt Release"
   GUI_alt_flag = 0
   if gui(sel).menu_open = -2 then
     gui(sel).menu_open = 0
@@ -237,7 +241,24 @@ IF keys = 0 AND GUI_alt_flag THEN 'Release
     gui(sel).updated = -1
   end if
 END IF
+keys = _KEYDOWN(100305) + _KEYDOWN(100306) * 2
+if keys AND GUI_ctl_flag = 0 THEN 'Ctl hold
+  GUI_debug_output "Ctl Held"
+  GUI_ctl_flag = -1
+elseif keys = 0 AND GUI_ctl_flag then 'Ctl Release
+  GUI_debug_output "Ctl Release"
+  GUI_ctl_flag = 0
+end if
 ch$ = INKEY$
+
+if ch$ > "" then
+  if len(ch$) >= 2 then
+    GUI_debug_output "INKEY$:" + str$(ASC(ch$, 1)) + str$(ASC(ch$, 2))
+  else
+    GUI_debug_output "INKEY$:" + str$(ASC(ch$, 1))
+  end if
+end if
+
 SELECT CASE ch$
   CASE " " TO "~" 'typeable character
     if gui(sel).element_type = GUI_INPUT_BOX then
@@ -260,7 +281,8 @@ SELECT CASE ch$
         end if
       NEXT x
     elseif ch$ = " " and gui(sel).element_type = GUI_BUTTON then
-      gui(sel).pressed = -1
+      GUI_queue_mouse_click sel
+      'gui(sel).pressed = -1
     end if
   CASE CHR$(8) 'BACKSPACE
     if gui(sel).element_type = GUI_INPUT_BOX then
@@ -316,7 +338,8 @@ SELECT CASE ch$
         gui(sel).selected = 0
       end if
     elseif gui(sel).element_type = GUI_BUTTON then
-      gui(sel).pressed = -1
+      GUI_queue_mouse_click sel
+      'gui(sel).pressed = -1
     elseif gui(sel).element_type = GUI_RADIO_BUTTON then
       gui(sel).checked = not gui(sel).checked
       FOR x = 1 to gui_num
@@ -334,7 +357,8 @@ SELECT CASE ch$
       gui(sel).drop_flag = not gui(sel).drop_flag
       gui(sel).updated = -1
     elseif gui(sel).element_type = GUI_LIST_BOX then
-      gui(sel).pressed = -1
+      'gui(sel).pressed = -1
+      GUI_queue_mouse_click sel
       gui(sel).updated = -1
     end if
   CASE CHR$(0) + CHR$(80) 'DOWN
@@ -454,37 +478,64 @@ SELECT CASE ch$
       GUI_calc_scroll gui(sel).row1, gui(sel).col1, gui(sel).row2, gui(sel).col2, gui(sel)
       gui(sel).updated = -1
     end if
-  CASE CHR$(0) + CHR$(16) TO CHR$(0) + CHR$(50)
-    k$ = GUI_alt_codes$(ASC(ch$, 2))
-    if gui(sel).element_type = GUI_MENU and GUI_alt_flag then
-      if gui(sel).menu_open = -2 then
-        for x = 1 to gui(sel).length
-          men = _MEMGET(gui(sel).menu, gui(sel).menu.OFFSET + len(men) * (x - 1), GUI_menu_item_type)
-          if ucase$(k$) = ucase$(GUI_menu_char$(MEM_get_str$(men.nam))) then
-            gui(sel).selected = x
-            gui(sel).menu_open = -1
-            gui(sel).updated = -1
-            men.selected = 1
-            _MEMPUT gui(sel).menu, gui(sel).menu.OFFSET + len(men) * (x - 1), men
-          end if
-        next x
-      elseif gui(sel).menu_open = -1 then
-        men = _MEMGET(gui(sel).menu, gui(sel).menu.OFFSET + len(men) * (gui(sel).selected - 1), GUI_menu_item_type)
-        for x = 1 to men.sub_menu_length
-          tempm = _MEMGET(men.sub_menu, men.sub_menu.OFFSET + len(men) * (x - 1), GUI_menu_item_type)
-          if ucase$(k$) = ucase$(GUI_menu_char$(MEM_get_str$(tempm.nam))) then
-            gui(sel).menu_choice = tempm.ident
-            gui(sel).menu_chosen = -1
-            gui(sel).updated = -1
-            gui(sel).menu_open = 0
-            gui(sel).selected = 0
-          end if
-        next x
+  CASE else 'CHR$(0) + CHR$(16) TO CHR$(0) + CHR$(50) 'Alt code
+    if GUI_alt_flag and len(ch$) = 2 and NOT GUI_ctl_flag then
+      k$ = GUI_alt_codes$(ASC(ch$, 2))
+      if gui(sel).element_type = GUI_MENU and GUI_alt_flag then
+        if gui(sel).menu_open = -2 then
+          for x = 1 to gui(sel).length
+            men = _MEMGET(gui(sel).menu, gui(sel).menu.OFFSET + len(men) * (x - 1), GUI_menu_item_type)
+            if ucase$(k$) = ucase$(GUI_menu_char$(MEM_get_str$(men.nam))) then
+              gui(sel).selected = x
+              gui(sel).menu_open = -1
+              gui(sel).updated = -1
+              men.selected = 1
+              _MEMPUT gui(sel).menu, gui(sel).menu.OFFSET + len(men) * (x - 1), men
+            end if
+          next x
+        elseif gui(sel).menu_open = -1 then
+          men = _MEMGET(gui(sel).menu, gui(sel).menu.OFFSET + len(men) * (gui(sel).selected - 1), GUI_menu_item_type)
+          for x = 1 to men.sub_menu_length
+            tempm = _MEMGET(men.sub_menu, men.sub_menu.OFFSET + len(men) * (x - 1), GUI_menu_item_type)
+            if ucase$(k$) = ucase$(GUI_menu_char$(MEM_get_str$(tempm.nam))) then
+              gui(sel).menu_choice = tempm.ident
+              gui(sel).menu_chosen = -1
+              gui(sel).updated = -1
+              gui(sel).menu_open = 0
+              gui(sel).selected = 0
+            end if
+          next x
+        end if
+      end if
+    elseif GUI_ctl_flag and NOT GUI_alt_flag then
+      if ch$ = chr$(22) then 'CTRL + V
+        GUI_debug_output "Paste"
+        SELECT CASE gui(sel).element_type
+          CASE GUI_INPUT_BOX
+            t$ = MEM_get_str$(gui(sel).text)
+            t$ = mid$(t$, 1, gui(sel).text_position) + _CLIPBOARD$ + mid$(t$, gui(sel).text_position + 1)
+            MEM_put_str gui(sel).text, t$
+            gui(sel).flags = gui(sel).flags OR GUI_FLAG_UPDATED
+            'gui(sel).updated = -1
+        END SELECT
+      elseif ch$ = chr$(3) then 'CTRL + C
+
+      elseif ch$ = chr$(24) then 'CTRL + X
+
       end if
     end if
+  'CASE CHR$(22) 'CTRL + V -- Paste
+  '  SELECT CASE gui(sel).element_type
+  '    CASE GUI_INPUT_BOX
+  '      t$ = MEM_get_str$(gui(sel).text)
+  '      t$ = mid$(t$, 1, gui(sel).text_position - 1) + GUI_CLIPBOARD$ + mid$(t$, gui(sel).text_position)
+      'CASE GUI_TEXT_BOX
+
+
+  '  END SELECT
 END SELECT
+
 GUI_inkey$ = ch$
-EXIT FUNCTION
 
 END FUNCTION
 
@@ -720,7 +771,7 @@ ELSEIF b.element_type = GUI_MENU then
 END IF
 END FUNCTION
 
-'Draws an array of elements, does the following things:
+'Draws an array of elements0, does the following things:
 '  respects layering
 '  Call's _DISPLAY at start and _AUTODISPLAY at the end
 '  Locates the cursor to a proper spot (And stores the location)
@@ -938,10 +989,11 @@ END SUB
 SUB GUI_draw_label (b as GUI_element_type, sel)
 COLOR b.mcolor.fr, b.mcolor.bk
 LOCATE b.row1, b.col1
-print MEM_get_str$(b.nam);
+print MEM_get_str$(b.text);
 END SUB
 
-SUB GUI_mouse_range (b() AS GUI_element_type, boxnum, selected_gui) 'Checks if mouse is in one of the boxes in b()
+'returns a clicked on item
+FUNCTION GUI_mouse_range (b() AS GUI_element_type, boxnum, selected_gui) 'Checks if mouse is in one of the boxes in b()
 'Returns the array number if it is in one of them
 
 DIM men as GUI_menu_item_type, mtmp as GUI_menu_item_type
@@ -950,6 +1002,13 @@ DIM men as GUI_menu_item_type, mtmp as GUI_menu_item_type
 'GUI_butflag equals -1 when the mouse button is pressed and that press has already been handled
 'By that logic, if GUI_butflag and GUI_but are both -1, then the mouse-button is being held-down
 'It prevents holding the mouse-button down from being interperated as lots and lots of mouse clicks
+
+s = GUI_read_mouse_queue
+if s > 0 then
+  GUI_mouse_range = s
+  GUI_debug_output "Read Queue'd mouse: " + str$(s)
+  EXIT FUNCTION
+end if
 
 GUI_mscroll = 0
 DO WHILE _MOUSEINPUT
@@ -1015,104 +1074,96 @@ current_layer = -128
 found = 0
 FOR x = 1 TO boxnum
   k = GUI_get_layer(b(x))
-  select case b(x).element_type
-    case GUI_BOX
-      IF GUI_my <= b(x).row2 AND GUI_my >= b(x).row1 THEN
-        IF GUI_mx >= b(x).col1 AND GUI_mx <= b(x).col2 THEN
-          if k > current_layer then
+  if k > current_layer then
+    select case b(x).element_type
+      case GUI_BOX
+        IF GUI_my <= b(x).row2 AND GUI_my >= b(x).row1 THEN
+          IF GUI_mx >= b(x).col1 AND GUI_mx <= b(x).col2 THEN
             found = x
             current_layer = k
-          end if
+          END IF
         END IF
-      END IF
-    case GUI_INPUT_BOX
-      IF GUI_my <= b(x).row1 + 2 AND GUI_my >= b(x).row1 THEN
-        IF GUI_mx >= b(x).col1 AND GUI_mx <= b(x).col2 THEN
-          if k > current_layer then
+      case GUI_INPUT_BOX
+        IF GUI_my <= b(x).row1 + 2 AND GUI_my >= b(x).row1 THEN
+          IF GUI_mx >= b(x).col1 AND GUI_mx <= b(x).col2 THEN
             found = x
             current_layer = k
-          end if
+          END IF
         END IF
-      END IF
-    case GUI_LIST_BOX, GUI_TEXT_BOX
-      IF GUI_my <= b(x).row2 AND GUI_my >= b(x).row1 THEN
-        IF GUI_mx >= b(x).col1 AND GUI_mx <= b(x).col2 THEN
-          if k > current_layer then
+      case GUI_LIST_BOX, GUI_TEXT_BOX
+        IF GUI_my <= b(x).row2 AND GUI_my >= b(x).row1 THEN
+          IF GUI_mx >= b(x).col1 AND GUI_mx <= b(x).col2 THEN
             found = x
             current_layer = k
-          end if
+          END IF
         END IF
-      END IF
-    case GUI_DROP_DOWN
-      if NOT b(x).drop_flag then
-        IF GUI_my = b(x).row1 AND GUI_mx >= b(x).col1 AND GUI_mx <= b(x).col2 THEN
-          if k > current_layer then
+      case GUI_DROP_DOWN
+        if NOT b(x).drop_flag then
+          IF GUI_my = b(x).row1 AND GUI_mx >= b(x).col1 AND GUI_mx <= b(x).col2 THEN
             found = x
             current_layer = k
-          end if
-        END IF
-      else
-        if GUI_my >= b(x).row1 and GUI_my <= b(x).row2 and GUI_mx >= b(x).col1 and GUI_mx <= b(x).col2 then
-          if k > current_layer then
+          END IF
+        else
+          if GUI_my >= b(x).row1 and GUI_my <= b(x).row2 and GUI_mx >= b(x).col1 and GUI_mx <= b(x).col2 then
             found = x
             current_layer = k
           end if
         end if
-      end if
-    case GUI_CHECKBOX
-      IF GUI_my = b(x).row1 AND GUI_mx >= b(x).col1 AND GUI_mx <= b(x).col1 + 2 + LEN(MEM_get_str$(b(x).nam)) THEN
-        if k > current_layer then
+      case GUI_CHECKBOX
+        IF GUI_my = b(x).row1 AND GUI_mx >= b(x).col1 AND GUI_mx <= b(x).col1 + 2 + b(x).nam.length THEN
+          found = x
+          current_layer = k
+        END IF
+      case GUI_MENU
+        if GUI_my = b(x).row1 then
+          found = x
+          current_layer = k
+        elseif b(x).menu_open = -1 then
+          col1 = b(x).col1 + b(x).menu_padding - 1 'Find row and column locations of the open menu
+          row1 = b(x).row1
+          for m = 1 to b(x).selected
+            men = _MEMGET(b(x).menu, b(x).menu.OFFSET + len(men) * (m - 1), GUI_menu_item_type)
+            if m < b(x).selected then col1 = col1 + men.nam.length + 1
+          next m
+          men_len = 0
+          for m = 1 to men.sub_menu_length
+            mtmp = _MEMGET(men.sub_menu, men.sub_menu.OFFSET + len(mtmp) * (m - 1), GUI_menu_item_type)
+            if mtmp.nam.length > men_len then
+              men_len = mtmp.nam.length
+            end if
+          next m
+          row2 = row1 + men.sub_menu_length + 2
+          col2 = col1 + men_len + 2
+          if GUI_my >= row1 and GUI_my <= row2 then
+            if GUI_mx >= col1 and GUI_mx <= col2 then
+              found = x
+              current_layer = k
+            end if
+          end if
+        end if
+      case GUI_BUTTON
+        IF GUI_my = b(x).row1 AND GUI_mx >= b(x).col1 AND GUI_mx <= b(x).col1 + b(x).nam.length + 1 THEN
+          found = x
+          current_layer = k
+        END IF
+      case GUI_RADIO_BUTTON
+        if GUI_my = b(x).row1 AND GUI_mx >= b(x).col1 AND GUI_mx <= b(x).col1 + 2 + b(x).nam.length THEN
           found = x
           current_layer = k
         end if
-      END IF
-    case GUI_MENU
-      if GUI_my = b(x).row1 then
-        if k > current_layer then
+      CASE GUI_LABEL
+        IF GUI_my = b(x).row1 and GUI_mx >= b(x).col1 AND GUI_mx <= b(x).col1 + b(x).text.length then
           found = x
           current_layer = k
         end if
-      elseif b(x).menu_open = -1 then
-        col1 = b(x).col1 + b(x).menu_padding - 1 'Find row and column locations of the open menu
-        row1 = b(x).row1
-        for m = 1 to b(x).selected
-          men = _MEMGET(b(x).menu, b(x).menu.OFFSET + len(men) * (m - 1), GUI_menu_item_type)
-          if m < b(x).selected then col1 = col1 + len(MEM_get_str$(men.nam)) + 1
-        next m
-        men_len = 0
-        for m = 1 to men.sub_menu_length
-          mtmp = _MEMGET(men.sub_menu, men.sub_menu.OFFSET + len(mtmp) * (m - 1), GUI_menu_item_type)
-          if len(MEM_get_str$(mtmp.nam)) > men_len then
-            men_len = len(MEM_get_str$(mtmp.nam))
-          end if
-        next m
-        row2 = row1 + men.sub_menu_length + 2
-        col2 = col1 + men_len + 2
-        if GUI_my >= row1 and GUI_my <= row2 then
-          if GUI_mx >= col1 and GUI_mx <= col2 then
-            found = x
-            current_layer = k
-          end if
-        end if
-      end if
-    case GUI_BUTTON
-      IF GUI_my = b(x).row1 AND GUI_mx >= b(x).col1 AND GUI_mx <= b(x).col1 + LEN(MEM_get_str$(b(x).nam)) + 1 THEN
-        if k > current_layer then
-          found = x
-          current_layer = k
-        end if
-      END IF
-    case GUI_RADIO_BUTTON
-      if GUI_my = b(x).row1 AND GUI_mx >= b(x).col1 AND GUI_mx <= b(x).col1 + 2 + LEN(MEM_get_str$(b(x).nam)) THEN
-        if k > current_layer then
-          found = x
-          current_layer = k
-        end if
-      end if
-  END SELECT
+    END SELECT
+  end if
 NEXT x
 
+GUI_mouse_range = found
+
 if found > 0 then
+  GUI_debug_output "Click, GUI:" + str$(found)
   select case b(found).element_type
     case GUI_BOX
       selected_gui = found
@@ -1148,8 +1199,9 @@ if found > 0 then
           s = GUI_my - b(found).row1 + b(found).scroll_offset_vert
           if b(found).selected <> s then
             b(found).selected = s
-          else
-            b(found).pressed = -1
+          'else
+            'GUI_queue_mouse_click = found
+          '  b(found).pressed = -1
           end if
         END IF
       END IF
@@ -1210,7 +1262,7 @@ if found > 0 then
         end if
       end if
     case GUI_BUTTON
-      b(found).pressed = -1
+      'b(found).pressed = -1
       selected_gui = found
       b(found).updated = -1
     CASE GUI_RADIO_BUTTON
@@ -1508,4 +1560,25 @@ FOR x = row1 + 1 TO row2 + 1
   NEXT y
 NEXT x
 _CONTROLCHR ON
+END SUB
+
+SUB GUI_queue_mouse_click (sel)
+GUI_MOUSE_QUEUE$ = ltrim$(rtrim$(str$(sel))) + " " + GUI_MOUSE_QUEUE$
+END SUB
+
+FUNCTION GUI_read_mouse_queue ()
+if GUI_MOUSE_QUEUE$ > "" then
+  s = val(GUI_MOUSE_QUEUE$)
+  GUI_MOUSE_QUEUE$ = mid$(GUI_MOUSE_QUEUE$, instr(GUI_MOUSE_QUEUE$, " ") + 1)
+  GUI_read_mouse_queue = s
+end if
+END FUNCTION
+
+SUB GUI_debug_output (s$)
+IF GUI_DEBUG then
+  d& = _DEST
+  _DEST _CONSOLE
+  PRINT s$
+  _DEST d&
+end if
 END SUB

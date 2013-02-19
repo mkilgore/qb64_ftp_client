@@ -20,7 +20,7 @@ END FUNCTION
 
 FUNCTION open_file$(starting_directory$, File_name_options$)
 DIM gui_num as integer, f_options as INTEGER
-gui_num = 7
+gui_num = 8
 
 f$ = File_name_options$
 DO
@@ -140,9 +140,21 @@ GUI_init_element gui(g), "path: " + starting_directory$
 gui(g).row1 = gui(1).row2 - 1
 gui(g).col1 = gui(1).col1 + 2
 update_files = -1
+
+g = g + 1
+gui(g).element_type = GUI_CHECKBOX
+gui(g).dialog = -1
+GUI_init_element gui(g), "Show Hidden"
+gui(g).row1 = gui(1).row2 - 1
+gui(g).col1 = gui(1).col2 - len("Show Hidden") - 4
+chk_box = g
+
+hidden = gui(chk_box).checked
+file_option_sel = gui(gui_drop).selected
 DO
   if update_files then
-    load_local_files l_files(), gui(dir_Gui), gui(file_gui), starting_directory$, file_search$(gui(gui_drop).selected), 0
+    update_files = 0
+    load_local_files l_files(), gui(dir_Gui), gui(file_gui), starting_directory$, file_search$(file_option_sel), hidden
   end if
 
   IF GUI_update_screen(gui(), gui_num, selected_gui) then
@@ -157,6 +169,15 @@ DO
       exit_flag = -1
   end select
 
+  if hidden <> gui(chk_box).checked then
+    hidden = gui(chk_box).checked
+    update_files = -1
+  end if
+
+  if gui(gui_drop).drop_flag = 0 and gui(gui_drop).selected <> file_option_sel then
+    file_option_sel = gui(gui_drop).selected
+    update_files = -1
+  end if
 LOOP until exit_flag or _EXIT
 
 GUI_free_element_array gui()
@@ -170,17 +191,24 @@ END FUNCTION
 SUB load_Local_files (L_files() as filedir_type, dirs as GUI_element_type, fils as GUI_element_type, s_dir$, ext$, show_hidden) 'Refreshes the local file listing
 fils.length = 0
 fils.selected = 0
-dirs.length = 1
-dirs.selected = 1
+dirs.length = 0
+dirs.selected = 0
 'boxes(1).offset = 0
-MEM_put_str L_files(dirs.length).nam, ".."
+'MEM_put_str L_files(1).nam, ".."
 'Local_files(boxes(1).length).dir = "DIR"
-L_files(dirs.length).flag_cwd = -1
-L_files(dirs.length).flag_retr = 0
+'L_files(dirs.length).flag_cwd = -1
+'L_files(dirs.length).flag_retr = 0
 IF instr(_OS$, "[LINUX]") THEN
+  if s_dir$ <> "/" then
+    dirs.length = dirs.length + 1
+    MEM_put_str L_files(dirs.length + fils.length).nam, ".."
+    L_files(dirs.length).flag_cwd = -1
+    L_files(dirs.length).flag_retr = 0
+  end if
   IF show_hidden THEN h$ = "a" ELSE h$ = ""
-  'if ext$ > "" then ex$ = "*." + ext$
-  SHELL _HIDE "ls -F" + h$ + " " + chr$(34) + s_dir$ + "/" + ext$ + chr$(34) + " > /tmp/dirtmp.tmp"
+  'if ext$ > "" then
+  SHELL _HIDE "ls -F" + h$ + " " + chr$(34) + s_dir$ + "/" + ext$ + chr$(34) + " > /tmp/filetmp.tmp"
+  SHELL _HIDE "ls -F" + h$ + " " + chr$(34) + s_dir$ + "/" + chr$(34) + " > /tmp/dirtmp.tmp"
   OPEN "/tmp/dirtmp.tmp" FOR INPUT AS #1
   DO WHILE NOT EOF(1)
     LINE INPUT #1, a$
@@ -203,7 +231,7 @@ IF instr(_OS$, "[LINUX]") THEN
   LOOP
   CLOSE #1
 
-  OPEN "/tmp/dirtmp.tmp" FOR INPUT AS #1
+  OPEN "/tmp/filetmp.tmp" FOR INPUT AS #1
   DO WHILE NOT EOF(1)
     LINE INPUT #1, a$
     IF a$ > "" THEN
@@ -222,7 +250,7 @@ IF instr(_OS$, "[LINUX]") THEN
 ELSE 'I guess I better add that Windows code at some point...
   tmp_dir$ = ENVIRON$("temp")
   SHELL _HIDE "cmd /c DIR " + CHR$(34) + s_dir$ + CHR$(34) + " /A:D /B > " + tmp_dir$ + "\dirtmp.tmp"
-  SHELL _HIDE "cmd /c DIR " + CHR$(34) + s_dir$ + CHR$(34) + " /A:-D /B > " + tmp_dir$ + "\filetmp.tmp"
+  SHELL _HIDE "cmd /c DIR " + CHR$(34) + s_dir$ + "\" + ext$ + CHR$(34) + " /A:-D /B > " + tmp_dir$ + "\filetmp.tmp"
   OPEN tmp_dir$ + "\filetmp.tmp" FOR INPUT AS #1
   IF NOT EOF(1) THEN
     DO
@@ -252,9 +280,11 @@ ELSE 'I guess I better add that Windows code at some point...
 END IF
 sort_dir_listing L_files(), fils.length + dirs.length
 MEM_allocate_string_array dirs.lines, dirs.length
+
 for x = 1 to dirs.length
   MEM_put_str_array dirs.lines, x, MEM_get_str$(L_files(x).nam)
 next x
+
 for x = 1 to fils.length
   MEM_put_str_array fils.lines, x, MEM_get_str$(L_files(x + dirs.length).nam)
 next x

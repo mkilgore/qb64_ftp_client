@@ -15,7 +15,7 @@ SUB rename_file_GUI (local_or_remote) 'Renames a local or remote file
 '  EXIT SUB
 'END IF
 
-gui_num = 4 
+gui_num = 4
 DIM gui(gui_num) AS GUI_element_type
 DIM buttons(2)
 input_box_num = 0
@@ -73,30 +73,30 @@ selected_gui = 1
 LOCATE , , 1
 locrow = 1
 loccol = 1
-IF local_or_remote = 1 THEN 
-  'MEM_put_str gui(input_box_num).text, RTRIM$(get_str$(Local_files(boxes(1).selected).nam)) 
-ELSE 
+IF local_or_remote = 1 THEN
+  'MEM_put_str gui(input_box_num).text, RTRIM$(get_str$(Local_files(boxes(1).selected).nam))
+ELSE
   'MEM_put_str gui(input_box_num).text, RTRIM$(get_str$(Remote_files(boxes(2).selected).nam))
 end if
 DO
   _LIMIT 500
-  
+
   if GUI_update_screen(gui(), gui_num, selected_gui) then
     GUI_draw_element_array gui(), gui_num, selected_gui
   end if
-  
-  GUI_mouse_range gui(), gui_num, selected_gui
-  
+
+  g_chosen = GUI_mouse_range(gui(), gui_num, selected_gui)
+
   key$ = GUI_inkey$(gui(), gui_num, selected_gui)
-  
+
   SELECT CASE key$
     CASE chr$(27)
       exit_flag = -1
   end select
-  
-  if gui(buttons(2)).pressed then
+
+  if buttons(2) = g_chosen then
     exit_flag = -1
-  elseif gui(buttons(1)).pressed then
+  elseif buttons(1) = g_chosen then
     'Clicked to rename
   end if
   'm = mouse_range(gui(), gui_num)

@@ -47,13 +47,15 @@ DO
   if GUI_update_screen(gui(), gui_num, selected_gui) then
     GUI_draw_element_array gui(), gui_num, selected_gui
   end if
-  
-  GUI_mouse_range gui(), gui_num, selected_gui
-  
+
+  g_clicked = GUI_mouse_range(gui(), gui_num, selected_gui)
+
   key$ = GUI_inkey$(gui(), gui_num, selected_gui)
-  
-  if gui(4).pressed then exit_gui_flag = -1
-  
+
+  if g_clicked = 4 then exit_gui_flag = -1
+
+  'if gui(4).pressed then exit_gui_flag = -1
+
 LOOP until exit_gui_flag or key$ = CHR$(27)
 GUI_free_element_array gui()
 END SUB
