@@ -23,6 +23,10 @@ DIM search_menu(10) as GUI_menu_item_type
 DIM tools_menu(10) as GUI_menu_item_type
 DIM help_menu(10) as GUI_menu_item_type
 
+print "Size: "; len(main_gui(1))
+sleep
+
+
 'GUI(1) is our main dialog box and is going to be
 g = 1
 main_gui(g).element_type = GUI_MENU
@@ -294,30 +298,30 @@ DO 'Main loop
       'main_gui(buttons(x)).pressed = 0 'Reset the button to 0 so we don't end up catching it a second time
     end if
   next x
-  if main_gui(1).menu_chosen then 'Check our menu
-    MEM_put_str main_gui(labels(4)).nam, "Menu Chosen: " + main_gui(1).menu_choice
-    main_gui(1).menu_chosen = 0 'Reset the menu so we don't enter this IF again
+  if main_gui(1).flags AND GUI_FLAG_MENU_CHOSEN then 'Check our menu
+    MEM_put_str main_gui(labels(4)).text, "Menu Chosen: " + main_gui(1).menu_choice
+    main_gui(1).flags = main_gui(1).flags AND NOT GUI_FLAG_MENU_CHOSEN 'Reset the menu so we don't enter this IF again
     i$ = main_gui(1).menu_choice
-
-    'Redraw screen so menu doesn't show before opening menu choice
-    GUI_draw_element_array main_gui(), gui_num, selected_gui
     'main_gui(1).updated = -1 'set menu to updated
     main_gui(1).flags = main_gui(1).flags OR GUI_FLAG_UPDATED
+    'Redraw screen so menu doesn't show before opening menu choice
+    GUI_draw_element_array main_gui(), gui_num, selected_gui
+
     if i$ = "EXIT " then exit_flag = -1 '"EXIT " is for the EXIT menu option -- So set our exit_flag variable
     if i$ = "ABOUT" then
-      about_dialog
+      'about_dialog
     end if
     if i$ = "RENAM" then
-      rename_file_GUI 0
+      'rename_file_GUI 0
     end if
     if i$ = "OPEN " then
-      prompt = prompt_dialog("Test Dialog"+chr$(13) + "Line 2", 10, OK_BUTTON OR CLOSE_BUTTON, OK_BUTTON)
+      'prompt = prompt_dialog("Test Dialog"+chr$(13) + "Line 2", 10, OK_BUTTON OR CLOSE_BUTTON, OK_BUTTON)
     end if
     if i$ = "CONEC" then
       'Connect_To_FTP
     end if
     if i$ = "HELP " then
-      popup_dialog_gui "Not Implemented Yet."
+      'popup_dialog_gui "Not Implemented Yet."
     end if
   end if
 LOOP UNTIL exit_flag = -1 or _EXIT
@@ -335,8 +339,8 @@ END SUB
 
 '$include:'mem_library/mem_lib.bm'
 '$include:'gui_library/gui_lib.bm'
-'$include:'dialogs/about.bm'
-'$include:'dialogs/rename_file.bm'
-'$include:'dialogs/prompt.bm'
+''$include:'dialogs/about.bm'
+''$include:'dialogs/rename_file.bm'
+''$include:'dialogs/prompt.bm'
 ''$include:'dialogs/ftp_connect.bm'
-'$include:'dialogs/dialog_simple.bm'
+''$include:'dialogs/dialog_simple.bm'
