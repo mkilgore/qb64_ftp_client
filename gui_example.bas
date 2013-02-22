@@ -36,50 +36,51 @@ main_gui(g).menu_padding = 2
 'main_gui(g).shadow = -1
 main_gui(g).flags = main_gui(g).flags OR GUI_FLAG_SKIP OR GUI_FLAG_SHADOW
 
-MEM_put_str base_menu(1).nam, "#File"
-base_menu(1).ident = "File "
-MEM_put_str base_menu(2).nam, "#Edit"
-base_menu(2).ident = "Edit "
-MEM_put_str base_menu(3).nam, "#Search"
-base_menu(3).ident = "Searc"
-MEM_put_str base_menu(4).nam, "#Help"
-base_menu(4).ident = "Help "
-GUI_attach_base_menu main_gui(g), 4, _OFFSET(base_menu(1))
 
 m=0
-m=m+1: MEM_put_str file_menu(m).nam, "#New            ": file_menu(m).ident = "NEW  "
-m=m+1: MEM_put_str file_menu(m).nam, "#Open":            file_menu(m).ident = "OPEN "
-m=m+1: MEM_put_str file_menu(m).nam, "#Connect":         file_menu(m).ident = "CONEC"
-m=m+1: MEM_put_str file_menu(m).nam, "-"
-m=m+1: MEM_put_str file_menu(m).nam, "#Save":            file_menu(m).ident = "SAVE "
-m=m+1: MEM_put_str file_menu(m).nam, "S#ave As":         file_menu(m).ident = "SAVEA"
-m=m+1: MEM_put_str file_menu(m).nam, "-"
-m=m+1: MEM_put_str file_menu(m).nam, "#Exit":            file_menu(m).ident = "EXIT "
+MEM_put_str base_menu(1).nam,          "#File":            base_menu(1).ident =   "File "
+
+m=m+1: MEM_put_str file_menu(m).nam,   "#New            ": file_menu(m).ident =   "NEW  "
+m=m+1: MEM_put_str file_menu(m).nam,   "#Open":            file_menu(m).ident =   "OPEN "
+m=m+1: MEM_put_str file_menu(m).nam,   "#Connect":         file_menu(m).ident =   "CONEC"
+m=m+1: MEM_put_str file_menu(m).nam,   "-":                file_menu(m).ident =   "-----"
+m=m+1: MEM_put_str file_menu(m).nam,   "#Save":            file_menu(m).ident =   "SAVE "
+m=m+1: MEM_put_str file_menu(m).nam,   "S#ave As":         file_menu(m).ident =   "SAVEA"
+m=m+1: MEM_put_str file_menu(m).nam,   "-":                file_menu(m).ident =   "-----"
+m=m+1: MEM_put_str file_menu(m).nam,   "#Exit":            file_menu(m).ident =   "EXIT "
 GUI_attach_menu base_menu(1), m, _OFFSET(file_menu(1))
 
 m=0
-m=m+1: MEM_put_str edit_menu(m).nam, "#Cut":        edit_menu(m).ident = "CUT  "
-m=m+1: MEM_put_str edit_menu(m).nam, "C#opy":       edit_menu(m).ident = "COPY "
-m=m+1: MEM_put_str edit_menu(m).nam, "#Paste":      edit_menu(m).ident = "PASTE"
-m=m+1: MEM_put_str edit_menu(m).nam, "#Delete":     edit_menu(m).ident = "DELET"
-m=m+1: MEM_put_str edit_menu(m).nam, "-"
-m=m+1: MEM_put_str edit_menu(m).nam, "#Rename":     edit_menu(m).ident = "RENAM"
-m=m+1: MEM_put_str edit_menu(m).nam, "#Select All": edit_menu(m).ident = "SELAL"
+MEM_put_str base_menu(2).nam,          "#Edit":            base_menu(2).ident =   "Edit "
+
+m=m+1: MEM_put_str edit_menu(m).nam,   "#Cut            ": edit_menu(m).ident =   "CUT  "
+m=m+1: MEM_put_str edit_menu(m).nam,   "C#opy":            edit_menu(m).ident =   "COPY "
+m=m+1: MEM_put_str edit_menu(m).nam,   "#Paste":           edit_menu(m).ident =   "PASTE"
+m=m+1: MEM_put_str edit_menu(m).nam,   "#Delete":          edit_menu(m).ident =   "DELET"
+m=m+1: MEM_put_str edit_menu(m).nam,   "-":                edit_menu(m).ident =   "-----"
+m=m+1: MEM_put_str edit_menu(m).nam,   "#Rename":          edit_menu(m).ident =   "RENAM"
+m=m+1: MEM_put_str edit_menu(m).nam,   "#Select All":      edit_menu(m).ident =   "SELAL"
 GUI_attach_menu base_menu(2), m, _OFFSET(edit_menu(1))
 
 m=0
-m=m+1: MEM_put_str search_menu(m).nam, "#Find":          search_menu(m).ident = "FIND "
-m=m+1: MEM_put_str search_menu(m).nam, "Find #Next":     search_menu(m).ident = "FINDN"
-m=m+1: MEM_put_str search_menu(m).nam, "Find #Previous": search_menu(m).ident = "FINDP"
-m=m+1: MEM_put_str search_menu(m).nam, "-"
-m=m+1: MEM_put_str search_menu(m).nam, "#Replace":       search_menu(m).ident = "REPLA"
+MEM_put_str base_menu(3).nam,          "#Search":          base_menu(3).ident =   "Searc"
+
+m=m+1: MEM_put_str search_menu(m).nam, "#Find           ": search_menu(m).ident = "FIND "
+m=m+1: MEM_put_str search_menu(m).nam, "Find #Next":       search_menu(m).ident = "FINDN"
+m=m+1: MEM_put_str search_menu(m).nam, "Find #Previous":   search_menu(m).ident = "FINDP"
+m=m+1: MEM_put_str search_menu(m).nam, "-":                search_menu(m).ident = "-----"
+m=m+1: MEM_put_str search_menu(m).nam, "#Replace":         search_menu(m).ident = "REPLA"
 GUI_attach_menu base_menu(3), m, _OFFSET(search_menu(1))
 
 m=0
-m=m+1: MEM_put_str help_menu(m).nam, "#Help":       help_menu(m).ident = "HELP "
-m=m+1: MEM_put_str help_menu(m).nam, "-"
-m=m+1: MEM_put_str help_menu(m).nam, "#About     ": help_menu(m).ident = "ABOUT"
+MEM_put_str base_menu(4).nam,          "#Help":            base_menu(4).ident =   "Help "
+
+m=m+1: MEM_put_str help_menu(m).nam,   "#Help           ": help_menu(m).ident =   "HELP "
+m=m+1: MEM_put_str help_menu(m).nam,   "-":                help_menu(m).ident =   "-----"
+m=m+1: MEM_put_str help_menu(m).nam,   "#About     ":      help_menu(m).ident =   "ABOUT"
 GUI_attach_menu base_menu(4), m, _OFFSET(help_menu(1))
+
+GUI_attach_base_menu main_gui(g), 4, _OFFSET(base_menu(1))
 
 g=g+1
 main_gui(g).element_type = GUI_BOX

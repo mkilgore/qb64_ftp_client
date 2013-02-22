@@ -52,7 +52,7 @@ CONST GUI_FLAG_SCROLL_V = 32
 CONST GUI_FLAG_SCROLL_H = 64
 CONST GUI_FLAG_SCROLL_IS_HELD_V = 128
 CONST GUI_FLAG_SCROLL_IS_HELD_H = 256
-CONST GUI_FLAG_TEXT_IS_SELECTED = 512
+'CONST GUI_FLAG_TEXT_IS_SELECTED = 512
 CONST GUI_FLAG_DROP_FLAG = 1024
 CONST GUI_FLAG_CHECKED = 2048
 CONST GUI_FLAG_MENU_OPEN = 4096
@@ -156,20 +156,6 @@ TYPE GUI_element_type
   'If this GUI is currently selected, then you should do a:
   'LOCATE cur_row, cur_col, 1
   'to locate the cursor
-
-  'skip AS _BYTE ' if -1 then will be skipped by TAB key
-  'shadow AS _BYTE ' if -1 then a shadow will be drawn around the box
-  'dialog AS _BYTE 'If set, dialog defaults will be used instead of normal default colors
-  'updated AS _BYTE 'If this is set, it indicates screen should be redrawn to reflect a change in this object
-  'checked AS _BYTE 'If set then the check-box is checked
-  'drop_flag AS _BYTE ' If drop_flag is set, then the drop-down box is showing
-  'scroll_held AS _BYTE 'flag variable indicating a held scroll or not
-  'scroll AS _BYTE ' If set then scroll bar(s) are drawn
-  'hide AS _BYTE 'For Input-box -- text will be drawn as "****" instead of "test" -- use for passwords, etc.
-  '  For GUI_BOX, Box will not be drawn (Useful if you want to make a background a certain color -- just put a GUI_BOX in the background and then have it not draw the box part)
-  'text_is_selected AS INTEGER
-  'menu_open as _BYTE 'if -1 then 'selected' menu was chosen  -- -2 means Alt is being held
-  'menu_chosen AS _BYTE
 END TYPE
 
 TYPE GUI_default_color_type 'holds colors
