@@ -23,9 +23,6 @@ DIM search_menu(10) as GUI_menu_item_type
 DIM tools_menu(10) as GUI_menu_item_type
 DIM help_menu(10) as GUI_menu_item_type
 
-print "Size: "; len(main_gui(1))
-sleep
-
 
 'GUI(1) is our main dialog box and is going to be
 g = 1
@@ -50,36 +47,36 @@ base_menu(4).ident = "Help "
 GUI_attach_base_menu main_gui(g), 4, _OFFSET(base_menu(1))
 
 m=0
-m=m+1: MEM_put_str file_menu(m).nam, "#New         ": file_menu(m).ident = "NEW  "
-m=m+1: MEM_put_str file_menu(m).nam, "#Open": file_menu(m).ident = "OPEN "
-m=m+1: MEM_put_str file_menu(m).nam, "#Connect": file_menu(m).ident = "CONEC"
+m=m+1: MEM_put_str file_menu(m).nam, "#New            ": file_menu(m).ident = "NEW  "
+m=m+1: MEM_put_str file_menu(m).nam, "#Open":            file_menu(m).ident = "OPEN "
+m=m+1: MEM_put_str file_menu(m).nam, "#Connect":         file_menu(m).ident = "CONEC"
 m=m+1: MEM_put_str file_menu(m).nam, "-"
-m=m+1: MEM_put_str file_menu(m).nam, "#Save": file_menu(m).ident = "SAVE "
-m=m+1: MEM_put_str file_menu(m).nam, "S#ave As": file_menu(m).ident = "SAVEA"
+m=m+1: MEM_put_str file_menu(m).nam, "#Save":            file_menu(m).ident = "SAVE "
+m=m+1: MEM_put_str file_menu(m).nam, "S#ave As":         file_menu(m).ident = "SAVEA"
 m=m+1: MEM_put_str file_menu(m).nam, "-"
-m=m+1: MEM_put_str file_menu(m).nam, "#Exit": file_menu(m).ident = "EXIT "
+m=m+1: MEM_put_str file_menu(m).nam, "#Exit":            file_menu(m).ident = "EXIT "
 GUI_attach_menu base_menu(1), m, _OFFSET(file_menu(1))
 
 m=0
-m=m+1: MEM_put_str edit_menu(m).nam, "#Cut": edit_menu(m).ident = "CUT  "
-m=m+1: MEM_put_str edit_menu(m).nam, "#Copy": edit_menu(m).ident = "COPY "
-m=m+1: MEM_put_str edit_menu(m).nam, "#Paste": edit_menu(m).ident = "PASTE"
-m=m+1: MEM_put_str edit_menu(m).nam, "#Delete": edit_menu(m).ident = "DELET"
+m=m+1: MEM_put_str edit_menu(m).nam, "#Cut":        edit_menu(m).ident = "CUT  "
+m=m+1: MEM_put_str edit_menu(m).nam, "C#opy":       edit_menu(m).ident = "COPY "
+m=m+1: MEM_put_str edit_menu(m).nam, "#Paste":      edit_menu(m).ident = "PASTE"
+m=m+1: MEM_put_str edit_menu(m).nam, "#Delete":     edit_menu(m).ident = "DELET"
 m=m+1: MEM_put_str edit_menu(m).nam, "-"
-m=m+1: MEM_put_str edit_menu(m).nam, "#Rename": edit_menu(m).ident = "RENAM"
+m=m+1: MEM_put_str edit_menu(m).nam, "#Rename":     edit_menu(m).ident = "RENAM"
 m=m+1: MEM_put_str edit_menu(m).nam, "#Select All": edit_menu(m).ident = "SELAL"
 GUI_attach_menu base_menu(2), m, _OFFSET(edit_menu(1))
 
 m=0
-m=m+1: MEM_put_str search_menu(m).nam, "#Find": search_menu(m).ident = "FIND "
-m=m+1: MEM_put_str search_menu(m).nam, "Find #Next": search_menu(m).ident = "FINDN"
+m=m+1: MEM_put_str search_menu(m).nam, "#Find":          search_menu(m).ident = "FIND "
+m=m+1: MEM_put_str search_menu(m).nam, "Find #Next":     search_menu(m).ident = "FINDN"
 m=m+1: MEM_put_str search_menu(m).nam, "Find #Previous": search_menu(m).ident = "FINDP"
 m=m+1: MEM_put_str search_menu(m).nam, "-"
-m=m+1: MEM_put_str search_menu(m).nam, "#Replace": search_menu(m).ident = "REPLA"
+m=m+1: MEM_put_str search_menu(m).nam, "#Replace":       search_menu(m).ident = "REPLA"
 GUI_attach_menu base_menu(3), m, _OFFSET(search_menu(1))
 
 m=0
-m=m+1: MEM_put_str help_menu(m).nam, "#Help": help_menu(m).ident = "HELP "
+m=m+1: MEM_put_str help_menu(m).nam, "#Help":       help_menu(m).ident = "HELP "
 m=m+1: MEM_put_str help_menu(m).nam, "-"
 m=m+1: MEM_put_str help_menu(m).nam, "#About     ": help_menu(m).ident = "ABOUT"
 GUI_attach_menu base_menu(4), m, _OFFSET(help_menu(1))
@@ -92,8 +89,8 @@ main_gui(g).row2 = 25
 main_gui(g).col1 = 1
 main_gui(g).col2 = 80
 main_gui(g).layer = -1 ' -- Set in background. Layer 0 is the default
-'main_gui(g).skip = -1 ' -- We don't want to be able to TAB to this gui element
-'main_gui(g).hide = -1 ' -- Don't draw box characters or box name, etc.
+' -- We don't want to be able to TAB to this gui element
+' -- Don't draw box characters or box name, etc.
 main_gui(g).flags = main_gui(g).flags OR GUI_FLAG_SKIP OR GUI_FLAG_HIDE
 
 g=g+1
@@ -165,8 +162,8 @@ main_gui(g).col1 = 2
 main_gui(g).row2 = 15 '<-- These cords will be used to draw the drop-down box when it is open
 main_gui(g).col2 = 40 '<--
 
-'main_gui(g).scroll = 1 '1 means just vertical scroll (No hoisontal)
-'main_gui(g).shadow = -1 'Draws shadow under box when drop-down is opened
+'Just vertical scroll (No hoisontal)
+'Draws shadow under box when drop-down is opened
 main_gui(g).flags = main_gui(g).flags OR GUI_FLAG_SCROLL_V OR GUI_FLAG_SHADOW
 main_gui(g).selected = 1 'Set the default selected item
 'allocate space for the items in the drop-down

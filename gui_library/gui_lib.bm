@@ -249,6 +249,9 @@ elseif keys = 0 AND GUI_ctl_flag then 'Ctl Release
   GUI_debug_output "Ctl Release"
   GUI_ctl_flag = 0
 end if
+
+GUI_shift_flag = _KEYDOWN(100303) + _KEYDOWN(100304) * 2
+
 ch$ = INKEY$
 
 if ch$ > "" then
@@ -295,7 +298,7 @@ SELECT CASE ch$
   CASE chr$(9) 'Tab
     do
       sel = (sel mod gui_num) + 1
-    loop until NOT (gui(sel).flags AND GUI_FLAG_SKIP)
+    loop until (gui(sel).flags AND GUI_FLAG_SKIP) = 0
     gui(sel).flags = gui(sel).flags OR GUI_FLAG_UPDATED
   CASE CHR$(13) 'Enter
     if gui(sel).element_type = GUI_TEXT_BOX then
@@ -421,6 +424,12 @@ SELECT CASE ch$
         END IF
         gui(sel).flags = gui(sel).flags OR GUI_FLAG_UPDATED
         GUI_calc_scroll gui(sel).row1, gui(sel).col1, gui(sel).row2, gui(sel).col2, gui(sel)
+        if GUI_shift_flag then
+          gui(sel).text_sel_col1 = gui(sel).text_position
+          gui(sel).text_sel_col2 = gui(sel).text_sel_col1
+        else
+          gui(sel).text_sel_col2 = gui(sel).text_position
+        end if
         'update_input_boxes = -1
       END IF
     ELSEIF gui(sel).element_type = GUI_DROP_DOWN or gui(sel).element_type = GUI_LIST_BOX then
@@ -450,6 +459,12 @@ SELECT CASE ch$
         END IF
         gui(sel).flags = gui(sel).flags OR GUI_FLAG_UPDATED
         GUI_calc_scroll gui(sel).row1, gui(sel).col1, gui(sel).row2, gui(sel).col2, gui(sel)
+        if GUI_shift_flag then
+          gui(sel).text_sel_col1 = gui(sel).text_position
+          gui(sel).text_sel_col2 = gui(sel).text_sel_col1
+        else
+          gui(sel).text_sel_col2 = gui(sel).text_position
+        end if
       end if
     ELSEIF gui(sel).element_type = GUI_DROP_DOWN or gui(sel).element_type = GUI_LIST_BOX then
       if gui(sel).flags AND GUI_FLAG_SCROLL_H then
@@ -523,16 +538,37 @@ SELECT CASE ch$
         GUI_debug_output "Paste"
         SELECT CASE gui(sel).element_type
           CASE GUI_INPUT_BOX
-            t$ = MEM_get_str$(gui(sel).text)
-            t$ = mid$(t$, 1, gui(sel).text_position) + _CLIPBOARD$ + mid$(t$, gui(sel).text_position + 1)
-            MEM_put_str gui(sel).text, t$
+            GUI_add_character gui(sel), _CLIPBOARD$
+            't$ = MEM_get_str$(gui(sel).text)
+            't$ = mid$(t$, 1, gui(sel).text_position) + _CLIPBOARD$ + mid$(t$, gui(sel).text_position + 1)
+            'MEM_put_str gui(sel).text, t$
             gui(sel).flags = gui(sel).flags OR GUI_FLAG_UPDATED
             'gui(sel).updated = -1
         END SELECT
       elseif ch$ = chr$(3) then 'CTRL + C
-
+        GUI_debug_output "Copy"
+        SELECT CASE gui(sel).element_type
+          CASE GUI_INPUT_BOX
+            t$ = MEM_get_str$(gui(sel).text)
+            _CLIPBOARD$ = mid$(t$, gui(sel).text_sel_col1 + 1, gui(sel).text_sel_col2 - gui(sel).text_sel_col1)
+            't$ = mid$(t$, 1, gui(sel).text_position) + _CLIPBOARD$ + mid$(t$, gui(sel).text_position + 1)
+            'MEM_put_str gui(sel).text, t$
+            'gui(sel).flags = gui(sel).flags OR GUI_FLAG_UPDATED
+            'gui(sel).updated = -1
+        END SELECT
       elseif ch$ = chr$(24) then 'CTRL + X
-
+        GUI_debug_output "Cut"
+        SELECT CASE gui(sel).element_type
+          CASE GUI_INPUT_BOX
+            t$ = MEM_get_str$(gui(sel).text)
+            _CLIPBOARD$ = mid$(t$, gui(sel).text_sel_col1 + 1, gui(sel).text_sel_col2 - gui(sel).text_sel_col1)
+            GUI_del_character gui(sel)
+            't$ = mid$(t$, 1, gui(sel).text_sel_col1) + mid$(t$, gui(sel).text_sel_col2 + 1)
+            't$ = mid$(t$, 1, gui(sel).text_position) + _CLIPBOARD$ + mid$(t$, gui(sel).text_position + 1)
+            'MEM_put_str gui(sel).text, t$
+            gui(sel).flags = gui(sel).flags OR GUI_FLAG_UPDATED
+            'gui(sel).updated = -1
+        END SELECT
       end if
     end if
   'CASE CHR$(22) 'CTRL + V -- Paste
@@ -895,12 +931,41 @@ END SUB
 SUB GUI_draw_input_box (b as GUI_element_type, sel)
 
 GUI_draw_Box b.row1, b.col1, b.row1 + 2, b.col2, b
-if (b.flags AND GUI_FLAG_TEXT_IS_SELECTED) then
+s$ = mid$(MEM_get_str$(b.text), b.scroll_offset_hors + 1, b.col2 - b.col1 - 1)
+IF (b.flags AND GUI_FLAG_HIDE) THEN s$ = STRING$(LEN(s$), "*")
+col1 = b.text_sel_col1
+col2 = b.text_sel_col2
+if col2 < col1 then
+  swap col1, col2
+end if
+if col1 = col2 OR sel = 0 then
+  color b.mcolor.fr, b.mcolor.bk
   LOCATE b.row1 + 1, b.col1 + 1
-  s$ = MID$(MEM_get_str$(b.text), b.scroll_offset_hors + 1, b.col2 - b.col1 - 1)
-  IF (b.flags AND GUI_FLAG_HIDE) = 0 THEN PRINT s$; ELSE PRINT STRING$(LEN(s$), "*");
+  's$ = MID$(MEM_get_str$(b.text), b.scroll_offset_hors + 1, b.col2 - b.col1 - 1)
+  print s$;
 else
-
+  locate b.row1 + 1, b.col1 + 1
+  if col1 <= b.scroll_offset_hors then
+    'Selected text goes off the left of the box
+    color b.selcolor.fr, b.selcolor.bk
+    print mid$(s$, 1, col2 - b.scroll_offset_hors);
+    color b.mcolor.fr, b.mcolor.bk
+    print mid$(s$, col2 - b.scroll_offset_hors + 1);
+  elseif col1 > b.scroll_offset_hors and col2 < b.scroll_offset_hors + (b.col2 - b.col1) then
+    'Selected text is completely on the screen
+    color b.mcolor.fr, b.mcolor.bk
+    print mid$(s$, 1, col1 - b.scroll_offset_hors);
+    color b.selcolor.fr, b.selcolor.bk
+    print mid$(s$, col1 - b.scroll_offset_hors + 1, col2 - col1);
+    color b.mcolor.fr, b.mcolor.bk
+    print mid$(s$, col2 - b.scroll_offset_hors + 1);
+  else
+    'Selected text goes off the left of the screen
+    color b.mcolor.fr, b.mcolor.bk
+    print mid$(s$, 1, col1 - b.scroll_offset_hors + 1);
+    color b.selcolor.fr, b.selcolor.bk
+    print mid$(s$, col1 - b.scroll_offset_hors + 1);
+  end if
 end if
 b.cur_row = b.row1 + 1
 b.cur_col = b.col1 + 1 + b.text_position - b.scroll_offset_hors
@@ -1066,17 +1131,32 @@ IF GUI_but AND GUI_butflag THEN 'Mouse held
     GUI_calc_vert_offset b(selected_gui)
     b(selected_gui).flags = b(selected_gui).flags OR GUI_FLAG_UPDATED
   elseif b(selected_gui).element_type = GUI_INPUT_BOX then
-    if b(selected_gui).flags AND GUI_FLAG_TEXT_IS_SELECTED THEN
-      if GUI_my - b(selected_gui).col1 <> b(selected_gui).text_sel_col1 then
-        b(selected_gui).text_sel_col2 = GUI_my - b(selected_gui).col1
-        b(selected_gui).flags = b(selected_gui).flags OR GUI_FLAG_UPDATED
-      end if
-    else
-      b(selected_gui).flags = b(selected_gui).flags OR GUI_FLAG_TEXT_IS_SELECTED OR GUI_FLAG_UPDATED
-      b(selected_gui).text_sel_col1 = b(selected_gui).text_position
-      b(selected_gui).text_sel_col2 = GUI_my - b(selected_gui).col1
-      b(selected_gui).text_position = b(selected_gui).text_sel_col2
+    old_col = b(selected_gui).text_position
+    b(selected_gui).text_position = b(selected_gui).scroll_offset_hors + GUI_mx - b(selected_gui).col1 - 1
+    IF b(selected_gui).text_position > b(selected_gui).text.length THEN
+      b(selected_gui).text_position = b(selected_gui).text.length
+    END IF
+    'if b(selected_gui).flags AND GUI_FLAG_TEXT_IS_SELECTED THEN
+    if GUI_my - b(selected_gui).col1 <> b(selected_gui).text_sel_col1 then
+      'c = GUI_my - b(selected_gui).col1
+      'if c + b(selected_gui).scroll_offset_hors > b(selected_gui).text.length then
+      '  c = b(selected_gui).text.length - b(selected_gui).scroll_offset_hors
+      'end if
+      b(selected_gui).text_sel_col2 = b(selected_gui).text_position
+      b(selected_gui).flags = b(selected_gui).flags OR GUI_FLAG_UPDATED
     end if
+  'elseif b(selected_gui).text_position <> old_Col then
+    b(selected_gui).flags = b(selected_gui).flags OR GUI_FLAG_TEXT_IS_SELECTED OR GUI_FLAG_UPDATED
+      'c = GUI_my - b(selected_gui).col1
+      'if c + b(selected_gui).scroll_offset_hors > b(selected_gui).text.length then
+      '  c = b(selected_gui).text.length - b(selected_gui).scroll_offset_hors
+      'end if
+    '  b(selected_gui).text_sel_col1 = old_cel
+    '  b(selected_gui).text_sel_col2 = b(selected_gui).text_position
+    'end if
+    'if b(selected_gui).text_sel_col1 > b(selected_gui).text_sel_col2 then
+    '  swap b(selected_gui).text_sel_col1, b(selected_gui).text_sel_col2
+    'end if
   end if
     'if GUI_mx = b(selected_gui).col2 AND (b(selected_gui).scroll AND 1) then
     '  if GUI_my >= b(selected_gui).row1 + 2 and GUI_my <= b(selected_gui).row2 - 2 then
@@ -1093,7 +1173,7 @@ IF GUI_but AND GUI_butflag THEN 'Mouse held
   EXIT FUNCTION
 ELSE
   GUI_butflag = 0
-  b(selected_gui).flags = ((b(selected_gui).flags AND NOT GUI_FLAG_SCROLL_IS_HELD_H) AND NOT GUI_FLAG_SCROLL_IS_HELD_V)
+  b(selected_gui).flags = ((b(selected_gui).flags AND NOT GUI_FLAG_SCROLL_IS_HELD_H) AND NOT GUI_FLAG_SCROLL_IS_HELD_V) OR GUI_FLAG_UPDATED
 END IF
 IF GUI_but = 0 THEN EXIT FUNCTION
 GUI_butflag = -1
@@ -1206,6 +1286,10 @@ if found > 0 then
           END IF
         END IF
       END IF
+      if NOT GUI_shift_flag then
+        b(found).text_sel_col1 = b(found).text_position
+      end if
+      b(found).text_sel_col2 = b(found).text_position
       b(found).flags = b(found).flags OR GUI_FLAG_UPDATED
     case GUI_TEXT_BOX
       selected_gui = found
@@ -1394,26 +1478,45 @@ END FUNCTION
 
 SUB GUI_add_character (b AS GUI_element_type, ch$)
 t$ = MEM_get_str$(b.text)
+col1 = b.text_sel_col1
+col2 = b.text_sel_col2
+if col1 > col2 then swap col1, col2
+if col1 <> col2 then GUI_del_character b
+
 t$ = MID$(t$, 1, b.text_position) + ch$ + MID$(t$, b.text_position + 1)
 'print "T="; t$;
 '_DISPLAY
 'sleep
 MEM_put_str b.text, t$
-b.text_position = b.text_position + 1
+b.text_position = b.text_position + len(ch$)
 IF b.text_position > b.scroll_offset_hors + (b.col2 - b.col1 - 2) THEN
-  b.scroll_offset_hors = b.scroll_offset_hors + 1
+  b.scroll_offset_hors = b.text_position - (b.col2 - b.col1 - 2)
+  'do
+  '  b.scroll_offset_hors = b.scroll_offset_hors + 1
+  'loop until b.text_position <= b.scroll_offset_hors + (b.col2 - b.col1 - 2)
 END IF
 END SUB
 
 SUB GUI_del_character (b AS GUI_element_type)
 t$ = MEM_get_str$(b.text)
-IF LEN(t$) > 0 AND b.text_position > 0 THEN
+col1 = b.text_sel_col1
+col2 = b.text_sel_col2
+if col1 > col2 then swap col1, col2
+IF LEN(t$) > 0 AND b.text_position > 0 AND col1 = col2 THEN
   t$ = MID$(t$, 1, b.text_position - 1) + MID$(t$, b.text_position + 1)
   MEM_put_str b.text, t$
   b.text_position = b.text_position - 1
   IF b.text_position < b.scroll_offset_hors THEN
-    b.scroll_offset_hors = b.scroll_offset_hors - 1
+    b.scroll_offset_hors = b.text_position + 1
   END IF
+ELSEIF col1 <> col2 then
+  t$ = mid$(t$, 1, col1) + mid$(t$, col2 + 1)
+  MEM_put_str b.text, t$
+  b.text_position = col1
+  IF b.text_position < b.scroll_offset_hors THEN
+    b.scroll_offset_hors = b.text_position - 1
+  END IF
+  b.text_sel_col1 = b.text_sel_col2
 END IF
 END SUB
 
