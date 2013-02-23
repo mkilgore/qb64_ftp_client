@@ -54,21 +54,25 @@ if tim > 0 then gui_num = gui_num + 1
 DIM gui(gui_num) AS GUI_element_type, labels(rows_add), tim_label, buttons(button_count)
 
 gui(1).element_type = GUI_BOX
-gui(1).dialog = -1
+'gui(1).dialog = -1
+gui(1).flags = gui(1).flags OR GUI_FLAG_DIALOG
 GUI_init_element gui(1), ""
 gui(1).row1 = _HEIGHT(0) / 2 - 2
 gui(1).row2 = gui(1).row1 + 3 + rows_add
 IF tim > 0 THEN gui(1).row2 = gui(1).row2 + 1
 gui(1).col1 = _WIDTH(0) / 2 - box_width \ 2
 gui(1).col2 = gui(1).col1 + box_width
-gui(1).shadow = -1
-gui(1).skip = -1
+'gui(1).shadow = -1
+'gui(1).skip = -1
+gui(1).flags = gui(1).flags OR GUI_FLAG_SHADOW OR GUI_FLAG_SKIP
 gui(1).layer = -1
 
 for x = 1 to rows_add
   gui(x + 1).element_type = GUI_LABEL
-  gui(x + 1).dialog = -1
-  GUI_init_element gui(x + 1), rows$(x)
+  'gui(x + 1).dialog = -1
+   gui(x + 1).flags =  gui(x + 1).flags OR GUI_FLAG_DIALOG
+  GUI_init_element gui(x + 1), "Label" + ltrim$(rtrim$(str$(x)))
+  MEM_put_str gui(x+1).text, rows$(x)
   gui(x + 1).row1 = gui(1).row1 + x
   gui(x + 1).col1 = gui(1).col1 + (gui(1).col2 - gui(1).col1) \ 2 - (len(rows$(x))) \ 2
   labels(x) = x + 1
@@ -78,7 +82,8 @@ button_start = rows_add + 1
 if tim > 0 then
   tim_label = 2 + rows_add
   gui(tim_label).element_type = GUI_LABEL
-  gui(tim_label).dialog = -1
+  'gui(tim_label).dialog = -1
+  gui(tim_label).flags = gui(tim_label).flags OR GUI_FLAG_DIALOG
   GUI_init_element gui(tim_label), ""
   gui(tim_label).row1 = gui(1).row1 + rows_add + 1
   gui(tim_label).col1 = 1
@@ -88,7 +93,7 @@ end if
 FOR x = 1 TO button_count
   n = button_start + x
   gui(n).element_type = GUI_BUTTON
-  gui(n).dialog = -1
+  gui(n).flags = gui(n).flags OR GUI_FLAG_DIALOG
   gui(n).row1 = gui(1).row2 - 1
   gui(n).col1 = gui(1).col1 + ((gui(1).col2 - gui(1).col1) / (button_count + 1)) * x
   IF NOT ok_flag AND (buttons AND OK_BUTTON) THEN
@@ -146,7 +151,7 @@ DO
     s$ = "Dialog will close in" + STR$(t_count) + " seconds..."
     MEM_put_str gui(tim_label).nam, s$
     gui(tim_label).col1 = _WIDTH(0) \ 2 - len(s$) \ 2
-    gui(tim_label).updated = -1
+    gui(tim_label).flags = gui(tim_label).flags OR GUI_FLAG_UPDATED
     t# = TIMER
   end if
 

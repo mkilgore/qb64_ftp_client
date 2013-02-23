@@ -32,9 +32,7 @@ main_gui(g).row1 = 1
 main_gui(g).col1 = 1
 main_gui(g).col2 = 80
 main_gui(g).menu_padding = 2
-'main_gui(g).skip = -1
-'main_gui(g).shadow = -1
-main_gui(g).flags = main_gui(g).flags OR GUI_FLAG_SKIP OR GUI_FLAG_SHADOW
+main_gui(g).flags = main_gui(g).flags OR GUI_FLAG_SKIP OR GUI_FLAG_SHADOW OR GUI_FLAG_MENU_LAST_ON_RIGHT
 
 
 m=0
@@ -108,8 +106,6 @@ main_gui(g).row1 = 2
 main_gui(g).row2 = 10
 main_gui(g).col1 = 41
 main_gui(g).col2 = 80
-'scroll = 1 means just vertical, scroll = 2 means just horisontal, scroll = 3 means both (Bit field)
-'main_gui(g).scroll = 1
 main_gui(g).flags = main_gui(g).flags OR GUI_FLAG_SCROLL_V
 
 MEM_allocate_string_array main_gui(g).lines, 120
@@ -182,8 +178,6 @@ main_gui(g).row1 = 9
 main_gui(g).col1 = 2
 main_gui(g).row2 = 24 'A larger row2 value will result in a bigger drop-down box
 main_gui(g).col2 = 40
-'main_gui(g).scroll = 1
-'main_gui(g).shadow = -1
 main_gui(g).flags = main_gui(g).flags OR GUI_FLAG_SCROLL_V OR GUI_FLAG_SHADOW
 main_gui(g).selected = 1
 MEM_allocate_string_array main_gui(g).lines, 80
@@ -226,15 +220,13 @@ main_gui(g).row1 = 11 'location
 main_gui(g).row2 = 22
 main_gui(g).col1 = 41
 main_gui(g).col2 = 80
-'scroll = 1 means just vertical, scroll = 2 means just horisontal, scroll = 3 means both (Bit field)
-'main_gui(g).scroll = 3
 main_gui(g).flags = main_gui(g).flags OR GUI_FLAG_SCROLL_V OR GUI_FLAG_SCROLL_H
 'We allocate 120 Lines for the array (main_gui(g).lines won't be allocated for you, but it may be reallocated if you allow it)
 'Just set this to a reasonable value for your program.
 MEM_allocate_string_array main_gui(g).lines, 120
 'Setting this to zero (It's default) means main_gui(g).lines will be reallocated if needed
 'The user could technically use all his memory if he allocates to many lines
-'But he'll probably reach the max length value before that happens...
+'But he'll probably reach the max value for an INTEGER before that happens...
 main_gui(g).max_lines = 0
 main_gui(g).length = 10 'Only display 10 lines since only 10 lines will have data in the beginning
 'Length will be dynamically changed based on the input (If a line is deleted, for instance, length will go down)
@@ -307,19 +299,19 @@ DO 'Main loop
 
     if i$ = "EXIT " then exit_flag = -1 '"EXIT " is for the EXIT menu option -- So set our exit_flag variable
     if i$ = "ABOUT" then
-      'about_dialog
+      about_dialog
     end if
     if i$ = "RENAM" then
-      'rename_file_GUI 0
+      rename_file_GUI 0
     end if
     if i$ = "OPEN " then
-      'prompt = prompt_dialog("Test Dialog"+chr$(13) + "Line 2", 10, OK_BUTTON OR CLOSE_BUTTON, OK_BUTTON)
+      prompt = prompt_dialog("Test Dialog"+chr$(13) + "Line 2", 10, OK_BUTTON OR CLOSE_BUTTON, OK_BUTTON)
     end if
     if i$ = "CONEC" then
       'Connect_To_FTP
     end if
     if i$ = "HELP " then
-      'popup_dialog_gui "Not Implemented Yet."
+      popup_dialog_gui "Not Implemented Yet."
     end if
   end if
 LOOP UNTIL exit_flag = -1 or _EXIT
@@ -337,8 +329,8 @@ END SUB
 
 '$include:'mem_library/mem_lib.bm'
 '$include:'gui_library/gui_lib.bm'
-''$include:'dialogs/about.bm'
-''$include:'dialogs/rename_file.bm'
-''$include:'dialogs/prompt.bm'
+'$include:'dialogs/about.bm'
+'$include:'dialogs/rename_file.bm'
+'$include:'dialogs/prompt.bm'
 ''$include:'dialogs/ftp_connect.bm'
-''$include:'dialogs/dialog_simple.bm'
+'$include:'dialogs/dialog_simple.bm'

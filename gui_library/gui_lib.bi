@@ -6,9 +6,9 @@
 'of the Do What You Want Public License, Version 1, as published by Matt Kilgore
 'See file COPYING that should have been included with this source.
 
-CONST GUI_VERSION$ = ".75"
+CONST GUI_VER$ = ".85"
 
-CONST GUI_DEBUG = -1
+CONST GUI_DEBUG = -1 'Set to -1 to turn on debug mode
 
 TYPE GUI_menu_item_type
   nam as MEM_string_type 'Displayed string for MENU choice
@@ -58,6 +58,7 @@ CONST GUI_FLAG_CHECKED = 2048
 CONST GUI_FLAG_MENU_OPEN = 4096
 CONST GUI_FLAG_MENU_ALT = 8192
 CONST GUI_FLAG_MENU_CHOSEN = 16384
+CONST GUI_FLAG_MENU_LAST_ON_RIGHT = 512
 
 TYPE GUI_element_type
   nam AS MEM_string_type 'name of item
@@ -98,12 +99,8 @@ TYPE GUI_element_type
   'bit 12 -- menu chosen
 
   mcolor as GUI_color_type
-  'c1 AS _BYTE 'forcolor
-  'c2 AS _BYTE 'backcolor
 
   selcolor as GUI_color_type
-  'sc1 AS _BYTE 'selected color (Has a few different meanings depending on the object)
-  'sc2 AS _BYTE
 
   ' Just a number indicating the layering.
   ' Default layer is zero. If you need something to be ontop of something else, put it in a higher layer
@@ -118,10 +115,7 @@ TYPE GUI_element_type
   text_sel_col2 AS INTEGER
 
   scroll_color as GUI_color_type
-  'scroll = 0 -- no scroll bars
-  'scroll = 1 -- Vertical scroll bar only
-  'scroll = 2 -- Horisontal scroll bar only
-  'scroll = 3 -- Vertical and Horisontal scroll bars
+
   scroll_offset_vert AS INTEGER 'current scroll offset -- calculated in draw_gui function
   scroll_offset_hors AS INTEGER
 
@@ -143,15 +137,11 @@ TYPE GUI_element_type
 
   group as INTEGER 'group number for radio buttons
 
-  'Updated only applies to selected gui element, to ease the ease of checking.
-  'You can assume that unless you change the values directly, no other gui's accept the selected gui
-  'will be changed.
-
   cur_row AS INTEGER
   cur_col AS INTEGER
 
   'This does not corespond to the displayed number of lines, just the real max allocation length of lines
-  max_lines AS _UNSIGNED INTEGER 'If 0 then the lines array will automatically be reallocated, else we won't go over lines
+  max_lines AS _UNSIGNED INTEGER 'If 0 then the lines array will automatically be reallocated, else we won't go over max_lines
 
   'If this GUI is currently selected, then you should do a:
   'LOCATE cur_row, cur_col, 1

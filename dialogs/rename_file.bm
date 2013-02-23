@@ -22,14 +22,16 @@ input_box_num = 0
 
 'box.nam = "Rename file"
 gui(1).element_type = GUI_BOX
-gui(1).dialog = -1
+'gui(1).dialog = -1
+gui(1).flags = gui(1).flags OR GUI_FLAG_DIALOG
 GUI_init_element gui(1), "Rename file"
 gui(1).row1 = _HEIGHT(0) \ 2 - 3
 gui(1).row2 = gui(1).row1 + 6
 gui(1).col1 = _WIDTH(0) \ 2 - 30
 gui(1).col2 = gui(1).col1 + 60
-gui(1).shadow = -1
-gui(1).skip = -1
+'gui(1).shadow = -1
+'gui(1).skip = -1
+gui(1).flags = gui(1).flags OR GUI_FLAG_SHADOW OR GUI_FLAG_SKIP
 gui(1).layer = -1
 'box.c1 = box_c1
 'box.c2 = box_c2
@@ -37,7 +39,8 @@ gui(1).layer = -1
 
 'gui(1).nam = "File Name"
 gui(2).element_type = GUI_INPUT_BOX
-gui(2).dialog = -1
+'gui(2).dialog = -1
+gui(2).flags = gui(2).flags OR GUI_FLAG_DIALOG
 GUI_init_element gui(2), "File Name"
 gui(2).row1 = gui(1).row1 + 1
 gui(2).col1 = gui(1).col1 + 5
@@ -45,7 +48,8 @@ gui(2).col2 = gui(1).col2 - 5
 input_box_num = 2
 
 gui(3).element_type = GUI_BUTTON
-gui(3).dialog = -1
+'gui(3).dialog = -1
+gui(3).flags = gui(3).flags OR GUI_FLAG_DIALOG
 IF local_or_remote = 1 THEN
   GUI_init_element gui(3), "Local File"
 ELSE
@@ -56,7 +60,8 @@ buttons(1) = 3
 
 'gui(3).nam = "Close"
 gui(4).element_type = GUI_BUTTON
-gui(4).dialog = -1
+'gui(4).dialog = -1
+gui(4).flags = gui(4).flags OR GUI_FLAG_DIALOG
 GUI_init_element gui(4), "Close"
 'put_str gui(3).nam, "Close"
 gui(4).row1 = gui(1).row2 - 1

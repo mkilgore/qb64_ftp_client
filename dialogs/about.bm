@@ -8,36 +8,66 @@
 
 SUB about_dialog () 'Displays 'about' box
 
-gui_num = 4
+gui_num = 6
 DIM gui(gui_num) AS GUI_element_type
 
-gui(1).element_type = GUI_BOX
-gui(1).dialog = -1
-GUI_init_element gui(1), "About"
-gui(1).row1 = _HEIGHT(0) \ 2 - 3
-gui(1).row2 = gui(1).row1 + 7
-gui(1).col1 = _WIDTH(0) \ 2 - 20
-gui(1).col2 = _WIDTH(0) \ 2 + 20
-gui(1).shadow = -1
-gui(1).layer = -1 'Set in background
+g=1
+gui(g).element_type = GUI_BOX
+'gui(1).dialog = -1
+gui(g).flags = gui(g).flags OR GUI_FLAG_DIALOG
+GUI_init_element gui(g), "About"
+gui(g).row1 = _HEIGHT(0) \ 2 - 3
+gui(g).row2 = gui(g).row1 + 10
+gui(g).col1 = _WIDTH(0) \ 2 - 20
+gui(g).col2 = _WIDTH(0) \ 2 + 20
+'gui(1).shadow = -1
+gui(g).flags = gui(g).flags OR GUI_FLAG_SHADOW
+gui(g).layer = -1 'Set in background
 
-gui(2).element_type = GUI_LABEL
-gui(2).dialog = -1
-GUI_init_element gui(2), "FTP Client, Version: " + VER$
-gui(2).row1 = gui(1).row1 + 2
-gui(2).col1 = _WIDTH(0) \ 2 - len(MEM_Get_str$(gui(2).nam)) \ 2
+g=g+1
+gui(g).element_type = GUI_LABEL
+'gui(2).dialog = -1
+gui(g).flags = gui(g).flags OR GUI_FLAG_DIALOG
+GUI_init_element gui(g), "Label1"
+MEM_put_str gui(g).text, "FTP Client, Version: " + VER$
+gui(g).row1 = gui(1).row1 + 2
+gui(g).col1 = _WIDTH(0) \ 2 - len(MEM_Get_str$(gui(g).text)) \ 2
 
-gui(3).element_type = GUI_LABEL
-gui(3).dialog = -1
-GUI_init_element gui(3), "Written by Matt Kilgore in QB64"
-gui(3).row1 = gui(1).row1 + 4
-gui(3).col1 = _WIDTH(0) \ 2 - len(MEM_Get_str$(gui(3).nam)) \ 2
+g=g+1
+gui(g).element_type = GUI_LABEL
+'gui(2).dialog = -1
+gui(g).flags = gui(g).flags OR GUI_FLAG_DIALOG
+GUI_init_element gui(g), "Label2"
+MEM_put_str gui(g).text, "Built with GUI version: " + GUI_VER$
+gui(g).row1 = gui(1).row1 + 4
+gui(g).col1 = _WIDTH(0) \ 2 - len(MEM_Get_str$(gui(g).text)) \ 2
 
-gui(4).element_type = GUI_BUTTON
-gui(4).dialog = -1
-GUI_init_element gui(4), "Close"
-gui(4).row1 = gui(1).row2 - 1
-gui(4).col1 = gui(1).col1 + (gui(1).col2 - gui(1).col1) \ 2 - 2
+g=g+1
+gui(g).element_type = GUI_LABEL
+'gui(2).dialog = -1
+gui(g).flags = gui(g).flags OR GUI_FLAG_DIALOG
+GUI_init_element gui(g), "Label3"
+MEM_put_str gui(g).text, "FTP library version: " + FTP_VER$
+gui(g).row1 = gui(1).row1 + 5
+gui(g).col1 = _WIDTH(0) \ 2 - len(MEM_Get_str$(gui(g).text)) \ 2
+
+g=g+1
+gui(g).element_type = GUI_LABEL
+'gui(3).dialog = -1
+gui(g).flags = gui(g).flags OR GUI_FLAG_DIALOG
+GUI_init_element gui(g), "Label4"
+MEM_put_str gui(g).text, "Written by Matt Kilgore in QB64"
+gui(g).row1 = gui(1).row1 + 7
+gui(g).col1 = _WIDTH(0) \ 2 - len(MEM_Get_str$(gui(g).text)) \ 2
+
+g=g+1
+gui(g).element_type = GUI_BUTTON
+'gui(4).dialog = -1
+gui(g).flags = gui(g).flags OR GUI_FLAG_DIALOG
+GUI_init_element gui(g), "Close"
+gui(g).row1 = gui(1).row1 + 9
+gui(g).col1 = gui(1).col1 + (gui(1).col2 - gui(1).col1) \ 2 - 2
+gui_close = g
 
 exit_gui_flag = 0
 selected_gui = 4
@@ -52,7 +82,7 @@ DO
 
   key$ = GUI_inkey$(gui(), gui_num, selected_gui)
 
-  if g_clicked = 4 then exit_gui_flag = -1
+  if g_clicked = gui_close then exit_gui_flag = -1
 
   'if gui(4).pressed then exit_gui_flag = -1
 
