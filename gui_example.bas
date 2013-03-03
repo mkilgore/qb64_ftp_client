@@ -18,6 +18,8 @@ DIM click_count(3) AS INTEGER
 DIM base_menu(4) as GUI_menu_item_type
 'DIM sub_menus(5, 10) as GUI_menu_item_type
 DIM file_menu(10) as GUI_menu_item_type
+DIM file_new_menu(10) as GUI_menu_item_type
+DIM file_new_csrc_menu(10) as GUI_menu_item_type
 DIM edit_menu(10) as GUI_menu_item_type
 DIM search_menu(10) as GUI_menu_item_type
 DIM tools_menu(10) as GUI_menu_item_type
@@ -47,6 +49,21 @@ m=m+1: MEM_put_str file_menu(m).nam,   "S#ave As":         file_menu(m).ident = 
 m=m+1: MEM_put_str file_menu(m).nam,   "-":                file_menu(m).ident =   "-----"
 m=m+1: MEM_put_str file_menu(m).nam,   "#Exit":            file_menu(m).ident =   "EXIT "
 GUI_attach_menu base_menu(1), m, _OFFSET(file_menu(1))
+
+sm = sm + 1: MEM_put_str file_new_menu(sm).nam, "#C Source       ": file_new_menu(sm).ident = "CSRC "
+sm = sm + 1: MEM_put_str file_new_menu(sm).nam, "C++ #Source     ": file_new_menu(sm).ident = "CPPSR"
+sm = sm + 1: MEM_put_str file_new_menu(sm).nam, "-"               : file_new_menu(sm).ident = "-----"
+sm = sm + 1: MEM_put_str file_new_menu(sm).nam, "#Plain Text     ": file_new_menu(sm).ident = "PLAIN"
+
+GUI_attach_menu file_menu(2), sm, _OFFSET(file_new_menu(1))
+
+sm = 0
+sm = sm + 1: MEM_put_str file_new_csrc_menu(sm).nam, "#C Source       ": file_new_csrc_menu(sm).ident = "CSRC "
+sm = sm + 1: MEM_put_str file_new_csrc_menu(sm).nam, "C++ #Source     ": file_new_csrc_menu(sm).ident = "CPPSR"
+sm = sm + 1: MEM_put_str file_new_csrc_menu(sm).nam, "-"               : file_new_csrc_menu(sm).ident = "-----"
+sm = sm + 1: MEM_put_str file_new_csrc_menu(sm).nam, "#Plain Text     ": file_new_csrc_menu(sm).ident = "PLAIN"
+
+GUI_attach_menu file_new_menu(2), sm, _OFFSET(file_new_csrc_menu(1))
 
 m=0
 MEM_put_str base_menu(2).nam,          "#Edit":            base_menu(2).ident =   "Edit "

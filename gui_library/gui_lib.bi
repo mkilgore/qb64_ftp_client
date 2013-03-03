@@ -23,6 +23,7 @@ TYPE GUI_menu_item_type
   has_sub AS _BYTE 'If -1 then sub_menu is set
   sub_menu as _MEM 'Points to an array of GUI_menu_item_type
   sub_menu_length AS INTEGER
+  key_combo as MEM_string_type
   selected AS INTEGER 'current
 END TYPE
 
@@ -83,7 +84,7 @@ TYPE GUI_element_type
   row2 AS INTEGER
   col2 AS INTEGER
 
-  flags AS INTEGER '15 (0 to 15) bits flags (Will be expanded as needed as new flags are needed)
+  flags AS _UNSIGNED LONG '15 (0 to 15) bits flags (Will be expanded as needed as new flags are needed)
   'bit 0  -- updated since last draw
   'bit 1  -- skip
   'bit 2  -- shadow
@@ -157,6 +158,7 @@ END TYPE
 'shared variables for mouse
 COMMON SHARED GUI_MX AS INTEGER, GUI_MY AS INTEGER, GUI_BUT AS INTEGER, GUI_MSCROLL AS INTEGER, GUI_BUTFLAG AS INTEGER
 COMMON SHARED GUI_CUR_ROW AS INTEGER, GUI_CUR_COL AS INTEGER, GUI_alt_flag AS INTEGER, GUI_ctl_flag AS INTEGER, GUI_shift_flag AS INTEGER
+COMMON SHARED GUI_DRAG_TIMER AS DOUBLE
 'default colors -- Values are set by GUI_init and are changable at any time
 COMMON SHARED GUI_DEFAULT_COLOR_BOX as GUI_default_color_type, GUI_DEFAULT_COLOR_INPUT as GUI_default_color_type
 COMMON SHARED GUI_DEFAULT_COLOR_TEXT as GUI_default_color_type, GUI_DEFAULT_COLOR_LIST as GUI_default_color_type
