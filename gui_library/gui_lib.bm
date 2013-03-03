@@ -748,7 +748,7 @@ END SUB
 
 '###############################################################################
 '###############################################################################
-'#-----------------------------MENU FUNCTIONS----------------------------------#
+'#------------------------------MENU FUNCTIONS---------------------------------#
 '###############################################################################
 '###############################################################################
 
@@ -829,27 +829,27 @@ END FUNCTION
 'Returns the current locate of the open menu, if any
 'Sends back -1 if there was an open menu at that debth
 'Sends zero if there was no menu open that deep
-FUNCTION GUI_get_menu_location (b as GUI_element_type, debth, row1, col1, row2, col1)
+'FUNCTION GUI_get_menu_location (b as GUI_element_type, debth, row1, col1, row2, col1)
 
-END FUNCTION
+'END FUNCTION
 
 'send it the X and Y of the mouse as well an GUI_MENU element
 FUNCTION GUI_menu_clicked_on (b as GUI_element_type, x, y)
 
 END FUNCTION
 'recursivly close sub menus by setting their selected value to zero
-'SUB GUI_close_sub_menu (m as GUI_menu_item_type)
-'DIM men as GUI_menu_item_type
-'m.selected = 0
-'if m.has_sub then
-'  FOR x = 1 to m.sub_menu_length
-'    men = _MEMGET(m.sub_menu, m.sub_menu.OFFSET, GUI_menu_item_type)
-'    men.selected = 0
-'    _MEMPUT m.sub_menu, m.sub_menu.OFFSET, men
-'    GUI_close_sub_menu men
-'  NEXT X
-'end if
-'END SUB
+SUB GUI_close_sub_menu (m as GUI_menu_item_type)
+DIM men as GUI_menu_item_type
+m.selected = 0
+if m.has_sub then
+  FOR x = 1 to m.sub_menu_length
+    men = _MEMGET(m.sub_menu, m.sub_menu.OFFSET, GUI_menu_item_type)
+    men.selected = 0
+    _MEMPUT m.sub_menu, m.sub_menu.OFFSET, men
+    GUI_close_sub_menu men
+  NEXT X
+end if
+END SUB
 
 
 '###############################################################################
