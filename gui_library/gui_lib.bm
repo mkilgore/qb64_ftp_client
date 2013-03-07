@@ -471,8 +471,8 @@ for x = 1 to b.length
   end if
 next x
 if b.flags AND GUI_FLAG_MENU_OPEN then
-  men = _MEMGET(b.menu, b.menu.OFFSET + len(men) * (b.selected - 1), GUI_menu_item_type)
-  GUI_draw_gui_menu b, men, menu_row1, menu_col1
+  'men = _MEMGET(b.menu, b.menu.OFFSET + len(men) * (b.selected - 1), GUI_menu_item_type)
+  GUI_draw_gui_menu b ', men, menu_row1, menu_col1
 end if
 b.cur_row = 0
 b.cur_col = 0
@@ -517,10 +517,15 @@ END SUB
 '  row1, col1 --> Location for the top left corner of the menu
 'The location of the top left corner will be adjusted by GUI_get_menu_location as nessisary
 'This may happen if the normal row1, col1 would draw the menu off screen
-SUB GUI_draw_gui_menu (b as GUI_element_type, m as GUI_menu_item_type, row1, col1)
+SUB GUI_draw_gui_menu (b as GUI_element_type) ', m as GUI_menu_item_type, row1, col1)
+STATIC count, m as GUI_menu_item_type
 DIM men as GUI_menu_item_type
 DIM men_next_menu as GUI_menu_item_type, sub_menu_row1, sub_menu_col1, sub_menu_open
-GUI_get_menu_location b, m, row1, col1, row2, col2
+
+GUI_get_menu_location b, count + 1, row1, col1, row2, col2
+
+if count = 0 then m = _MEMGET(b.menu, b.menu.OFFSET + len(men) * (b.selected - 1), GUI_menu_item_type)
+
 GUI_debug_output "Row1:" + str$(row1) + " Col1" + str$(col1) + " Row2:" + str$(row2) + " Col2:" + str$(col2)
 wid = col2 - col1 - 3
 IF b.flags AND GUI_FLAG_SHADOW THEN
@@ -577,7 +582,10 @@ locate row2, col1
 color b.mcolor.fr, b.mcolor.bk
 print CHR$(192); STRING$(col2 - col1 - 1, 196); CHR$(217);
 if sub_menu_open then
-  GUI_draw_gui_menu b, men_next_menu, sub_menu_row1, sub_menu_col1
+  m = men_next_menu
+  count = count + 1
+  GUI_draw_gui_menu b ', men_next_menu, sub_menu_row1, sub_menu_col1
+  count = count - 1
 end if
 _CONTROLCHR ON
 END SUB
@@ -790,10 +798,10 @@ END SUB
 'row1 and col1 won't change unless they have to be moved so the menu isn't off screen
 
 
-SUB GUI_get_menu_location (b as GUI_element_type, s as integer, row1, col1, row2, col2)
+SUB GUI_get_menu_location (b as GUI_element_type, sel as integer, row1, col1, row2, col2)
 STATIC count, m as GUI_menu_item_type
 DIM men as GUI_menu_item_type
-GUI_debug_output "Count:" + str$(count)
+GUI_debug_output "R Count:" + str$(count) + "   SEL=" + str$(sel)
 if count = 0 then
   row1 = b.row1
   col1 = b.col1
@@ -804,7 +812,7 @@ else
     row1 = b.row1
     col2 = b.col1 + b.menu_padding
     for x = 1 to b.selected
-      men = _MEMGET(b(found).menu, b(found).menu.OFFSET + len(men) * (x - 1), GUI_menu_item_type)
+      men = _MEMGET(b.menu, b.menu.OFFSET + len(men) * (x - 1), GUI_menu_item_type)
       if x = b.length AND (b.flags AND GUI_FLAG_MENU_LAST_ON_RIGHT) then
         col1 = b.col2 - GUI_menu_len(MEM_get_str$(men.nam)) - 2
       else
@@ -840,8 +848,8 @@ else
   end if
 end if
 count = count + 1
-if count < s then
-  GUI_get_menu_location b, s + 1, row1, col1, row2, col2
+if count < sel then
+  'GUI_get_menu_location b, sel, row1, col1, row2, col2
 end if
 count = count - 1
 END SUB
@@ -900,6 +908,7 @@ END FUNCTION
 FUNCTION GUI_menu_clicked_on (b as GUI_element_type, cx, cy, debth, selection)
 STATIC count, m AS GUI_menu_item_type
 DIM men as GUI_menu_item_type
+GUI_debug_output "T Count:" + str$(count)
 GUI_get_menu_location b, count, row1, col1, row2, col2
 if cx >= col1 and cx <= col2 and cy >= row1 and cy <= row2 then
   clicked = -1
@@ -910,7 +919,7 @@ if cx >= col1 and cx <= col2 and cy >= row1 and cy <= row2 then
     'col2 = b.col1 + b.menu_padding
     c = col1 + b.menu_padding
     for x = 1 to b.selected
-      men = _MEMGET(b(found).menu, b(found).menu.OFFSET + len(men) * (x - 1), GUI_menu_item_type)
+      men = _MEMGET(b.menu, b.menu.OFFSET + len(men) * (x - 1), GUI_menu_item_type)
       if x = b.length AND (b.flags AND GUI_FLAG_MENU_LAST_ON_RIGHT) then
         c = b.col2 - GUI_menu_len(MEM_get_str$(men.nam)) - 2
       else
@@ -923,7 +932,10 @@ if cx >= col1 and cx <= col2 and cy >= row1 and cy <= row2 then
     next x
     row2 = row1
   else
-    
+    s = cx - row1
+    if s > 0 and s <= row2 - row1 then
+      selection = s
+    end if
   end if
   'selection =
 end if
@@ -931,6 +943,8 @@ end if
 count = count + 1
 'd = debth
 's = selection
+
+' ----- Check for a sub-menu before recursing -- Don't recurse if there isn't a sub-menu
 clicked = clicked OR GUI_menu_clicked_on(b, x, y, debth, selection)
 
 'if tclicked = 0 then
@@ -1736,31 +1750,35 @@ FOR x = 1 TO boxnum
           current_layer = k
         END IF
       case GUI_MENU
-        if GUI_my = b(x).row1 then
+        if GUI_menu_clicked_on(b(x), GUI_MX, GUI_MY, debth, selection) then
           found = x
           current_layer = k
-        elseif b(x).flags AND GUI_FLAG_MENU_OPEN then
-          col1 = b(x).col1 + b(x).menu_padding - 1 'Find row and column locations of the open menu
-          row1 = b(x).row1 + 1
-          if (b(x).flags AND GUI_FLAG_MENU_LAST_ON_RIGHT) = 0 OR b(x).selected <> b(x).length then
-            for m = 1 to b(x).selected
-              men = _MEMGET(b(x).menu, b(x).menu.OFFSET + len(men) * (m - 1), GUI_menu_item_type)
-              if m < b(x).selected then col1 = col1 + men.nam.length + 1
-            next m
-          else
-            men = _MEMGET(b(x).menu, b(x).menu.OFFSET + len(men) * (b(x).length - 1), GUI_menu_item_type)
-            col1 = b(x).col2 - men.nam.length - 2
-            if b(x).flags AND GUI_FLAG_SHADOW then col1 = col1 - 2
-          end if
-          GUI_get_menu_location b(x), men, row1, col1, row2, col2
-          wid = col2 - col1 - 3
-          if GUI_my >= row1 and GUI_my <= row2 then
-            if GUI_mx >= col1 and GUI_mx <= col2 then
-              found = x
-              current_layer = k
-            end if
-          end if
         end if
+        'if GUI_my = b(x).row1 then
+        '  found = x 
+        '  current_layer = k
+        'elseif b(x).flags AND GUI_FLAG_MENU_OPEN then
+        '  col1 = b(x).col1 + b(x).menu_padding - 1 'Find row and column locations of the open menu
+        '  row1 = b(x).row1 + 1
+        '  if (b(x).flags AND GUI_FLAG_MENU_LAST_ON_RIGHT) = 0 OR b(x).selected <> b(x).length then
+        '    for m = 1 to b(x).selected
+        '      men = _MEMGET(b(x).menu, b(x).menu.OFFSET + len(men) * (m - 1), GUI_menu_item_type)
+        '      if m < b(x).selected then col1 = col1 + men.nam.length + 1
+        '    next m
+        '  else
+        '    men = _MEMGET(b(x).menu, b(x).menu.OFFSET + len(men) * (b(x).length - 1), GUI_menu_item_type)
+        '    col1 = b(x).col2 - men.nam.length - 2
+        '    if b(x).flags AND GUI_FLAG_SHADOW then col1 = col1 - 2
+        '  end if
+        '  GUI_get_menu_location b(x), men, row1, col1, row2, col2
+        '  wid = col2 - col1 - 3
+        '  if GUI_my >= row1 and GUI_my <= row2 then
+        '    if GUI_mx >= col1 and GUI_mx <= col2 then
+        '      found = x
+        '      current_layer = k
+        '    end if
+        '  end if
+        'end if
       case GUI_BUTTON
         IF GUI_my = b(x).row1 AND GUI_mx >= b(x).col1 AND GUI_mx <= b(x).col1 + b(x).nam.length + 1 THEN
           found = x
