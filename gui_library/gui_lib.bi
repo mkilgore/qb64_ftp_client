@@ -23,6 +23,7 @@ TYPE GUI_menu_item_type
   has_sub AS _BYTE 'If -1 then sub_menu is set
   sub_menu as _MEM 'Points to an array of GUI_menu_item_type
   sub_menu_length AS INTEGER
+  sub_menu_open as _BYTE
   key_combo as MEM_string_type
   selected AS INTEGER 'current
 END TYPE

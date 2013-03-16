@@ -9,6 +9,8 @@ $CONSOLE
 
 GUI_init
 
+ON ERROR GOTO DEBUG_ONERROR
+
 gui_num = 25
 
 DIM main_gui(gui_num) as GUI_element_type 'create 25 GUI elements
@@ -337,6 +339,14 @@ LOOP UNTIL exit_flag = -1 or _EXIT
 GUI_free_element_array main_gui()
 
 SYSTEM
+
+DEBUG_ONERROR:
+COLOR 7, 0
+CLS
+PRINT "ERROR N:"; ERR
+PRINT "ERROR L:"; _ERRORLINE
+
+END
 
 sub debug_print (p$)
 _DEST _CONSOLE
