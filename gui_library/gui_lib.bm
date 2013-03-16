@@ -413,12 +413,12 @@ if b.flags AND GUI_FLAG_DROP_FLAG then
   GUI_draw_box b.row1, b.col1, b.row2, b.col2, b
   _CONTROLCHR OFF
 end if
-IF NOT (b.flags AND GUI_FLAG_DROP_FLAG) THEN PRINT "[";
+IF (b.flags AND GUI_FLAG_DROP_FLAG) = 0 THEN PRINT "[";
 IF sel THEN COLOR b.selcolor.fr, b.selcolor.bk
 locate b.row1, b.col1 + 1
 PRINT LEFT$(MEM_get_str_array$(b.lines, b.selected) + SPACE$(b.col2 - b.col1), b.col2 - b.col1 - 2); CHR$(31);
 COLOR b.mcolor.fr, b.mcolor.bk
-IF NOT (b.flags AND GUI_FLAG_DROP_FLAG) THEN PRINT "]";
+IF (b.flags AND GUI_FLAG_DROP_FLAG) = 0 THEN PRINT "]";
 if b.flags AND GUI_FLAG_DROP_FLAG then
   s = GUI_draw_inside_text(b)
 end if
@@ -569,7 +569,7 @@ for x = 1 to m.sub_menu_length
     else
       PRINT SPACE$(wid - GUI_menu_len(MEM_get_Str$(men.nam)));
     end if
-    if men.selected > 0 and men.has_sub then
+    if men.sub_menu_open and men.has_sub then
       men_next_menu = men
       sub_menu_row1 = row1 + x - 1
       sub_menu_col1 = col2 + 1
@@ -610,7 +610,7 @@ FOR y = col1 + 2 TO col2 + 2
   colo = SCREEN(row2 + 1, y, 1)
   LOCATE row2 + 1, y
   COLOR colo MOD 8, 0
-  PRINT CHR$(chr)
+  PRINT CHR$(chr);
 NEXT y
 FOR x = row1 + 1 to row2 + 1
   FOR y = col2 + 1 to col2 + 2
@@ -618,12 +618,11 @@ FOR x = row1 + 1 to row2 + 1
     colo = SCREEN(x, y, 1)
     LOCATE x, y
     color colo MOD 8, 0
-    PRINT chr$(chr)
+    PRINT chr$(chr);
   next y
 NEXT x
 _CONTROLCHR ON
 END SUB
-
 
 SUB GUI_draw_box (row1, col1, row2, col2, b as GUI_element_type)
 IF b.flags AND GUI_FLAG_SHADOW THEN
@@ -801,7 +800,7 @@ END SUB
 
 SUB GUI_get_menu_location (b as GUI_element_type, sel, row1, col1, row2, col2)
 STATIC count, m as GUI_menu_item_type
-DIM men as GUI_menu_item_type
+DIM men as GUI_menu_item_type, mnext as GUI_menu_item_type
 GUI_debug_output "R Count:" + str$(count) + "   SEL=" + str$(sel)
 if count = 0 then
   row1 = b.row1
@@ -828,18 +827,30 @@ else
   end if
 
   wid = 0
+  if col1 <=0 then
+    col1 = 1
+  end if
+  if row1 <= 0 then
+    row1 = 1
+  end if
   row1 = row1 + 1
   row2 = row1 + m.sub_menu_length + 1
   GUI_debug_output "Here"
+  GUI_debug_output "Mnam: " + MEM_get_str$(m.nam)
+  GUI_debug_output "Msub_length: " + str$(m.sub_menu_length)
+  GUI_debug_output "Mselected: " + str$(m.selected)
+  GUI_debug_output "MOff: " + str$(m.sub_menu.OFFSET)
   for x = 1 to m.sub_menu_length
+    GUI_debug_output "Grabbing entry " + str$(x)
     men = _MEMGET(m.sub_menu, m.sub_menu.OFFSET + len(men) * (x - 1), GUI_menu_item_type)
+    GUI_debug_output "Name: " + MEM_get_str$(men.nam)
     l = GUI_menu_len(MEM_get_str$(men.nam))
     if l > wid then
       wid = l
     end if
     if men.has_sub then
       has_sub = -1
-      if x = m.selected and m.sub_menu_open then m = men
+      if x = m.selected and m.sub_menu_open then mnext = men
     end if
   next x
   GUI_debug_output "Done!"
@@ -859,38 +870,11 @@ else
 end if
 count = count + 1
 if count <= sel then
+  m = mnext
   GUI_get_menu_location b, sel, row1, col1, row2, col2
 end if
 count = count - 1
 END SUB
-
-
-'SUB GUI_get_menu_location (b as GUI_element_type, m as GUI_menu_item_type, row1, col1, row2, col2)
-'DIM men as GUI_menu_item_type
-'wid = 0
-'for x = 1 to m.sub_menu_length
-'  men = _MEMGET(m.sub_menu, m.sub_menu.OFFSET + len(men) * (x - 1), GUI_menu_item_type)
-'  l = GUI_menu_len(MEM_get_str$(men.nam))
-'  if l > wid then
-'    wid = l
-'  end if
-'  if men.has_sub then has_sub = -1
-'next x
-'if has_sub then wid = wid + 2
-'col2 = col1 + wid + 3
-'row2 = row1 + m.sub_menu_length + 1
-'if b.flags AND GUI_FLAG_SHADOW then c = col2 + 2 else c = col2
-'if c  > _WIDTH(0) then
-'  col1 = col1 - (c - _WIDTH(0))
-'  col2 = col1 + wid + 3
-'end if
-'if row2 > _HEIGHT(0) then
-'  row1 = row1 - m.sub_menu_length - 2
-'  if b.flags AND GUI_FLAG_SHADOW then row1 = row1 - 1
-'  row2 = row1 + m.sub_menu_length + 2
-'end if
-'GUI_debug_output "Row1:" + str$(row1) + " Col1" + str$(col1) + " Row2:" + str$(row2) + " Col2:" + str$(col2)
-'END SUB
 
 FUNCTION GUI_menu_len (a$) 'Length of menu item a$.
 'Just takes one away from the length if the string has a '#'`
@@ -917,7 +901,7 @@ END FUNCTION
 'And element will be 'selection'
 FUNCTION GUI_menu_clicked_on (b as GUI_element_type, cx, cy, debth, selection)
 STATIC count, m AS GUI_menu_item_type
-DIM men as GUI_menu_item_type
+DIM men as GUI_menu_item_type, mtmp as GUI_menu_item_type
 GUI_debug_output "T Count:" + str$(count)
 GUI_get_menu_location b, count, row1, col1, row2, col2
 GUI_debug_output "CLICKED Row1:" + str$(row1) + " Col1" + str$(col1) + " Row2:" + str$(row2) + " Col2:" + str$(col2)
@@ -936,7 +920,7 @@ if cx >= col1 and cx <= col2 and cy >= row1 and cy <= row2 then
       if x = b.length AND (b.flags AND GUI_FLAG_MENU_LAST_ON_RIGHT) then
         c = b.col2 - GUI_menu_len(MEM_get_str$(men.nam)) - 2
       else
-        c = c + 1
+        c = c
       end if
       if cx >= c and cx <= c + 2 + GUI_menu_len(MEM_get_str$(men.nam)) then
         selection = x
@@ -947,7 +931,12 @@ if cx >= col1 and cx <= col2 and cy >= row1 and cy <= row2 then
   else
     s = cy - row1
     if s > 0 and s <= row2 - row1 then
-      selection = s
+      mtmp = _MEMGET(m.sub_menu, m.sub_menu.OFFSET + len(mtmp) * (m.selected - 1), GUI_menu_item_type)
+      if MEM_get_str$(mtmp.nam) <> "-" then
+        selection = s
+      else
+        clicked = 0
+      end if
     end if
   end if
   'selection =
@@ -1045,7 +1034,6 @@ if b.flags AND GUI_FLAG_SCROLL_H then
   end if
 end if
 END SUB
-
 
 SUB GUI_calc_vert_offset (g as GUI_element_type)
 l = g.scroll_loc_vert - g.row1 - 2
@@ -1934,6 +1922,7 @@ if found > 0 then
           men = _MEMGET(b(found).menu, b(found).menu.OFFSET + len(men) * (b(found).selected - 1), GUI_menu_item_type)
           if men.has_sub then
             men.sub_menu_open = -1
+            GUI_close_sub_menu men
           end if
           men.selected = 1
           _MEMPUT b(found).menu, b(found).menu.OFFSET + len(men) * (b(found).selected - 1), men
@@ -1947,6 +1936,8 @@ if found > 0 then
         memtmp = b(found).menu
         offset = len(mtmp) * (b(found).selected - 1)
         mtmp = _MEMGET(b(found).menu, b(found).menu.OFFSET + len(mtmp) * (b(found).selected - 1), GUI_menu_item_type)
+        GUI_Debug_output "BMTMP: " + MEM_get_str$(mtmp.nam)
+        '_MEMPUT memtmp, memtmp.OFFSET + offset, mtmp
         FOR d = 1 to debth - 1
           'if d >= debth - 1 then mtmp.selected = selection
           'if d < debth  then
@@ -1955,6 +1946,7 @@ if found > 0 then
           '  men = _MEMGET(mtmp.sub_menu, mtmp.sub_menu.OFFSET + len(men) * (selection - 1), GUI_menu_item_type)
           'end if
           if d < debth then
+            GUI_debug_output "I was here!"
             memtmp = mtmp.sub_menu
             offset = len(mtmp) * (mtmp.selected - 1)
             mtmp = men
@@ -1975,6 +1967,7 @@ if found > 0 then
           'if mnext.has_sub then
           men.sub_menu_open = -1
           men.selected = 1
+          GUI_close_sub_menu men
           'mnext.selected = 1
           '_MEMPUT men.sub_menu, men.sub_menu.OFFSET + len(mnext) * (men.selected - 1), mnext
           _MEMPUT mtmp.sub_menu, mtmp.sub_menu.OFFSET + len(men) * (mtmp.selected - 1), men
