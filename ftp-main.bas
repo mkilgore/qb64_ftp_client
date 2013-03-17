@@ -17,7 +17,7 @@
 $SCREENHIDE
 $CONSOLE
 
-CONST VER$ = "0.97"
+CONST VER$ = "0.98"
 
 '$include:'mem_library/mem_lib.bi'
 '$include:'file_library/file_helpers.bi'
@@ -54,7 +54,7 @@ DIM SHARED Remote_files(500) AS filedir_type, Local_files(1000) AS filedir_type 
 '$include:'help/setup_help.bm'
 
 IF CLI THEN
-  command_line
+  'command_line
   SYSTEM
 ELSE
   _CONSOLE OFF
@@ -75,26 +75,32 @@ GUI_init_element boxes(2), "Remote"
 boxes(2).length = 0
 
 boxes(3).element_type = GUI_LABEL
-GUI_init_element boxes(3), space$(_WIDTH(0))
-boxes(3).skip = -1
+GUI_init_element boxes(3), ""
+MEM_put_str boxes(3).text, space$(_WIDTH(0))
+boxes(3).flags = boxes(3).flags OR GUI_FLAG_SKIP
+'boxes(3).skip = -1
 
 boxes(4).element_type = GUI_LABEL
 GUI_init_element boxes(4), ""
-boxes(4).skip = -1
+boxes(4).flags = boxes(4).flags OR GUI_FLAG_SKIP
+'boxes(4).skip = -1
 
 boxes(5).element_type = GUI_LABEL
 GUI_init_element boxes(5), ""
-boxes(5).skip = -1
+boxes(5).flags = boxes(5).flags OR GUI_FLAG_SKIP
+'boxes(5).skip = -1
 
 boxes(6).element_type = GUI_MENU
 GUI_init_element boxes(6), "Menu"
-boxes(6).shadow = -1
+boxes(6).flags = boxes(6).flags OR GUI_FLAG_SHADOW
+'boxes(6).shadow = -1
 
 boxes(7).element_type = GUI_BOX
 GUI_init_element boxes(7), "Box"
-boxes(7).hide = -1
+boxes(7).flags = boxes(7).flags OR GUI_FLAG_HIDE OR GUI_FLAG_SKIP
+'boxes(7).hide = -1
 boxes(7).layer = -1
-boxes(7).skip = -1
+'boxes(7).skip = -1
 
 MEM_allocate_string_array boxes(1).lines, 120
 MEM_allocate_string_array boxes(2).lines, 120

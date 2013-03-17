@@ -499,14 +499,6 @@ LOCATE b.row1, b.col1
 print MEM_get_str$(b.text);
 END SUB
 
-'It draws an open menu box starting at the location row1, col1
-'This will also recurse through the menu object and draw open sub_menus, if any
-'Takes:
-'  b --> GUI element, it's properties (Such as GUI_fLAG_SHADOW and colors) will be used to draw the menu
-'  m --> MENU item type, The menu we draw will be it's sub menu
-'  row1, col1 --> Location for the top left corner of the menu
-'The location of the top left corner will be adjusted by GUI_get_menu_location as nessisary
-'This may happen if the normal row1, col1 would draw the menu off screen
 SUB GUI_draw_gui_menu (b as GUI_element_type) ', m as GUI_menu_item_type, row1, col1)
 STATIC count, m as GUI_menu_item_type
 DIM men as GUI_menu_item_type

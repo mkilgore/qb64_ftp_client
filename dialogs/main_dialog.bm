@@ -11,7 +11,7 @@
 SUB main () 'main loop for GUI, etc.
 
 get_new_dir
-refresh_Local_files
+'refresh_Local_files
 global_selected_gui = 1
 
 print_files boxes(1), Local_files()
@@ -25,29 +25,32 @@ DO
     update_scrn
   end if
   
-  GUI_mouse_range boxes(), BOXES, global_selected_gui
+  g_clicked = GUI_mouse_range(boxes(), BOXES, global_selected_gui)
   
   key$ = GUI_inkey$(boxes(), BOXES, global_selected_gui)
   
-  if boxes(1).pressed then
-    boxes(1).pressed = 0
+  if g_clicked = 1 then
+    'boxes(1).pressed = 0
     CHDIR MEM_get_str$(Local_files(boxes(1).selected).nam)
     get_new_dir
-    refresh_Local_files
-    boxes(1).updated = -1
+    'refresh_Local_files
+    'boxes(1).updated = -1
+    boxes(1).flags = boxes(1).flags OR GUI_FLAG_UPDATED
   end if
-  if boxes(2).pressed then
-    boxes(2).pressed = 0
-    change_remote_dir RTRIM$(MEM_get_str$(Remote_files(boxes(2).selected).nam))
-    Update_Remote_Files
-    boxes(2).updated = -1
+  if g_clicked = 2 then
+    'boxes(2).pressed = 0
+    'change_remote_dir RTRIM$(MEM_get_str$(Remote_files(boxes(2).selected).nam))
+    'Update_Remote_Files
+    'boxes(2).updated = -1
+    boxes(2).flags = boxes(2).flags OR GUI_FLAG_UPDATED
     'update remote files
   end if
   
-  IF boxes(6).menu_chosen then
-    boxes(6).menu_chosen = 0
+  IF boxes(6).flags AND GUI_FLAG_MENU_CHOSEN then
+    'boxes(6).menu_chosen = 0
+    boxes(6).flags = (boxes(6).flags AND NOT GUI_FLAG_MENU_CHOSEN) OR GUI_FLAG_UPDATED
     update_scrn
-    boxes(6).updated = -1
+    'boxes(6).updated = -1
     i$ = boxes(6).menu_choice
     if i$ = "EXIT " then 'exit
       exit_flag = -1
@@ -60,22 +63,23 @@ DO
       CLOSE command_connect&
       status$ = "Not Connected."
       boxes(2).length = 0
-      boxes(2).updated = -1
+      boxes(2).flags = boxes(2).flags OR GUI_FLAG_UPDATED
+      'boxes(2).updated = -1
     elseif i$ = "CMDLN" then 'command line
       command_line
       if is_connected then update_remote_files
       refresh_Local_files
-      boxes(1).updated = -1
+      boxes(1).flags = boxes(1).flags OR GUI_FLAG_UPDATED
     elseif i$ = "LREFR" then 'local refresh 
       refresh_Local_files
-      boxes(1).updated = -1
+      boxes(1).flags = boxes(1).flags OR GUI_FLAG_UPDATED
     elseif i$ = "LDELE" then 'local delete
       delete_file_GUI 1
-      boxes(1).updated = -1
+      boxes(1).flags = boxes(1).flags OR GUI_FLAG_UPDATED
     elseif i$ = "LSHOH" then 'local show hidden
       show_hidden_local = NOT show_hidden_local
       refresh_Local_files
-      boxes(1).updated = -1
+      boxes(1).flags = boxes(1).flags OR GUI_FLAG_UPDATED
     elseif i$ = "LMKDI" then 'local make directory
     elseif i$ = "LRMDI" then 'local rename directory
     elseif i$ = "LDLDI" then 'local delete directory
@@ -98,6 +102,7 @@ DO
   '      refresh_Local_files
   '      update = -1
   '    END IF
+
   '  ELSEIF global_menu_sel = 3 THEN
   '    IF menu_sel = 1 THEN
   '      Update_Remote_Files
@@ -113,6 +118,7 @@ DO
   '    ELSEIF menu_sel = 5 THEN
   '      show_hidden_remote = NOT show_hidden_remote
   '      Update_Remote_Files
+  
   '      update = -1
   '    END IF
   '  ELSEIF global_menu_sel = 4 THEN
@@ -153,6 +159,7 @@ END SUB
 SUB setup_main_GUI () 'sets up the main GUI
 'if scrn& <> 0 then _FREEIMAGE scrn& 'prevent memory leak
 'scrn& = _NEWIMAGE(scrnw, scrnh, 0)
+
 'SCREEN scrn&
 
 'boxes(1).nam = "Local"
@@ -162,26 +169,26 @@ boxes(1).col1 = 1
 boxes(1).col2 = _WIDTH(0) \ 2
 boxes(1).row1 = 2
 boxes(1).row2 = _HEIGHT(0) - 2
-boxes(1).scroll = 1
+boxes(1).flags = boxes(1).flags OR GUI_FLAG_SCROLL_V
 boxes(1).selected = 1
-boxes(1).mcolor = GUI_DEFAULT_COLOR_LIST.mcolor
-boxes(1).selcolor = GUI_DEFAULT_COLOR_LIST.selcolor
-boxes(1).scroll_color = GUI_DEFAULT_COLOR_LIST.scroll_color
+boxes(1).c.mcolor = GUI_DEFAULT_COLOR_LIST.mcolor
+boxes(1).c.selcolor = GUI_DEFAULT_COLOR_LIST.selcolor
+boxes(1).c.scroll_color = GUI_DEFAULT_COLOR_LIST.scroll_color
 
 boxes(2).col1 = _WIDTH(0) \ 2 + 1
 boxes(2).col2 = _WIDTH(0)
 boxes(2).row1 = 2
 boxes(2).row2 = _HEIGHT(0) - 2
-boxes(2).scroll = 1
+boxes(2).flags = boxes(2).flags OR GUI_FLAG_SCROLL_V
 boxes(2).selected = 1
-boxes(2).mcolor = GUI_DEFAULT_COLOR_LIST.mcolor
-boxes(2).selcolor = GUI_DEFAULT_COLOR_LIST.selcolor
-boxes(2).scroll_color = GUI_DEFAULT_COLOR_LIST.scroll_color
+boxes(2).c.mcolor = GUI_DEFAULT_COLOR_LIST.mcolor
+boxes(2).c.selcolor = GUI_DEFAULT_COLOR_LIST.selcolor
+boxes(2).c.scroll_color = GUI_DEFAULT_COLOR_LIST.scroll_color
 
 boxes(3).col1 = 1
 boxes(3).row1 = _HEIGHT(0)
-boxes(3).mcolor.fr = status_c1
-boxes(3).mcolor.bk = status_c2
+boxes(3).c.mcolor.fr = status_c1
+boxes(3).c.mcolor.bk = status_c2
 
 boxes(4).row1 = boxes(2).row2 + 1
 boxes(4).col1 = 1
@@ -193,9 +200,9 @@ boxes(6).col1 = 1
 boxes(6).col2 = _WIDTH(0)
 boxes(6).row1 = 1
 boxes(6).menu_padding = 2
-boxes(6).mcolor = GUI_DEFAULT_COLOR_MENU.mcolor
-boxes(6).selcolor = GUI_DEFAULT_COLOR_MENU.selcolor
-boxes(6).scroll_color = GUI_DEFAULT_COLOR_MENU.scroll_color
+boxes(6).c.mcolor = GUI_DEFAULT_COLOR_MENU.mcolor
+boxes(6).c.selcolor = GUI_DEFAULT_COLOR_MENU.selcolor
+boxes(6).c.scroll_color = GUI_DEFAULT_COLOR_MENU.scroll_color
 
 boxes(7).row1 = 2
 boxes(7).row2 = 24

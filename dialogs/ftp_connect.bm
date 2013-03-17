@@ -13,10 +13,11 @@ DIM gui(gui_num) as GUI_element_type
 
 'main_ide.nam = "Connect to FTP Server"
 gui(1).element_type = GUI_BOX
-gui(1).dialog = -1
+'gui(1).dialog = -1
+gui(1).flags = gui(1).flags OR GUI_FLAG_DIALOG OR GUI_FLAG_SHADOW OR GUI_FLAG_SKIP
 GUI_init_element gui(1), "Connect to FTP Server"
-gui(1).shadow = -1
-gui(1).skip = -1
+'gui(1).shadow = -1
+'gui(1).skip = -1
 gui(1).layer = -1
 rows = 12
 cols = 46
@@ -30,7 +31,8 @@ r = gui(1).row1 + 1
 c = gui(1).col1 + 4
 
 gui(2).element_type = GUI_INPUT_BOX
-gui(2).dialog = -1
+'gui(2).dialog = -1
+gui(2).flags = gui(2).flags OR GUI_FLAG_DIALOG
 GUI_init_element gui(2), "Server"
 gui(2).row1 = gui(1).row1 + 1
 gui(2).col1 = gui(1).col1 + 3
@@ -39,7 +41,8 @@ gui(2).col2 = gui(2).col1 + 40
 
 
 gui(3).element_type = GUI_INPUT_BOX
-gui(3).dialog = -1
+'gui(3).dialog = -1
+gui(3).flags = gui(3).flags OR GUI_FLAG_DIALOG
 GUI_init_element gui(3), "Username"
 gui(3).row1 = gui(2).row2 + 1
 gui(3).col1 = gui(2).col1
@@ -47,24 +50,27 @@ gui(3).row2 = gui(3).row1 + 2
 gui(3).col2 = gui(3).col1 + 40
 
 gui(4).element_type = GUI_INPUT_BOX
-gui(4).dialog = -1
+'gui(4).dialog = -1
+gui(4).flags = gui(4).flags OR GUI_FLAG_DIALOG OR GUI_FLAG_HIDE
 GUI_init_element gui(4), "Password"
 gui(4).row1 = gui(3).row2 + 1
 gui(4).col1 = gui(3).col1
 gui(4).row2 = gui(4).row1 + 2
 gui(4).col2 = gui(4).col1 + 40
-gui(4).hide = -1
+'gui(4).hide = -1
 
 
 gui(5).element_type  = GUI_BUTTON
-gui(5).dialog = -1
+'gui(5).dialog = -1
+gui(5).flags = gui(5).flags OR GUI_FLAG_DIALOG
 GUI_init_element gui(5), "Connect"
 gui(5).row1 = gui(1).row2 - 1
 gui(5).col1 = gui(1).col1 + cols \ 3 - LEN(MEM_get_str$(gui(5).nam)) \ 2
 
 
 gui(6).element_type = GUI_BUTTON
-gui(6).dialog = -1
+'gui(6).dialog = -1
+gui(6).flags = gui(6).flags OR GUI_FLAG_DIALOG
 GUI_init_element gui(6), "Exit"
 gui(6).row1 = gui(5).row1
 gui(6).col1 = gui(5).col1 + cols \ 3 - LEN(MEM_get_str$(gui(6).nam)) \ 2
@@ -79,7 +85,7 @@ DO
     GUI_draw_element_array gui(), gui_num, selected_gui
   end if
   
-  GUI_mouse_range gui(), gui_num, selected_gui
+  g_clicked = GUI_mouse_range(gui(), gui_num, selected_gui)
   
   a$ = GUI_inkey$(gui(), gui_num, selected_gui)
   
@@ -88,8 +94,8 @@ DO
       exit_gui_flag =-1
   end select
   
-  if gui(5).pressed then
-    gui(5).pressed = 0
+  if g_clicked = 5 then
+    'gui(5).pressed = 0
     server$ = MEM_get_str$(gui(2).text)
     if INSTR(server$, ":") then
       port$ = MID$(server$, INSTR(server$, ":") + 1)
@@ -102,10 +108,11 @@ DO
     if username$ = "" then username$ = "anonymous"
     Start_ftp_connect
     if is_connected then exit_gui_flag = -1
-    gui(1).updated = -1
+    'gui(1).updated = -1
+    gui(1).flags = gui(1).flags OR GUI_FLAG_UPDATED
   end if
   
-  if gui(6).pressed then
+  if g_clicked = 6 then
     exit_gui_flag = -1
   end if
   'm = mouse_range(gui(), 5)

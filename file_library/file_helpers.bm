@@ -1,5 +1,4 @@
 
-
 SUB sort_dir_listing (f() AS filedir_type, file_num)
 'quicksort type of thing. First, move all of the DIR's to the top
 nex = 0
@@ -58,5 +57,22 @@ IF low < high THEN
     quick_sort_filedir_type f(), low, l - 1
     quick_sort_filedir_type f(), l + 1, high
   END IF
+END IF
+END SUB
+
+
+SUB get_new_dir () 'Uses SHELL to get the current dir
+IF opper$ = "NIX" THEN
+  SHELL _HIDE "pwd > /tmp/dirtmp.tmp"
+  OPEN "/tmp/dirtmp.tmp" FOR INPUT AS #1
+  LINE INPUT #1, Local_dir$
+  CLOSE #1
+  KILL "/tmp/dirtmp.tmp"
+ELSEIF opper$ = "WIN" THEN
+  SHELL _HIDE "cd > " + temp_dir$ + sep$ + "cdtemp.tmp"
+  OPEN temp_dir$ + sep$ + "cdtemp.tmp" FOR INPUT AS #1
+  LINE INPUT #1, Local_dir$
+  CLOSE #1
+  KILL temp_dir$ + sep$ + "cdtemp.tmp"
 END IF
 END SUB
