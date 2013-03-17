@@ -7,10 +7,13 @@
 'See file COPYING that should have been included with this source.
 
 SUB GUI_init()
+GUI_debug_output "GUI being Initalized"
+GUI_debug_output "AltKey codes being setup..."
 a$ = "QWERTYUIOP????ASDFGHJKL?????ZXCVBNM" 'Credit to Galleon for the ALT key code
 FOR x = 1 TO LEN(a$)
   GUI_alt_codes$(x + 15) = MID$(a$, x, 1)
 NEXT x
+GUI_debug_output "Setting default colors..."
 GUI_DEFAULT_COLOR_BOX.mcolor.fr = 7
 GUI_DEFAULT_COLOR_BOX.mcolor.bk = 1
 GUI_DEFAULT_COLOR_BOX.selcolor.fr = 1
@@ -115,7 +118,7 @@ FOR x = 1 to gui_num
   if gui(x).flags AND GUI_FLAG_UPDATED then
     GUI_update_screen = -1
     gui(x).flags = gui(x).flags AND NOT GUI_FLAG_UPDATED
-    GUI_debug_output "Element: " + str$(x)
+    GUI_debug_output "Element " + str$(x) + " was updated"
   end if
 NEXT x
 END FUNCTION
@@ -126,94 +129,69 @@ END FUNCTION
 '  You should set the element_type before calling this SUB
 '  You should also set the GUI_FLAG_DIALOG flag if you intend to use it
 SUB GUI_init_element (g as GUI_element_type, nam$)
+GUI_debug_output "Initalizing element " + nam$
 MEM_put_str g.nam, nam$
 SELECT CASE g.element_type
   case GUI_BOX
     if g.flags AND GUI_FLAG_DIALOG then
-      g.mcolor = GUI_DEFAULT_DIALOG_COLOR_BOX.mcolor
-      g.selcolor = GUI_DEFAULT_DIALOG_COLOR_BOX.selcolor
+      g.c = GUI_DEFAULT_DIALOG_COLOR_BOX
     else
-      g.mcolor = GUI_DEFAULT_COLOR_BOX.mcolor
-      g.selcolor = GUI_DEFAULT_COLOR_BOX.selcolor
+      g.c = GUI_DEFAULT_COLOR_BOX
     end if
   CASE GUI_BUTTON
     if g.flags AND GUI_FLAG_DIALOG then
-      g.mcolor = GUI_DEFAULT_DIALOG_COLOR_BUTTON.mcolor
-      g.selcolor = GUI_DEFAULT_DIALOG_COLOR_BUTTON.selcolor
+      g.c = GUI_DEFAULT_DIALOG_COLOR_BUTTON
     else
-      g.mcolor = GUI_DEFAULT_COLOR_BUTTON.mcolor
-      g.selcolor = GUI_DEFAULT_COLOR_BUTTON.selcolor
+      g.c = GUI_DEFAULT_COLOR_BUTTON
     end if
   CASE GUI_DROP_DOWN
     if g.flags AND GUI_FLAG_DIALOG then
-      g.mcolor = GUI_DEFAULT_DIALOG_COLOR_DROP.mcolor
-      g.selcolor = GUI_DEFAULT_DIALOG_COLOR_DROP.selcolor
-      g.scroll_color = GUI_DEFAULT_DIALOG_COLOR_DROP.scroll_color
+      g.c = GUI_DEFAULT_DIALOG_COLOR_DROP
     else
-      g.mcolor = GUI_DEFAULT_COLOR_DROP.mcolor
-      g.selcolor = GUI_DEFAULT_COLOR_DROP.selcolor
-      g.scroll_color = GUI_DEFAULT_COLOR_DROP.scroll_color
+      g.c = GUI_DEFAULT_COLOR_DROP
     end if
   CASE GUI_CHECKBOX
     if g.flags AND GUI_FLAG_DIALOG then
-      g.mcolor = GUI_DEFAULT_DIALOG_COLOR_CHECKBOX.mcolor
-      g.selcolor = GUI_DEFAULT_DIALOG_COLOR_CHECKBOX.selcolor
+      g.c = GUI_DEFAULT_DIALOG_COLOR_CHECKBOX
     else
-      g.mcolor = GUI_DEFAULT_COLOR_CHECKBOX.mcolor
-      g.selcolor = GUI_DEFAULT_COLOR_CHECKBOX.selcolor
+      g.c = GUI_DEFAULT_COLOR_CHECKBOX
     end if
   CASE GUI_INPUT_BOX
     if g.flags AND GUI_FLAG_DIALOG then
-      g.mcolor = GUI_DEFAULT_DIALOG_COLOR_INPUT.mcolor
-      g.selcolor = GUI_DEFAULT_DIALOG_COLOR_INPUT.selcolor
+      g.c = GUI_DEFAULT_DIALOG_COLOR_INPUT
     else
-      g.mcolor = GUI_DEFAULT_COLOR_INPUT.mcolor
-      g.selcolor = GUI_DEFAULT_COLOR_INPUT.selcolor
+      g.c = GUI_DEFAULT_COLOR_INPUT
     end if
   CASE GUI_LIST_BOX
     if g.flags AND GUI_FLAG_DIALOG then
-      g.mcolor = GUI_DEFAULT_DIALOG_COLOR_LIST.mcolor
-      g.selcolor = GUI_DEFAULT_DIALOG_COLOR_LIST.selcolor
-      g.scroll_color = GUI_DEFAULT_DIALOG_COLOR_LIST.scroll_color
+      g.c = GUI_DEFAULT_DIALOG_COLOR_LIST
     else
-      g.mcolor = GUI_DEFAULT_COLOR_LIST.mcolor
-      g.selcolor = GUI_DEFAULT_COLOR_LIST.selcolor
-      g.scroll_color = GUI_DEFAULT_COLOR_LIST.scroll_color
+      g.c = GUI_DEFAULT_COLOR_LIST
     end if
   CASE GUI_MENU
     if g.flags AND GUI_FLAG_DIALOG then
-      g.mcolor = GUI_DEFAULT_DIALOG_COLOR_MENU.mcolor
-      g.selcolor = GUI_DEFAULT_DIALOG_COLOR_MENU.selcolor
-      g.scroll_color = GUI_DEFAULT_DIALOG_COLOR_MENU.scroll_color
+      g.c = GUI_DEFAULT_DIALOG_COLOR_MENU
     else
-      g.mcolor = GUI_DEFAULT_COLOR_MENU.mcolor
-      g.selcolor = GUI_DEFAULT_COLOR_MENU.selcolor
-      g.scroll_color = GUI_DEFAULT_COLOR_MENU.scroll_color
+      g.c = GUI_DEFAULT_COLOR_MENU
     end if
     g.flags = g.flags OR GUI_FLAG_SKIP
   CASE GUI_TEXT_BOX
     if g.flags AND GUI_FLAG_DIALOG then
-      g.mcolor = GUI_DEFAULT_DIALOG_COLOR_TEXT.mcolor
-      g.selcolor = GUI_DEFAULT_DIALOG_COLOR_TEXT.selcolor
-      g.scroll_color = GUI_DEFAULT_DIALOG_COLOR_TEXT.scroll_color
+      g.c = GUI_DEFAULT_DIALOG_COLOR_TEXT
     else
-      g.mcolor = GUI_DEFAULT_COLOR_TEXT.mcolor
-      g.selcolor = GUI_DEFAULT_COLOR_TEXT.selcolor
-      g.scroll_color = GUI_DEFAULT_COLOR_TEXT.scroll_color
+      g.c = GUI_DEFAULT_COLOR_TEXT
     end if
   CASE GUI_RADIO_BUTTON
     if g.flags AND GUI_FLAG_DIALOG then
-      g.mcolor = GUI_DEFAULT_DIALOG_COLOR_RADIO.mcolor
-      g.selcolor = GUI_DEFAULT_DIALOG_COLOR_RADIO.selcolor
+      g.c = GUI_DEFAULT_DIALOG_COLOR_RADIO
     else
-      g.mcolor = GUI_DEFAULT_COLOR_RADIO.mcolor
-      g.selcolor = GUI_DEFAULT_COLOR_RADIO.selcolor
+      g.c = GUI_DEFAULT_COLOR_RADIO
     end if
   CASE GUI_LABEL
     if g.flags AND GUI_FLAG_DIALOG then
-      g.mcolor = GUI_DEFAULT_DIALOG_COLOR_LABEL.mcolor
+      g.c = GUI_DEFAULT_DIALOG_COLOR_LABEL
     else
-      g.mcolor = GUI_DEFAULT_COLOR_LABEL.mcolor
+      g.c = GUI_DEFAULT_COLOR_LABEL
     end if
     g.flags = g.flags OR GUI_FLAG_SKIP
 END SELECT
@@ -245,13 +223,25 @@ IF GUI_DEBUG then
 end if
 END SUB
 
+SUB GUI_resize_update ()
+
+END SUB
+
+FUNCTION GUI_register_gui ()
+
+END FUNCTION
+
+SUB GUI_unregister_gui ()
+
+END SUB
+
 '###############################################################################
 '###############################################################################
 '#---------------------------DRAWING FUNCTIONS---------------------------------#
 '###############################################################################
 '###############################################################################
 
-'Draws an array of elements0, does the following things:
+'Draws an array of elements, does the following things:
 '  respects layering
 '  Call's _DISPLAY at start and _AUTODISPLAY at the end
 '  Locates the cursor to a proper spot (And stores the location)
@@ -287,7 +277,7 @@ SUB GUI_draw_element (b AS GUI_element_type, sel) 'Draws box b
 'Draws a box
 IF b.element_type = GUI_BOX THEN 'Plain box
   if b.flags AND GUI_FLAG_HIDE then
-    color b.mcolor.fr, b.mcolor.bk
+    color b.c.mcolor.fr, b.c.mcolor.bk
     for x = b.row1 to b.row2
       locate x, b.col1
       print space$(b.col2 - b.col1 + 1);
@@ -298,7 +288,7 @@ IF b.element_type = GUI_BOX THEN 'Plain box
 ELSEIF b.element_type = GUI_INPUT_BOX THEN 'Input box
   GUI_draw_input_box b, sel
 
-ELSEIF b.element_type = GUI_TEXT_BOX THEN 'TextBox -- not done yet
+ELSEIF b.element_type = GUI_TEXT_BOX THEN 'TextBox
   GUI_draw_text_box b, sel
 
 ELSEIF b.element_type = GUI_LIST_BOX THEN 'list box
@@ -327,11 +317,11 @@ END SUB
 
 SUB GUI_draw_checkbox (b as GUI_element_type, sel)
 LOCATE b.row1, b.col1
-IF sel THEN COLOR b.selcolor.fr, b.selcolor.bk ELSE COLOR b.mcolor.fr MOD 8, b.mcolor.bk
+IF sel THEN COLOR b.c.selcolor.fr, b.c.selcolor.bk ELSE COLOR b.c.mcolor.fr MOD 8, b.c.mcolor.bk
 PRINT "[";
 IF b.flags AND GUI_FLAG_CHECKED THEN PRINT chr$(251); ELSE PRINT " ";
 PRINT "]";
-COLOR b.mcolor.fr, b.mcolor.bk
+COLOR b.c.mcolor.fr, b.c.mcolor.bk
 PRINT MEM_get_str$(b.nam);
 b.cur_row = b.row1
 b.cur_col = b.col1 + 1
@@ -339,11 +329,11 @@ END SUB
 
 SUB GUI_draw_radio_button (b as GUI_element_type, sel)
 LOCATE b.row1, b.col1
-IF sel THEN COLOR b.selcolor.fr, b.selcolor.bk ELSE COLOR b.mcolor.fr MOD 8, b.mcolor.bk
+IF sel THEN COLOR b.c.selcolor.fr, b.c.selcolor.bk ELSE COLOR b.c.mcolor.fr MOD 8, b.c.mcolor.bk
 PRINT "(";
 IF b.flags AND GUI_FLAG_CHECKED THEN PRINT chr$(254); ELSE PRINT " ";
 PRINT ")";
-COLOR b.mcolor.fr, b.mcolor.bk
+COLOR b.c.mcolor.fr, b.c.mcolor.bk
 PRINT MEM_get_str$(b.nam);
 b.cur_row = b.row1
 b.cur_col = b.col1 + 1
@@ -351,12 +341,12 @@ END SUB
 
 SUB GUI_draw_button (b as GUI_element_type, sel)
 LOCATE b.row1, b.col1
-IF sel THEN COLOR b.selcolor.fr, b.selcolor.bk ELSE COLOR b.mcolor.fr MOD 8, b.mcolor.bk
+IF sel THEN COLOR b.c.selcolor.fr, b.c.selcolor.bk ELSE COLOR b.c.mcolor.fr MOD 8, b.c.mcolor.bk
 PRINT "<";
 'IF sel THEN COLOR b.selcol, b.c2 ELSE COLOR b.c1 MOD 8, b.c2
-COLOR b.mcolor.fr, b.mcolor.bk
+COLOR b.c.mcolor.fr, b.c.mcolor.bk
 PRINT MEM_get_str$(b.nam);
-IF sel THEN COLOR b.selcolor.fr, b.selcolor.bk ELSE COLOR b.mcolor.fr MOD 8, b.mcolor.bk
+IF sel THEN COLOR b.c.selcolor.fr, b.c.selcolor.bk ELSE COLOR b.c.mcolor.fr MOD 8, b.c.mcolor.bk
 PRINT ">";
 b.cur_row = b.row1
 b.cur_col = b.col1 + 1
@@ -373,7 +363,7 @@ if col2 < col1 then
   swap col1, col2
 end if
 if col1 = col2 OR sel = 0 then
-  color b.mcolor.fr, b.mcolor.bk
+  color b.c.mcolor.fr, b.c.mcolor.bk
   LOCATE b.row1 + 1, b.col1 + 1
   's$ = MID$(MEM_get_str$(b.text), b.scroll_offset_hors + 1, b.col2 - b.col1 - 1)
   print s$;
@@ -381,23 +371,23 @@ else
   locate b.row1 + 1, b.col1 + 1
   if col1 <= b.scroll_offset_hors then
     'Selected text goes off the left of the box
-    color b.selcolor.fr, b.selcolor.bk
+    color b.c.selcolor.fr, b.c.selcolor.bk
     print mid$(s$, 1, col2 - b.scroll_offset_hors);
-    color b.mcolor.fr, b.mcolor.bk
+    color b.c.mcolor.fr, b.c.mcolor.bk
     print mid$(s$, col2 - b.scroll_offset_hors + 1);
   elseif col1 > b.scroll_offset_hors and col2 < b.scroll_offset_hors + (b.col2 - b.col1) then
     'Selected text is completely on the screen
-    color b.mcolor.fr, b.mcolor.bk
+    color b.c.mcolor.fr, b.c.mcolor.bk
     print mid$(s$, 1, col1 - b.scroll_offset_hors);
-    color b.selcolor.fr, b.selcolor.bk
+    color b.c.selcolor.fr, b.c.selcolor.bk
     print mid$(s$, col1 - b.scroll_offset_hors + 1, col2 - col1);
-    color b.mcolor.fr, b.mcolor.bk
+    color b.c.mcolor.fr, b.c.mcolor.bk
     print mid$(s$, col2 - b.scroll_offset_hors + 1);
   else
     'Selected text goes off the left of the screen
-    color b.mcolor.fr, b.mcolor.bk
+    color b.c.mcolor.fr, b.c.mcolor.bk
     print mid$(s$, 1, col1 - b.scroll_offset_hors + 1);
-    color b.selcolor.fr, b.selcolor.bk
+    color b.c.selcolor.fr, b.c.selcolor.bk
     print mid$(s$, col1 - b.scroll_offset_hors + 1);
   end if
 end if
@@ -408,16 +398,16 @@ END SUB
 SUB GUI_draw_dropdown (b as GUI_element_type, sel)
 _CONTROLCHR OFF
 LOCATE b.row1, b.col1
-COLOR b.mcolor.fr, b.mcolor.bk
+COLOR b.c.mcolor.fr, b.c.mcolor.bk
 if b.flags AND GUI_FLAG_DROP_FLAG then
   GUI_draw_box b.row1, b.col1, b.row2, b.col2, b
   _CONTROLCHR OFF
 end if
 IF (b.flags AND GUI_FLAG_DROP_FLAG) = 0 THEN PRINT "[";
-IF sel THEN COLOR b.selcolor.fr, b.selcolor.bk
+IF sel THEN COLOR b.c.selcolor.fr, b.c.selcolor.bk
 locate b.row1, b.col1 + 1
 PRINT LEFT$(MEM_get_str_array$(b.lines, b.selected) + SPACE$(b.col2 - b.col1), b.col2 - b.col1 - 2); CHR$(31);
-COLOR b.mcolor.fr, b.mcolor.bk
+COLOR b.c.mcolor.fr, b.c.mcolor.bk
 IF (b.flags AND GUI_FLAG_DROP_FLAG) = 0 THEN PRINT "]";
 if b.flags AND GUI_FLAG_DROP_FLAG then
   s = GUI_draw_inside_text(b)
@@ -439,7 +429,7 @@ DIM menu_sel, menu_row1, menu_col1
 if NOT sel then b.flags = (b.flags AND NOT GUI_FLAG_MENU_OPEN) AND NOT GUI_FLAG_MENU_ALT : b.selected = 0
 
 locate b.row1, b.col1
-color b.mcolor.fr, b.mcolor.bk
+color b.c.mcolor.fr, b.c.mcolor.bk
 print space$(b.col2 - b.col1 + 1)
 locate b.row1, b.col1
 PRINT SPACE$(b.menu_padding);
@@ -455,18 +445,18 @@ for x = 1 to b.length
       menu_col1 = POS(0) - 1
       if menu_col1 < 1 then menu_col1 = 1
     end if
-    color b.selcolor.fr, b.selcolor.bk
+    color b.c.selcolor.fr, b.c.selcolor.bk
     if (b.flags AND GUI_FLAG_MENU_ALT) = 0 then
       GUI_print_menu_no_hilight MEM_get_str$(men.nam) ', b.mcolor.fr, b.mcolor.bk, b.scroll_color.fr, b.scroll_color.bk
     else
-      GUI_print_menu MEM_get_str$(men.nam), b.selcolor.fr, b.selcolor.bk, b.scroll_color.fr, b.selcolor.bk
+      GUI_print_menu MEM_get_str$(men.nam), b.c.selcolor.fr, b.c.selcolor.bk, b.c.scroll_color.fr, b.c.selcolor.bk
     end if
   else
-    color b.mcolor.fr, b.mcolor.bk
+    color b.c.mcolor.fr, b.c.mcolor.bk
     if (b.flags AND GUI_FLAG_MENU_ALT) = 0 then
       GUI_print_menu_no_hilight MEM_get_str$(men.nam)
     else
-      GUI_print_menu MEM_get_str$(men.nam), b.mcolor.fr, b.mcolor.bk, b.scroll_color.fr, b.mcolor.bk
+      GUI_print_menu MEM_get_str$(men.nam), b.c.mcolor.fr, b.c.mcolor.bk, b.c.scroll_color.fr, b.c.mcolor.bk
     end if
   end if
 next x
@@ -504,7 +494,7 @@ end if
 END SUB
 
 SUB GUI_draw_label (b as GUI_element_type, sel)
-COLOR b.mcolor.fr, b.mcolor.bk
+COLOR b.c.mcolor.fr, b.c.mcolor.bk
 LOCATE b.row1, b.col1
 print MEM_get_str$(b.text);
 END SUB
@@ -533,33 +523,33 @@ IF b.flags AND GUI_FLAG_SHADOW THEN
   GUI_draw_box_shadow row1, col1, row2, col2
 END IF
 _CONTROLCHR OFF
-color b.mcolor.fr, b.mcolor.bk
+color b.c.mcolor.fr, b.c.mcolor.bk
 locate row1, col1
 PRINT CHR$(218); STRING$(col2 - col1 - 1, 196); CHR$(191);
 for x = 1 to m.sub_menu_length
   men = _MEMGET(m.sub_menu, m.sub_menu.OFFSET + len(men) * (x - 1), GUI_menu_item_type)
   locate x + row1, col1
-  color b.mcolor.fr, b.mcolor.bk
+  color b.c.mcolor.fr, b.c.mcolor.bk
   print chr$(179);
   if MEM_get_str$(men.nam) = "-" then
     if m.selected = x then
-      color b.selcolor.fr, b.selcolor.bk
+      color b.c.selcolor.fr, b.c.selcolor.bk
     else
-      color b.mcolor.fr, b.mcolor.bk
+      color b.c.mcolor.fr, b.c.mcolor.bk
     end if
     locate , col1
     PRINT CHR$(195); STRING$(col2 - col1 - 1, 196); CHR$(180);
   else
     if m.selected = x then
       if GUI_alt_flag then
-        GUI_print_menu MEM_get_str$(men.nam), b.selcolor.fr, b.selcolor.bk, b.scroll_color.fr, b.selcolor.bk
+        GUI_print_menu MEM_get_str$(men.nam), b.c.selcolor.fr, b.c.selcolor.bk, b.c.scroll_color.fr, b.c.selcolor.bk
       else
-        color b.selcolor.fr, b.selcolor.bk
+        color b.c.selcolor.fr, b.c.selcolor.bk
         GUI_print_menu_no_hilight MEM_get_str$(men.nam)
       end if
     else
       if GUI_alt_flag then
-        GUI_print_menu MEM_get_str$(men.nam), b.mcolor.fr, b.mcolor.bk, b.scroll_color.fr, b.mcolor.bk
+        GUI_print_menu MEM_get_str$(men.nam), b.c.mcolor.fr, b.c.mcolor.bk, b.c.scroll_color.fr, b.c.mcolor.bk
       else
         GUI_print_menu_no_hilight MEM_get_str$(men.nam)
       end if
@@ -575,12 +565,12 @@ for x = 1 to m.sub_menu_length
       sub_menu_col1 = col2 + 1
       sub_menu_open = -1
     end if
-    color b.mcolor.fr, b.mcolor.bk
+    color b.c.mcolor.fr, b.c.mcolor.bk
     print chr$(179);
   end if
 next x
 locate row2, col1
-color b.mcolor.fr, b.mcolor.bk
+color b.c.mcolor.fr, b.c.mcolor.bk
 print CHR$(192); STRING$(col2 - col1 - 1, 196); CHR$(217);
 if sub_menu_open then
   m = men_next_menu
@@ -632,18 +622,18 @@ _CONTROLCHR OFF
 if (b.flags AND GUI_FLAG_SCROLL_V) and (b.scroll_loc_vert = 0) then GUI_calc_scroll row1, col1, row2, col2, b
 if (b.flags AND GUI_FLAG_SCROLL_H) and (b.scroll_loc_hors = 0) then GUI_calc_scroll row1, col1, row2, col2, b
 n$ = MEM_get_str$(b.nam)
-COLOR b.mcolor.fr, b.mcolor.bk
+COLOR b.c.mcolor.fr, b.c.mcolor.bk
 LOCATE row1, col1
 PRINT CHR$(218); CHR$(196); n$; STRING$(col2 - col1 - 2 - LEN(n$), 196); CHR$(191);
 FOR x = row1 + 1 TO row2 - 1
   LOCATE x, col1
-  COLOR b.mcolor.fr, b.mcolor.bk
+  COLOR b.c.mcolor.fr, b.c.mcolor.bk
   PRINT CHR$(179); SPACE$(col2 - col1 - 1);
   IF (b.flags AND GUI_FLAG_SCROLL_V) = 0 THEN
     PRINT CHR$(179);
   END IF
   IF b.flags AND GUI_FLAG_SCROLL_V THEN
-    COLOR b.scroll_color.fr, b.scroll_color.bk
+    COLOR b.c.scroll_color.fr, b.c.scroll_color.bk
     SELECT CASE x
       CASE row1 + 1
         PRINT CHR$(24);
@@ -658,18 +648,18 @@ FOR x = row1 + 1 TO row2 - 1
     END SELECT
   END IF
 NEXT x
-COLOR b.mcolor.fr MOD 8, b.mcolor.bk
+COLOR b.c.mcolor.fr MOD 8, b.c.mcolor.bk
 LOCATE row2, col1
 print CHR$(192);
 if NOT (b.flags AND GUI_FLAG_SCROLL_H) then
   PRINT STRING$(col2 - col1 - 1, 196);
 else
-  color b.scroll_color.fr, b.scroll_color.bk
+  color b.c.scroll_color.fr, b.c.scroll_color.bk
   PRINT chr$(27);
   print string$(b.scroll_loc_hors - b.col1 - 2, 176);
   print chr$(219);
   print string$(b.col2 - b.scroll_loc_hors - 2, 176); chr$(26);
-  COLOR b.mcolor.fr MOD 8, b.mcolor.bk
+  COLOR b.c.mcolor.fr MOD 8, b.c.mcolor.bk
 end if
 print CHR$(217);
 _CONTROLCHR ON
@@ -680,9 +670,9 @@ for x = 1 to b.row2 - b.row1 - 1
   locate x + b.row1, b.col1 + 1
   if (b.selected - b.scroll_offset_vert) = (x) then
     s = x
-    color b.selcolor.fr, b.selcolor.bk
+    color b.c.selcolor.fr, b.c.selcolor.bk
   else
-    color b.mcolor.fr, b.mcolor.bk
+    color b.c.mcolor.fr, b.c.mcolor.bk
   end if
   if x + b.scroll_offset_vert <= b.length then
     k$ = mid$(MEM_get_str_array$(b.lines, x + b.scroll_offset_vert), b.scroll_offset_hors + 1, b.col2 - b.col1 - 1)
@@ -694,7 +684,6 @@ for x = 1 to b.row2 - b.row1 - 1
 next x
 GUI_draw_inside_text = s
 END FUNCTION
-
 
 SUB GUI_print_menu_no_hilight (a$) 'Prints a$ without the '#' and no hilighting
 PRINT " "; MID$(a$, 1, INSTR(a$, "#") - 1); MID$(a$, INSTR(a$, "#") + 1); " ";
@@ -801,7 +790,6 @@ END SUB
 SUB GUI_get_menu_location (b as GUI_element_type, sel, row1, col1, row2, col2)
 STATIC count, m as GUI_menu_item_type
 DIM men as GUI_menu_item_type, mnext as GUI_menu_item_type
-GUI_debug_output "R Count:" + str$(count) + "   SEL=" + str$(sel)
 if count = 0 then
   row1 = b.row1
   col1 = b.col1
@@ -835,15 +823,8 @@ else
   end if
   row1 = row1 + 1
   row2 = row1 + m.sub_menu_length + 1
-  GUI_debug_output "Here"
-  GUI_debug_output "Mnam: " + MEM_get_str$(m.nam)
-  GUI_debug_output "Msub_length: " + str$(m.sub_menu_length)
-  GUI_debug_output "Mselected: " + str$(m.selected)
-  GUI_debug_output "MOff: " + str$(m.sub_menu.OFFSET)
   for x = 1 to m.sub_menu_length
-    GUI_debug_output "Grabbing entry " + str$(x)
     men = _MEMGET(m.sub_menu, m.sub_menu.OFFSET + len(men) * (x - 1), GUI_menu_item_type)
-    GUI_debug_output "Name: " + MEM_get_str$(men.nam)
     l = GUI_menu_len(MEM_get_str$(men.nam))
     if l > wid then
       wid = l
@@ -853,7 +834,6 @@ else
       if x = m.selected and m.sub_menu_open then mnext = men
     end if
   next x
-  GUI_debug_output "Done!"
   if has_sub then wid = wid + 2
   col2 = col1 + wid + 3
   row2 = row1 + m.sub_menu_length + 1
@@ -902,12 +882,8 @@ END FUNCTION
 FUNCTION GUI_menu_clicked_on (b as GUI_element_type, cx, cy, debth, selection)
 STATIC count, m AS GUI_menu_item_type
 DIM men as GUI_menu_item_type, mtmp as GUI_menu_item_type
-GUI_debug_output "T Count:" + str$(count)
 GUI_get_menu_location b, count, row1, col1, row2, col2
-GUI_debug_output "CLICKED Row1:" + str$(row1) + " Col1" + str$(col1) + " Row2:" + str$(row2) + " Col2:" + str$(col2)
-GUI_debug_output "MOUSE Row1:" + str$(cy) + " Col1" + str$(cx)
 if cx >= col1 and cx <= col2 and cy >= row1 and cy <= row2 then
-  GUI_debug_output "Menu was Clicked on!"
   clicked = -1
   debth = count
   selection = 0
@@ -948,7 +924,6 @@ else
     end if
   else
     if m.has_sub and m.sub_menu_open then
-      GUI_debug_output "Recursing into next SUB menu"
       m = _MEMGET(m.sub_menu, m.sub_menu.OFFSET + len(m) * (m.selected - 1), GUI_menu_item_type)
       h_sub_menu = -1
     end if
@@ -968,8 +943,6 @@ end if
 '  d = debth
 count = count - 1
 'end if
-GUI_debug_output "Debth: " + str$(debth) + " Sel: " + str$(selection)
-GUI_debug_output "Clicked: " + str$(clicked)
 if clicked then GUI_menu_clicked_on = -1
 END FUNCTION
 
@@ -983,14 +956,6 @@ if m.has_sub then
     _MEMPUT m.sub_menu, m.sub_menu.OFFSET + len(men) * (x - 1), men
   next x
 end if
-'if m.has_sub then
-'  FOR x = 1 to m.sub_menu_length
-'    men = _MEMGET(m.sub_menu, m.sub_menu.OFFSET, GUI_menu_item_type)
-'    men.selected = 0
-'    _MEMPUT m.sub_menu, m.sub_menu.OFFSET, men
-'    GUI_close_sub_menu men
-'  NEXT X
-'end if
 END SUB
 
 
@@ -1160,6 +1125,7 @@ END SUB
 
 FUNCTION GUI_inkey$ (gui() AS GUI_element_type, gui_num AS INTEGER, sel)
 DIM tempm AS GUI_menu_item_type, men AS GUI_menu_item_type
+DIM memtmp as _MEM, offset as _OFFSET
 
 keys = _KEYDOWN(100307) + _KEYDOWN(100308) * 2
 IF (keys) AND GUI_alt_flag = 0 THEN 'Alt Hold
@@ -1334,6 +1300,25 @@ SELECT CASE ch$
       if ((gui(sel).flags AND GUI_FLAG_MENU_ALT) OR (gui(sel).flags AND GUI_FLAG_MENU_OPEN)) = 0 then
         gui(sel).flags = gui(sel).flags OR GUI_FLAG_MENU_OPEN
       elseif gui(sel).flags AND GUI_FLAG_MENU_OPEN then
+        'memtmp = gui(sel).menu
+        'offset = len(tempm) * (gui(sel).selected - 1)
+        'tempm = _MEMGET(gui(sel).menu, gui(sel).menu.OFFSET + len(tempm) * (gui(sel).selected - 1), GUI_menu_item_type)
+
+        'FOR d = 1 to debth - 1
+          'if d >= debth - 1 then mtmp.selected = selection
+          'if d < debth  then
+          'men = _MEMGET(mtmp.sub_menu, mtmp.sub_menu.OFFSET + len(men) * (mtmp.selected - 1), GUI_menu_item_type)
+          'else
+          '  men = _MEMGET(mtmp.sub_menu, mtmp.sub_menu.OFFSET + len(men) * (selection - 1), GUI_menu_item_type)
+          'end if
+        '  if d < debth then
+        '    GUI_debug_output "I was here!"
+        '    memtmp = mtmp.sub_menu
+        '    offset = len(mtmp) * (mtmp.selected - 1)
+        '    mtmp = men
+        '  end if
+        
+        'NEXT d
         tempm = _MEMGET(gui(sel).menu, gui(sel).menu.OFFSET + len(tempm) * (gui(sel).selected - 1), GUI_menu_item_type)
         do
           tempm.selected = (tempm.selected mod tempm.sub_menu_length) + 1
@@ -1914,7 +1899,6 @@ if found > 0 then
       if selected_gui <> found then b(found).selected = 0: b(found).flags = b(found).flags AND NOT GUI_FLAG_MENU_OPEN
       selected_gui = found
       b(found).flags = b(found).flags OR GUI_FLAG_UPDATED
-      GUI_debug_output "CHECK Debth: " + str$(debth) + " Sel: " + str$(selection)
       if debth = 0 then
         if selection > 0 then
           b(found).flags = b(found).flags OR GUI_FLAG_MENU_OPEN
@@ -1931,12 +1915,9 @@ if found > 0 then
           b(found).flags = b(found).flags AND NOT GUI_FLAG_MENU_OPEN
         end if
       else
-        GUI_debug_output "Selecting up menu"
-        GUI_debug_output "Selection: " + str$(selection)
         memtmp = b(found).menu
         offset = len(mtmp) * (b(found).selected - 1)
         mtmp = _MEMGET(b(found).menu, b(found).menu.OFFSET + len(mtmp) * (b(found).selected - 1), GUI_menu_item_type)
-        GUI_Debug_output "BMTMP: " + MEM_get_str$(mtmp.nam)
         '_MEMPUT memtmp, memtmp.OFFSET + offset, mtmp
         FOR d = 1 to debth - 1
           'if d >= debth - 1 then mtmp.selected = selection
@@ -1946,7 +1927,6 @@ if found > 0 then
           '  men = _MEMGET(mtmp.sub_menu, mtmp.sub_menu.OFFSET + len(men) * (selection - 1), GUI_menu_item_type)
           'end if
           if d < debth then
-            GUI_debug_output "I was here!"
             memtmp = mtmp.sub_menu
             offset = len(mtmp) * (mtmp.selected - 1)
             mtmp = men
@@ -1954,13 +1934,9 @@ if found > 0 then
         
         NEXT d
         mtmp.selected = selection
-        GUI_Debug_output "MTMP: " + MEM_get_str$(mtmp.nam)
-        GUI_Debug_output "MOFF: " + str$(b(found).menu.OFFSET) + " memtmp:" + str$(memtmp.OFFSET)
-        GUI_debug_output "OFF:  " + str$(offset)
         _MEMPUT memtmp, memtmp.OFFSET + offset, mtmp
         men = _MEMGET(mtmp.sub_menu, mtmp.sub_menu.OFFSET + len(men) * (mtmp.selected - 1), GUI_menu_item_type)
         
-        GUI_debug_output "Menu Item: " + MEM_get_str$(men.nam)
         'mtmp.selected = selection
         if men.has_Sub then
           'mnext = _MEMGET(men.sub_menu, men.sub_menu.OFFSET + len(men) * (men.selected - 1), GUI_menu_item_type)
