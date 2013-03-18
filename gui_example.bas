@@ -7,6 +7,8 @@
 
 $CONSOLE
 
+'width 60, 25
+
 GUI_init
 
 ON ERROR GOTO DEBUG_ONERROR
@@ -28,14 +30,13 @@ DIM search_menu(10) as GUI_menu_item_type
 DIM tools_menu(10) as GUI_menu_item_type
 DIM help_menu(10) as GUI_menu_item_type
 
-
 'GUI(1) is our main dialog box and is going to be
 g = 1
 main_gui(g).element_type = GUI_MENU
 GUI_init_element main_gui(g), "Menu"
 main_gui(g).row1 = 1
 main_gui(g).col1 = 1
-main_gui(g).col2 = 80
+main_gui(g).col2 = _WIDTH(0)
 main_gui(g).menu_padding = 2
 main_gui(g).flags = main_gui(g).flags OR GUI_FLAG_SKIP OR GUI_FLAG_SHADOW OR GUI_FLAG_MENU_LAST_ON_RIGHT
 
@@ -113,9 +114,9 @@ g=g+1
 main_gui(g).element_type = GUI_BOX
 GUI_init_element main_gui(g), "Plain Box"
 main_gui(g).row1 = 2  'location
-main_gui(g).row2 = 25
+main_gui(g).row2 = _HEIGHT(0)
 main_gui(g).col1 = 1
-main_gui(g).col2 = 80
+main_gui(g).col2 = _WIDTH(0)
 main_gui(g).layer = -1 ' -- Set in background. Layer 0 is the default
 ' -- We don't want to be able to TAB to this gui element
 ' -- Don't draw box characters or box name, etc.
@@ -126,15 +127,15 @@ main_gui(g).element_type = GUI_INPUT_BOX
 GUI_init_element main_gui(g), "Input Box"
 main_gui(g).row1 = 2
 main_gui(g).col1 = 1
-main_gui(g).col2 = 40
+main_gui(g).col2 = _WIDTH(0) \ 2
 
 g=g+1
 main_gui(g).element_type = GUI_LIST_BOX
 GUI_init_element main_gui(g), "List Box"
 main_gui(g).row1 = 2
 main_gui(g).row2 = 10
-main_gui(g).col1 = 41
-main_gui(g).col2 = 80
+main_gui(g).col1 = _WIDTH(0) \ 2 + 1
+main_gui(g).col2 = _WIDTH(0)
 main_gui(g).flags = main_gui(g).flags OR GUI_FLAG_SCROLL_V
 
 MEM_allocate_string_array main_gui(g).lines, 120
@@ -155,27 +156,27 @@ g=g+1
 main_gui(g).element_type = GUI_CHECKBOX 'Same as the last one
 GUI_init_element main_gui(g), "CheckBox2"
 main_gui(g).row1 = 6
-main_gui(g).col1 = 20
+main_gui(g).col1 = _WIDTH(0) \ 4
 
 g=g+1
 main_gui(g).element_type = GUI_BUTTON 'Initalize some buttons -- Virtually the same as buttons
 GUI_init_element main_gui(g), "Button"
 main_gui(g).row1 = 7 'Location
-main_gui(g).col1 = 2
+main_gui(g).col1 = 2 '((_WIDTH(0) \ 2) \ 3) - main_gui(g).nam.length \ 2
 buttons(1) = g 'Store main_gui() number for later use
 
 g=g+1
 main_gui(g).element_type = GUI_BUTTON 'Same as before
 GUI_init_element main_gui(g), "Button2"
 main_gui(g).row1 = 7
-main_gui(g).col1 = 15
+main_gui(g).col1 = ((_WIDTH(0) \ 2) \ 3)  - main_gui(g).nam.length \ 2
 buttons(2) = g
 
 g=g+1
 main_gui(g).element_type = GUI_BUTTON 'Same as before
 GUI_init_element main_gui(g), "Button3"
 main_gui(g).row1 = 7
-main_gui(g).col1 = 31
+main_gui(g).col1 = ((_WIDTH(0) \ 2) \ 3) * 2 - main_gui(g).nam.length \ 2
 buttons(3) = g
 
 
@@ -186,7 +187,7 @@ main_gui(g).row1 = 8
 main_gui(g).col1 = 2
 
 main_gui(g).row2 = 15 '<-- These cords will be used to draw the drop-down box when it is open
-main_gui(g).col2 = 40 '<--
+main_gui(g).col2 = _WIDTH(0) \ 2 '<--
 
 'Just vertical scroll (No hoisontal)
 'Draws shadow under box when drop-down is opened
@@ -205,8 +206,8 @@ main_gui(g).element_type = GUI_DROP_DOWN 'Almost exactly the same as before
 GUI_init_element main_gui(g), "Drop Down"
 main_gui(g).row1 = 9
 main_gui(g).col1 = 2
-main_gui(g).row2 = 24 'A larger row2 value will result in a bigger drop-down box
-main_gui(g).col2 = 40
+main_gui(g).row2 = _HEIGHT(0) - 1 'A larger row2 value will result in a bigger drop-down box
+main_gui(g).col2 = _WIDTH(0) \ 2
 main_gui(g).flags = main_gui(g).flags OR GUI_FLAG_SCROLL_V OR GUI_FLAG_SHADOW
 main_gui(g).selected = 1
 MEM_allocate_string_array main_gui(g).lines, 80
@@ -247,8 +248,8 @@ GUI_init_element main_gui(g), "Text Box"
 
 main_gui(g).row1 = 11 'location
 main_gui(g).row2 = 22
-main_gui(g).col1 = 41
-main_gui(g).col2 = 80
+main_gui(g).col1 = _WIDTH(0) \ 2 + 1
+main_gui(g).col2 = _WIDTH(0)
 main_gui(g).flags = main_gui(g).flags OR GUI_FLAG_SCROLL_V OR GUI_FLAG_SCROLL_H
 'We allocate 120 Lines for the array (main_gui(g).lines won't be allocated for you, but it may be reallocated if you allow it)
 'Just set this to a reasonable value for your program.
@@ -274,7 +275,7 @@ main_gui(g).element_type = GUI_INPUT_BOX 'One extra Input box for good measure ;
 GUI_init_element main_gui(g), "Input Box"
 main_gui(g).row1 = 23
 main_gui(g).col1 = 1
-main_gui(g).col2 = 80
+main_gui(g).col2 = _WIDTH(0)
 
 
 'selected_gui = 0 'First selected gui element

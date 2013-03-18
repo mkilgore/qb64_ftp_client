@@ -23,7 +23,7 @@ box(1).flags = box(1).flags OR GUI_FLAG_SHADOW
 
 box(2).element_type = GUI_LABEL
 'box(2).dialog = -1
-box(2).flags = box(2).flags OR GUI_FLAG_DIALOG
+box(2).flags = box(2).flags OR GUI_FLAG_DIALOG OR GUI_FLAG_UPDATED
 GUI_init_element box(2), "Label1"
 MEM_put_Str box(2).text, dialog$
 box(2).row1 = box(1).row1 + 1

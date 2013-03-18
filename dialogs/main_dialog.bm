@@ -11,7 +11,7 @@
 SUB main () 'main loop for GUI, etc.
 
 get_new_dir
-'refresh_Local_files
+refresh_Local_files
 global_selected_gui = 1
 
 print_files boxes(1), Local_files()
@@ -33,14 +33,14 @@ DO
     'boxes(1).pressed = 0
     CHDIR MEM_get_str$(Local_files(boxes(1).selected).nam)
     get_new_dir
-    'refresh_Local_files
+    refresh_Local_files
     'boxes(1).updated = -1
     boxes(1).flags = boxes(1).flags OR GUI_FLAG_UPDATED
   end if
   if g_clicked = 2 then
     'boxes(2).pressed = 0
-    'change_remote_dir RTRIM$(MEM_get_str$(Remote_files(boxes(2).selected).nam))
-    'Update_Remote_Files
+    change_remote_dir RTRIM$(MEM_get_str$(Remote_files(boxes(2).selected).nam))
+    Update_Remote_Files
     'boxes(2).updated = -1
     boxes(2).flags = boxes(2).flags OR GUI_FLAG_UPDATED
     'update remote files

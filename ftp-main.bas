@@ -92,7 +92,7 @@ boxes(5).flags = boxes(5).flags OR GUI_FLAG_SKIP
 
 boxes(6).element_type = GUI_MENU
 GUI_init_element boxes(6), "Menu"
-boxes(6).flags = boxes(6).flags OR GUI_FLAG_SHADOW
+boxes(6).flags = boxes(6).flags OR GUI_FLAG_SHADOW OR GUI_FLAG_MENU_LAST_ON_RIGHT
 'boxes(6).shadow = -1
 
 boxes(7).element_type = GUI_BOX

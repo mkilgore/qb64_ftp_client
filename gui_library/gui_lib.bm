@@ -237,6 +237,21 @@ END SUB
 
 '###############################################################################
 '###############################################################################
+'#-------------------------GUI LAYOUT MANAGEMENT-------------------------------#
+'###############################################################################
+'###############################################################################
+
+SUB GUI_reposition_array(gui() as GUI_element_type)
+
+END SUB
+
+SUB GUI_reposition_element(g as GUI_element_type)
+
+END SUB
+
+
+'###############################################################################
+'###############################################################################
 '#---------------------------DRAWING FUNCTIONS---------------------------------#
 '###############################################################################
 '###############################################################################
@@ -768,17 +783,6 @@ g.menu = _MEM(items, LEN(m) * item_num)
 g.length = item_num
 END SUB
 
-'Returns the drawn location of a menu taking into account movement so it
-'doesn't go off the screen
-'Takes:
-'  b --> The GUI element for the GUI_MENU
-'  m --> The menu you're going to draw
-'  row1, col1 --> The wanted location of the menu
-'Returns:
-'  row1, col1, row2, col2 --> The location the menu will drawn at
-'row1 and col1 won't change unless they have to be moved so the menu isn't off screen
-
-
 SUB GUI_get_menu_location (b as GUI_element_type, sel, row1, col1, row2, col2)
 STATIC count, m as GUI_menu_item_type
 DIM men as GUI_menu_item_type, mnext as GUI_menu_item_type
@@ -860,13 +864,6 @@ END FUNCTION
 FUNCTION GUI_menu_char$ (a$) 'Get's the hilighted character
 GUI_menu_char$ = MID$(a$, INSTR(a$, "#") + 1, 1)
 END FUNCTION
-
-'Returns the current locate of the open menu, if any
-'Sends back -1 if there was an open menu at that debth
-'Sends zero if there was no menu open that deep
-'FUNCTION GUI_get_menu_location (b as GUI_element_type, debth, row1, col1, row2, col1)
-
-'END FUNCTION
 
 'send it the X and Y of the mouse as well an GUI_MENU element
 'If it returned -1 then the debth of the menu it clicked on will be in debth
