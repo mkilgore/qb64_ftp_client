@@ -11,51 +11,41 @@ CONST GUI_VER$ = ".85"
 CONST GUI_DEBUG = -1 'Set to -1 to turn on debug mode
 
 'CONST values coresponding to a element type
-CONST GUI_BOX = 1
-CONST GUI_INPUT_BOX = 2
-CONST GUI_TEXT_BOX = 3
-CONST GUI_LIST_BOX = 4
-CONST GUI_DROP_DOWN = 5
-CONST GUI_CHECKBOX = 6
-CONST GUI_MENU = 7
-CONST GUI_BUTTON = 8
-CONST GUI_RADIO_BUTTON = 9
-CONST GUI_LABEL = 10
+CONST GUI_BOX           = 1
+CONST GUI_INPUT_BOX     = 2
+CONST GUI_TEXT_BOX      = 3
+CONST GUI_LIST_BOX      = 4
+CONST GUI_DROP_DOWN     = 5
+CONST GUI_CHECKBOX      = 6
+CONST GUI_MENU          = 7
+CONST GUI_BUTTON        = 8
+CONST GUI_RADIO_BUTTON  = 9
+CONST GUI_LABEL         = 10
+'CONST GUI_COMBO_BOX     = 11
 
 'Flags for GUI_element_type
-CONST GUI_FLAG_UPDATED            = &H00000001       '&B1
-CONST GUI_FLAG_SKIP               = &H00000002       '&B10
-CONST GUI_FLAG_SHADOW             = &H00000004       '&B100
-CONST GUI_FLAG_DIALOG             = &H00000008       '&B1000
-CONST GUI_FLAG_HIDE               = &H00000010       '&B10000
-CONST GUI_FLAG_SCROLL_V           = &H00000020       '&B100000
-CONST GUI_FLAG_SCROLL_H           = &H00000040       '&B1000000
-CONST GUI_FLAG_SCROLL_IS_HELD_V   = &H00000080       '&B10000000
-CONST GUI_FLAG_SCROLL_IS_HELD_H   = &H00000100       '&B100000000
-CONST GUI_FLAG_DROP_FLAG          = &H00000200       '&B1000000000
-CONST GUI_FLAG_CHECKED            = &H00000400       '&B10000000000
-CONST GUI_FLAG_MENU_OPEN          = &H00000800       '&B100000000000
-CONST GUI_FLAG_MENU_ALT           = &H00001000       '&B1000000000000
-CONST GUI_FLAG_MENU_CHOSEN        = &H00002000       '&B10000000000000
-CONST GUI_FLAG_MENU_LAST_ON_RIGHT = &H00004000       '&B100000000000000
-
-CONST GUI_LAYOUT_ANCHOR_LEFT      = &H00000001
-CONST GUI_LAYOUT_ANCHOR_RIGHT     = &H00000002
-CONST GUI_LAYOUT_ANCHOR_UP        = &H00000004
-CONST GUI_LAYOUT_ANCHOR_DOWN      = &H00000008
-CONST GUI_LAYOUT_ANCHOR_CENTER    = &H00000010
-CONST GUI_LAYOUT_CONST_ROW1       = &H00000020
-CONST GUI_LAYOUT_CONST_ROW2       = &H00000040
-CONST GUI_LAYOUT_CONST_COL1       = &H00000080
-CONST GUI_LAYOUT_CONST_COL2       = &H00000100
+CONST GUI_FLAG_UPDATED            = &H00000001
+CONST GUI_FLAG_SKIP               = &H00000002
+CONST GUI_FLAG_SHADOW             = &H00000004
+CONST GUI_FLAG_DIALOG             = &H00000008
+CONST GUI_FLAG_HIDE               = &H00000010
+CONST GUI_FLAG_SCROLL_V           = &H00000020
+CONST GUI_FLAG_SCROLL_H           = &H00000040
+CONST GUI_FLAG_SCROLL_IS_HELD_V   = &H00000080
+CONST GUI_FLAG_SCROLL_IS_HELD_H   = &H00000100
+CONST GUI_FLAG_DROP_FLAG          = &H00000200
+CONST GUI_FLAG_CHECKED            = &H00000400
+CONST GUI_FLAG_MENU_OPEN          = &H00000800
+CONST GUI_FLAG_MENU_ALT           = &H00001000
+CONST GUI_FLAG_MENU_CHOSEN        = &H00002000
+CONST GUI_FLAG_MENU_LAST_ON_RIGHT = &H00004000
 
 'Byte 1
 CONST GUI_EVENT_MOUSE             = &H00000001
 CONST GUI_EVENT_KEYBOARD          = &H00000002
 
 'Byte 2
-CONST GUI_EVENT_CHECK_CHANGED     = 1  * &H00000100
-'CONST GUI_EVENT_
+CONST GUI_EVENT_CHECK_CHANGED     =  1 * &H00000100
 
 TYPE GUI_menu_item_type
   nam as MEM_string_type 'Displayed string for MENU choice
@@ -86,91 +76,44 @@ TYPE GUI_element_colors_type 'holds colors
   scroll_color as GUI_color_type
 END TYPE
 
-TYPE GUI_layout_type
-  anchor as _UNSIGNED _BYTE
-
-END TYPE
-
 TYPE GUI_element_type
   nam AS MEM_string_type 'name of item
-
   element_type AS _BYTE
-  '0 -- Nothing
-  '1 -- Box                  -- Draws a plain box with nothing inside
-  '2 -- Input-Box            -- Box is forced to 3 rows, single line input
-  '3 -- text-box             -- Multi-line input
-  '4 -- List-Box             -- Multiple lines -- Lists lines and allows one to be selected
-  '5 -- Drop-down            -- Displays as one line, but when clicked on a box appears with multiple selecteable items
-  '6 -- CheckBox             -- Displays a label along with an empty or filled Box, which can be toggled by clicking on it
-  '7 -- Menu handler         -- Indicates this element is a menu (Menus are a bit more complex -- see documentation)
-  '8 -- Button               -- Just a simple button
-  '9 -- Radio button         -- Like a checkbox, but they can be linked together so that only one in a group is selectable at a time
-  '10 - Label                -- Just plain text (Prints text at row1, col1). skip is set by default
-  '      V      -- not implemented just yet
-  ' -- Combo Box
-  ' -- Window
-
   row1 AS INTEGER 'location
   col1 AS INTEGER
   row2 AS INTEGER
   col2 AS INTEGER
-
   flags AS _UNSIGNED LONG 'Coresponds to the above flags
-
+  'inheret AS _UNSIGNED LONG
   c as GUI_element_colors_type
-  'mcolor as GUI_color_type 'Used for drawing most things on screen
-  'selcolor as GUI_color_type 'Used when drawing things such as the selected text
-  'scroll_color as GUI_color_type 'Normally used for scroll bars
-
-  ' Just a number indicating the layering.
-  ' Default layer is zero. If you need something to be ontop of something else, put it in a higher layer
   layer AS _BYTE
-
   text AS MEM_string_type 'text drawn/edited in a Input-Box
-
   text_position AS INTEGER 'position of the cursor in the input
-  'text_offset AS INTEGER 'We display the string in the box starting at the text_offset character, to account for scrolling to the right
   text_sel_row1 AS INTEGER
   text_sel_row2 AS INTEGER
   text_sel_col1 AS INTEGER
   text_sel_col2 AS INTEGER
-
+  
   scroll_offset_vert AS INTEGER 'current scroll offset -- calculated in draw_gui function
   scroll_offset_hors AS INTEGER
-
+  
   scroll_loc_hors AS INTEGER 'current location of scroll-bar
   scroll_loc_vert AS INTEGER
-
   scroll_max_hors AS INTEGER 'Max number of characters in a line -- If 0 then will be automatically calculated (Which is a bit slower)
-  'The length variable is used in place of a "scroll_max_vert" variable
-
   length AS INTEGER ' Length of string array
   selected AS INTEGER 'selected line in list-box, drop-down, etc.
   selected_old AS INTEGER
   lines AS MEM_array_type ' Array to store strings for list-box, drop-down, etc.
-
   menu as _MEM ' Points to an actual array of menu_items
-
   menu_padding as INTEGER 'Spaces padded before start of menu
   menu_choice AS STRING * 5
 
   group as INTEGER 'group number for radio buttons
-
   cur_row AS INTEGER
   cur_col AS INTEGER
-
   'This does not corespond to the displayed number of lines, just the real max allocation length of lines
   max_lines AS _UNSIGNED INTEGER 'If 0 then the lines array will automatically be reallocated, else we won't go over max_lines
-
-  'If this GUI is currently selected, then you should do a:
-  'LOCATE cur_row, cur_col, 1
-  'to locate the cursor
-  
-  'It's layout setup -- 
-  l as GUI_layout_type
-
-
-  parent AS _MEM
+  'parent AS _MEM
 END TYPE
 
 TYPE GUI_event_type

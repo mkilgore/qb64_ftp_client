@@ -3,7 +3,7 @@
 
 '$include:'mem_library/mem_lib.bi'
 '$include:'gui_library/gui_lib.bi'
-'$include:'dialogs/prompt.bi'
+''$include:'dialogs/prompt.bi'
 
 $CONSOLE
 
@@ -329,19 +329,19 @@ DO 'Main loop
 
     if i$ = "EXIT " then exit_flag = -1 '"EXIT " is for the EXIT menu option -- So set our exit_flag variable
     if i$ = "ABOUT" then
-      about_dialog
+      'about_dialog
     end if
     if i$ = "RENAM" then
-      rename_file_GUI 0
+      'rename_file_GUI 0
     end if
     if i$ = "OPEN " then
-      prompt = prompt_dialog("Test Dialog"+chr$(13) + "Line 2", 10, OK_BUTTON OR CLOSE_BUTTON, OK_BUTTON)
+      'prompt = prompt_dialog("Test Dialog"+chr$(13) + "Line 2", 10, OK_BUTTON OR CLOSE_BUTTON, OK_BUTTON)
     end if
     if i$ = "CONEC" then
       'Connect_To_FTP
     end if
     if i$ = "HELP " then
-      popup_dialog_gui "Not Implemented Yet."
+      'popup_dialog_gui "Not Implemented Yet."
     end if
   end if
 LOOP UNTIL exit_flag = -1 or _EXIT
@@ -356,6 +356,7 @@ COLOR 7, 0
 CLS
 PRINT "ERROR N:"; ERR
 PRINT "ERROR L:"; _ERRORLINE
+print 67
 
 END
 
@@ -367,8 +368,8 @@ END SUB
 
 '$include:'mem_library/mem_lib.bm'
 '$include:'gui_library/gui_lib.bm'
-'$include:'dialogs/about.bm'
-'$include:'dialogs/rename_file.bm'
-'$include:'dialogs/prompt.bm'
+''$include:'dialogs/about.bm'
+''$include:'dialogs/rename_file.bm'
+''$include:'dialogs/prompt.bm'
 ''$include:'dialogs/ftp_connect.bm'
-'$include:'dialogs/dialog_simple.bm'
+''$include:'dialogs/dialog_simple.bm'

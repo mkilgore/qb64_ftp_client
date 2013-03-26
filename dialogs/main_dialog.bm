@@ -241,8 +241,8 @@ ELSE
   r$ = dir$
 END IF
 
-MEM_put_str boxes(4).nam, l$
-MEM_put_str boxes(5).nam, r$
+MEM_put_str boxes(4).text, l$
+MEM_put_str boxes(5).text, r$
 
 GUI_draw_element_array boxes(), BOXES, global_selected_gui
 

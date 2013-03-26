@@ -54,7 +54,7 @@ DIM SHARED Remote_files(500) AS filedir_type, Local_files(1000) AS filedir_type 
 '$include:'help/setup_help.bm'
 
 IF CLI THEN
-  'command_line
+  command_line
   SYSTEM
 ELSE
   _CONSOLE OFF
