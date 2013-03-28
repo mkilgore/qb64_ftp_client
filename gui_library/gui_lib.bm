@@ -802,13 +802,15 @@ else
   row2 = row1 + m.sub_menu_length + 1
   for x = 1 to m.sub_menu_length
     men = _MEMGET(m.sub_menu, m.sub_menu.OFFSET + len(men) * (x - 1), GUI_menu_item_type)
+    GUI_debug_output "Menu item: " + MEM_get_str$(men.nam)
     l = GUI_menu_len(MEM_get_str$(men.nam))
     if l > wid then
       wid = l
     end if
     if men.has_sub then
+      GUI_debug_output "In Has sub!!!"
       has_sub = -1
-      if x = m.selected and m.sub_menu_open then mnext = men
+      if x = m.selected and men.sub_menu_open then mnext = men: GUI_debug_output "Sub menu open"
     end if
   next x
   if has_sub then wid = wid + 2
@@ -853,7 +855,42 @@ FUNCTION GUI_menu_clicked_on (b as GUI_element_type, cx, cy, debth, selection)
 STATIC count, m AS GUI_menu_item_type
 DIM men as GUI_menu_item_type, mtmp as GUI_menu_item_type
 GUI_get_menu_location b, count, row1, col1, row2, col2
-if cx >= col1 and cx <= col2 and cy >= row1 and cy <= row2 then
+
+'else
+  if count = 0 then
+    if b.selected > 0 and b.flags OR GUI_FLAG_MENU_OPEN then
+      m = _MEMGET(b.menu, b.menu.OFFSET + len(men) * (b.selected - 1), GUI_menu_item_type)
+      h_sub_menu = -1
+    end if
+  else
+    if m.has_sub and m.sub_menu_open then
+      m = _MEMGET(m.sub_menu, m.sub_menu.OFFSET + len(m) * (m.selected - 1), GUI_menu_item_type)
+      h_sub_menu = -1
+    end if
+  end if
+'end if
+'if clicked = 0 then
+count = count + 1
+'d = debth
+'s = selection
+
+if h_sub_menu then 
+  if selection <> 0 then
+    d = debth
+    s = selection
+    selection = 0
+    'c = clicked
+  end if
+' ----- Check for a sub-menu before recursing -- Don't recurse if there isn't a sub-menu
+  clicked = GUI_menu_clicked_on(b, cx, cy, debth, selection)
+  
+  if selection = 0 then
+    debth = d
+    selection = s
+  end if
+end if
+
+if cx >= col1 and cx <= col2 and cy >= row1 and cy <= row2 and not clicked then
   clicked = -1
   debth = count
   selection = 0
@@ -886,39 +923,7 @@ if cx >= col1 and cx <= col2 and cy >= row1 and cy <= row2 then
     end if
   end if
   'selection =
-else
-  if count = 0 then
-    if b.selected > 0 then
-      m = _MEMGET(b.menu, b.menu.OFFSET + len(men) * (b.selected - 1), GUI_menu_item_type)
-      h_sub_menu = -1
-    end if
-  else
-    if m.has_sub and m.sub_menu_open then
-      m = _MEMGET(m.sub_menu, m.sub_menu.OFFSET + len(m) * (m.selected - 1), GUI_menu_item_type)
-      h_sub_menu = -1
-    end if
-  end if
 end if
-'if clicked = 0 then
-count = count + 1
-'d = debth
-'s = selection
-
-if h_sub_menu then 
-  if selection <> 0 then
-    d = debth
-    s = selection
-    selection = 0
-  end if
-' ----- Check for a sub-menu before recursing -- Don't recurse if there isn't a sub-menu
-  clicked = clicked OR GUI_menu_clicked_on(b, cx, cy, debth, selection)
-  
-  if selection = 0 then
-    debth = d
-    selection = s
-  end if
-end if
-
 'if tclicked = 0 then
 '  d = debth
 count = count - 1
@@ -963,60 +968,80 @@ if (b.flags AND GUI_FLAG_MENU_OPEN) = 0 OR (b.flags AND GUI_FLAG_MENU_ALT) then
   elseif m = M_LEFT then
     b.selected = b.selected - 1
     if b.selected = 0 then b.selected = b.length
+    b.flags = b.flags OR GUI_FLAG_UPDATED
   elseif m = M_RIGHT then
     b.selected = (b.selected mod b.length) + 1
+    b.flags = b.flags OR GUI_FLAG_UPDATED
   end if
 elseif b.flags AND GUI_FLAG_MENU_OPEN then
-  'if m = M_UP or m = M_DOWN then 'These are just movement inside of the open menu, easy enough
-    memtmp = b.menu
-    offset = len(mtmp) * (b.selected - 1)
-    mtmp = _MEMGET(b.menu, b.menu.OFFSET + len(mtmp) * (b.selected - 1), GUI_menu_item_type)
-    do
-      men = _MEMGET(mtmp.sub_menu, mtmp.sub_menu.OFFSET + len(men) * (mtmp.selected - 1), GUI_menu_item_type)
-      if men.sub_menu_open then
-        memtmp = mtmp.sub_menu
-        offset = len(mtmp) * (mtmp.selected - 1)
-        mtmp = men
-      end if
-    loop until not men.sub_menu_open
-    if m = M_DOWN then
-      do  
-        mtmp.selected = (mtmp.selected mod mtmp.sub_menu_length) + 1
-        tempm = _MEMGET(mtmp.sub_menu, mtmp.sub_menu.OFFSET + len(tempm) * (mtmp.selected - 1), GUI_menu_item_type)
-      loop until MEM_get_str$(tempm.nam) <> "-"
-    elseif m = M_UP then
-      do
-        mtmp.selected = mtmp.selected - 1
-        if mtmp.selected = 0 then mtmp.selected = mtmp.sub_menu_length
-        tempm = _MEMGET(mtmp.sub_menu, mtmp.sub_menu.OFFSET + len(tempm) * (mtmp.selected - 1), GUI_menu_item_type)
-      loop until MEM_get_str$(tempm.nam) <> "-"
-    elseif m = M_RIGHT then
-      tempm = _MEMGET(mtmp.sub_menu, mtmp.sub_menu.OFFSET + len(mtmp) * (mtmp.selected - 1), GUI_menu_item_type)
-      GUI_debug_output "Menu item: " + MEM_get_str$(mtmp.nam)
-      GUI_debug_output "Menu item2: " + MEM_Get_str$(tempm.nam)
-      if tempm.has_sub then
-        GUI_debug_output "Sub menu found!"
-        tempm.sub_menu_open = -1
-        tempm.selected = 1
-        GUI_close_sub_menu tempm
-        _MEMPUT mtmp.sub_menu, mtmp.sub_menu.OFFSET + len(mtmp) * (mtmp.selected - 1), tempm
-      else
-        b.selected = (b.selected mod b.length) + 1
-        tempm = _MEMGET(b.menu, b.menu.OFFSET + len(tempm) * (b.selected - 1), GUI_menu_item_type)
-        tempm.selected = 1
-        _MEMPUT b.menu, b.menu.OFFSET + len(tempm) * (b.selected - 1), tempm
-        GUI_close_sub_menu tempm
-      end if
-    elseif m = M_LEFT then
-      
+  memtmp = b.menu
+  offset = len(mtmp) * (b.selected - 1)
+  mtmp = _MEMGET(b.menu, b.menu.OFFSET + len(mtmp) * (b.selected - 1), GUI_menu_item_type)
+  d = 0
+  do
+    men = _MEMGET(mtmp.sub_menu, mtmp.sub_menu.OFFSET + len(men) * (mtmp.selected - 1), GUI_menu_item_type)
+    if men.sub_menu_open then
+      d = d + 1
+      memtmp = mtmp.sub_menu
+      offset = len(mtmp) * (mtmp.selected - 1)
+      mtmp = men
     end if
-    _MEMPUT memtmp, memtmp.OFFSET + offset, mtmp
-    b.flags = b.flags OR GUI_FLAG_UPDATED
-  'elseif m = M_LEFT then
-    
-  'elseif m = M_RIGHT then
-    
-  'end if
+  loop until not men.sub_menu_open
+  if m = M_DOWN then
+    do  
+      mtmp.selected = (mtmp.selected mod mtmp.sub_menu_length) + 1
+      tempm = _MEMGET(mtmp.sub_menu, mtmp.sub_menu.OFFSET + len(tempm) * (mtmp.selected - 1), GUI_menu_item_type)
+    loop until MEM_get_str$(tempm.nam) <> "-"
+  elseif m = M_UP then
+    do
+      mtmp.selected = mtmp.selected - 1
+      if mtmp.selected = 0 then mtmp.selected = mtmp.sub_menu_length
+      tempm = _MEMGET(mtmp.sub_menu, mtmp.sub_menu.OFFSET + len(tempm) * (mtmp.selected - 1), GUI_menu_item_type)
+    loop until MEM_get_str$(tempm.nam) <> "-"
+  elseif m = M_RIGHT then
+    tempm = _MEMGET(mtmp.sub_menu, mtmp.sub_menu.OFFSET + len(mtmp) * (mtmp.selected - 1), GUI_menu_item_type)
+    GUI_debug_output "Menu item: " + MEM_get_str$(mtmp.nam)
+    GUI_debug_output "Menu item2: " + MEM_Get_str$(tempm.nam)
+    if tempm.has_sub then
+      GUI_debug_output "Sub menu found!"
+      tempm.sub_menu_open = -1
+      tempm.selected = 1
+      GUI_close_sub_menu tempm
+      _MEMPUT mtmp.sub_menu, mtmp.sub_menu.OFFSET + len(mtmp) * (mtmp.selected - 1), tempm
+    else
+      b.selected = (b.selected mod b.length) + 1
+      tempm = _MEMGET(b.menu, b.menu.OFFSET + len(tempm) * (b.selected - 1), GUI_menu_item_type)
+      tempm.selected = 1
+      if tempm.has_sub then mtmp.sub_menu_open = -1
+      _MEMPUT b.menu, b.menu.OFFSET + len(tempm) * (b.selected - 1), tempm
+      GUI_close_sub_menu tempm
+    end if
+  elseif m = M_LEFT then
+    if d <> 0 then
+      mtmp.sub_menu_open = 0
+    else
+      b.selected = b.selected - 1
+      if b.selected = 0 then b.selected = b.length
+      mtmp = _MEMGET(b.menu, b.menu.OFFSET + len(mtmp) * (b.selected - 1), GUI_menu_item_type)
+      mtmp.selected = 1
+      GUI_close_sub_menu mtmp
+      offset = len(mtmp) * (b.selected - 1)
+    end if
+  elseif m = M_ENTER then
+    if not men.has_sub then
+      b.menu_choice = men.ident
+      b.selected = 0
+      b.flags = (b.flags OR GUI_FLAG_MENU_CHOSEN OR GUI_FLAG_UPDATED) AND NOT GUI_FLAG_MENU_OPEN
+    else
+      'tempm = _MEMGET(mtmp.sub_menu, mtmp.sub_menu.OFFSET + len(mtmp) * (mtmp.selected - 1), GUI_menu_item_type)
+      men.sub_menu_open = -1
+      men.selected = 1
+      GUI_close_sub_menu men
+      _MEMPUT mtmp.sub_menu, mtmp.sub_menu.OFFSET + len(mtmp) * (mtmp.selected - 1), men
+    end if
+  end if
+  _MEMPUT memtmp, memtmp.OFFSET + offset, mtmp
+  b.flags = b.flags OR GUI_FLAG_UPDATED
 end if
 
 END SUB
@@ -1310,23 +1335,24 @@ SELECT CASE ch$
       end if
 
       GUI_calc_scroll gui(sel).row1, gui(sel).col1, gui(sel).row2, gui(sel).col2, gui(sel)
-    elseif gui(sel).element_type = GUI_MENU and gui(sel).selected > 0 then
-      if ((gui(sel).flags AND GUI_FLAG_MENU_ALT) OR (gui(sel).flags AND GUI_FLAG_MENU_OPEN)) = 0 then
-        gui(sel).flags = gui(sel).flags OR GUI_FLAG_MENU_OPEN
-        tempm = _MEMGET(gui(sel).menu, gui(sel).menu.OFFSET + len(tempm) * (gui(sel).selected - 1), GUI_menu_item_type)
-        GUI_close_sub_menu tempm
-      elseif gui(sel).flags AND GUI_FLAG_MENU_OPEN then
-        tempm = _MEMGET(gui(sel).menu, gui(sel).menu.OFFSET + len(tempm) * (gui(sel).selected - 1), GUI_menu_item_type)
-        men = _MEMGET(tempm.sub_menu, tempm.sub_menu.OFFSET + len(tempm) * (tempm.selected - 1), GUI_menu_item_type)
-        if NOT men.has_sub then
-          gui(sel).menu_choice = men.ident
-          gui(sel).selected = 0
-          gui(sel).flags = (gui(sel).flags OR GUI_FLAG_MENU_CHOSEN OR GUI_FLAG_UPDATED) AND NOT GUI_FLAG_MENU_OPEN
-        else
-          men.selected = 1
-          gui(sel).flags = gui(sel).flags OR GUI_FLAG_UPDATED
-        end if
-      end if
+    elseif gui(sel).element_type = GUI_MENU then 'and gui(sel).selected > 0 then
+      GUI_menu_movement 5, gui(sel)
+      'if ((gui(sel).flags AND GUI_FLAG_MENU_ALT) OR (gui(sel).flags AND GUI_FLAG_MENU_OPEN)) = 0 then
+      '  gui(sel).flags = gui(sel).flags OR GUI_FLAG_MENU_OPEN
+      '  tempm = _MEMGET(gui(sel).menu, gui(sel).menu.OFFSET + len(tempm) * (gui(sel).selected - 1), GUI_menu_item_type)
+      '  GUI_close_sub_menu tempm
+      'elseif gui(sel).flags AND GUI_FLAG_MENU_OPEN then
+      '  tempm = _MEMGET(gui(sel).menu, gui(sel).menu.OFFSET + len(tempm) * (gui(sel).selected - 1), GUI_menu_item_type)
+      '  men = _MEMGET(tempm.sub_menu, tempm.sub_menu.OFFSET + len(tempm) * (tempm.selected - 1), GUI_menu_item_type)
+      '  if NOT men.has_sub then
+      '    gui(sel).menu_choice = men.ident
+      '    gui(sel).selected = 0
+      '    gui(sel).flags = (gui(sel).flags OR GUI_FLAG_MENU_CHOSEN OR GUI_FLAG_UPDATED) AND NOT GUI_FLAG_MENU_OPEN
+      '  else
+      '    men.selected = 1
+      '    gui(sel).flags = gui(sel).flags OR GUI_FLAG_UPDATED
+      '  end if
+      'end if
     elseif gui(sel).element_type = GUI_BUTTON then
       GUI_queue_mouse_click sel
     elseif gui(sel).element_type = GUI_RADIO_BUTTON then

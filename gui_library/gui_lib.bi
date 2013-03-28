@@ -6,9 +6,9 @@
 'of the Do What You Want Public License, Version 1, as published by Matt Kilgore
 'See file COPYING that should have been included with this source.
 
-CONST GUI_VER$ = ".85"
+CONST GUI_VER$ = ".90"
 
-CONST GUI_DEBUG = -1 'Set to -1 to turn on debug mode
+CONST GUI_DEBUG = 0 'Set to -1 to turn on debug mode
 
 'CONST values coresponding to a element type
 CONST GUI_BOX           = 1

@@ -25,6 +25,7 @@ DIM file_menu(10) as GUI_menu_item_type
 DIM file_new_menu(10) as GUI_menu_item_type
 DIM file_new_csrc_menu(10) as GUI_menu_item_type
 DIM file_new_csrc_csrc_menu(10) as GUI_menu_item_type
+DIM file_new_csrc_csrc_csrc_menu(10) AS GUI_menu_item_type
 DIM edit_menu(10) as GUI_menu_item_type
 DIM search_menu(10) as GUI_menu_item_type
 DIM tools_menu(10) as GUI_menu_item_type
@@ -34,9 +35,7 @@ DIM help_menu(10) as GUI_menu_item_type
 g = 1
 main_gui(g).element_type = GUI_MENU
 GUI_init_element main_gui(g), "Menu"
-main_gui(g).row1 = 1
-main_gui(g).col1 = 1
-main_gui(g).col2 = _WIDTH(0)
+
 main_gui(g).menu_padding = 2
 main_gui(g).flags = main_gui(g).flags OR GUI_FLAG_SKIP OR GUI_FLAG_SHADOW OR GUI_FLAG_MENU_LAST_ON_RIGHT
 
@@ -77,6 +76,14 @@ sm = sm + 1: MEM_put_str file_new_csrc_csrc_menu(sm).nam, "#Plain Text     ": fi
 
 GUI_attach_menu file_new_csrc_menu(2), sm, _OFFSET(file_new_csrc_csrc_menu(1))
 
+sm = 0
+sm = sm + 1: MEM_put_str file_new_csrc_csrc_csrc_menu(sm).nam, "#C Source       ": file_new_csrc_csrc_csrc_menu(sm).ident = "CSRC "
+sm = sm + 1: MEM_put_str file_new_csrc_csrc_csrc_menu(sm).nam, "C++ #Source     ": file_new_csrc_csrc_csrc_menu(sm).ident = "CPPSR"
+sm = sm + 1: MEM_put_str file_new_csrc_csrc_csrc_menu(sm).nam, "-"               : file_new_csrc_csrc_csrc_menu(sm).ident = "-----"
+sm = sm + 1: MEM_put_str file_new_csrc_csrc_csrc_menu(sm).nam, "#Plain Text     ": file_new_csrc_csrc_csrc_menu(sm).ident = "PLAIN"
+
+GUI_attach_menu file_new_csrc_csrc_menu(2), sm, _OFFSET(file_new_csrc_csrc_csrc_menu(1))
+
 
 m=0
 MEM_put_str base_menu(2).nam,          "#Edit":            base_menu(2).ident =   "Edit "
@@ -113,10 +120,6 @@ GUI_attach_base_menu main_gui(g), 4, _OFFSET(base_menu(1))
 g=g+1
 main_gui(g).element_type = GUI_BOX
 GUI_init_element main_gui(g), "Plain Box"
-main_gui(g).row1 = 2  'location
-main_gui(g).row2 = _HEIGHT(0)
-main_gui(g).col1 = 1
-main_gui(g).col2 = _WIDTH(0)
 main_gui(g).layer = -1 ' -- Set in background. Layer 0 is the default
 ' -- We don't want to be able to TAB to this gui element
 ' -- Don't draw box characters or box name, etc.
@@ -125,17 +128,11 @@ main_gui(g).flags = main_gui(g).flags OR GUI_FLAG_SKIP OR GUI_FLAG_HIDE
 g=g+1
 main_gui(g).element_type = GUI_INPUT_BOX
 GUI_init_element main_gui(g), "Input Box"
-main_gui(g).row1 = 2
-main_gui(g).col1 = 1
-main_gui(g).col2 = _WIDTH(0) \ 2
+
 
 g=g+1
 main_gui(g).element_type = GUI_LIST_BOX
 GUI_init_element main_gui(g), "List Box"
-main_gui(g).row1 = 2
-main_gui(g).row2 = 10
-main_gui(g).col1 = _WIDTH(0) \ 2 + 1
-main_gui(g).col2 = _WIDTH(0)
 main_gui(g).flags = main_gui(g).flags OR GUI_FLAG_SCROLL_V
 
 MEM_allocate_string_array main_gui(g).lines, 120
@@ -149,45 +146,31 @@ list_box_n = g
 g=g+1
 main_gui(g).element_type = GUI_CHECKBOX 'Initalize a few Checkbox's
 GUI_init_element main_gui(g), "CheckBox1"
-main_gui(g).row1 = 6 'Location
-main_gui(g).col1 = 2
+
 
 g=g+1
 main_gui(g).element_type = GUI_CHECKBOX 'Same as the last one
 GUI_init_element main_gui(g), "CheckBox2"
-main_gui(g).row1 = 6
-main_gui(g).col1 = _WIDTH(0) \ 4
 
 g=g+1
 main_gui(g).element_type = GUI_BUTTON 'Initalize some buttons -- Virtually the same as buttons
 GUI_init_element main_gui(g), "Button"
-main_gui(g).row1 = 7 'Location
-main_gui(g).col1 = 2 '((_WIDTH(0) \ 2) \ 3) - main_gui(g).nam.length \ 2
 buttons(1) = g 'Store main_gui() number for later use
 
 g=g+1
 main_gui(g).element_type = GUI_BUTTON 'Same as before
 GUI_init_element main_gui(g), "Button2"
-main_gui(g).row1 = 7
-main_gui(g).col1 = ((_WIDTH(0) \ 2) \ 3)  - main_gui(g).nam.length \ 2
 buttons(2) = g
 
 g=g+1
 main_gui(g).element_type = GUI_BUTTON 'Same as before
 GUI_init_element main_gui(g), "Button3"
-main_gui(g).row1 = 7
-main_gui(g).col1 = ((_WIDTH(0) \ 2) \ 3) * 2 - main_gui(g).nam.length \ 2
 buttons(3) = g
 
 
 g=g+1
 main_gui(g).element_type = GUI_DROP_DOWN 'Initalize a drop-down selection
 GUI_init_element main_gui(g), "Drop Down"
-main_gui(g).row1 = 8
-main_gui(g).col1 = 2
-
-main_gui(g).row2 = 15 '<-- These cords will be used to draw the drop-down box when it is open
-main_gui(g).col2 = _WIDTH(0) \ 2 '<--
 
 'Just vertical scroll (No hoisontal)
 'Draws shadow under box when drop-down is opened
@@ -204,10 +187,6 @@ next x
 g=g+1
 main_gui(g).element_type = GUI_DROP_DOWN 'Almost exactly the same as before
 GUI_init_element main_gui(g), "Drop Down"
-main_gui(g).row1 = 9
-main_gui(g).col1 = 2
-main_gui(g).row2 = _HEIGHT(0) - 1 'A larger row2 value will result in a bigger drop-down box
-main_gui(g).col2 = _WIDTH(0) \ 2
 main_gui(g).flags = main_gui(g).flags OR GUI_FLAG_SCROLL_V OR GUI_FLAG_SHADOW
 main_gui(g).selected = 1
 MEM_allocate_string_array main_gui(g).lines, 80
@@ -220,16 +199,12 @@ for x = 1 to 4 'group 0
   g=g+1
   main_gui(g).element_type = GUI_RADIO_BUTTON 'Initalize 4 radio buttons linked by their group number
   GUI_init_element main_gui(g), "Radio Button" + str$(x)
-  main_gui(g).row1 = 9 + x
-  main_gui(g).col1 = 2
 next x
 
 for x = 1 to 4 'group 1
   g=g+1
   main_gui(g).element_type = GUI_RADIO_BUTTON 'Same as before, but different group number
   GUI_init_element main_gui(g), "Radio Button" + str$(x)
-  main_gui(g).row1 = 14 + x
-  main_gui(g).col1 = 2
   main_gui(g).group = 1
 next x
 
@@ -237,19 +212,12 @@ FOR x = 1 to 4
   g=g+1
   main_gui(g).element_type = GUI_LABEL 'Initalize 4 lables via a loop
   GUI_init_element main_gui(g), ""
-  main_gui(g).row1 = 18 + x
-  main_gui(g).col1 = 2
   labels(x) = g 'Store it's main_gui() element number for later use
 NEXT x
 
 g=g+1
 main_gui(g).element_type = GUI_TEXT_BOX 'Initalize a Text-Box
 GUI_init_element main_gui(g), "Text Box"
-
-main_gui(g).row1 = 11 'location
-main_gui(g).row2 = 22
-main_gui(g).col1 = _WIDTH(0) \ 2 + 1
-main_gui(g).col2 = _WIDTH(0)
 main_gui(g).flags = main_gui(g).flags OR GUI_FLAG_SCROLL_V OR GUI_FLAG_SCROLL_H
 'We allocate 120 Lines for the array (main_gui(g).lines won't be allocated for you, but it may be reallocated if you allow it)
 'Just set this to a reasonable value for your program.
@@ -273,9 +241,9 @@ next x
 g=g+1
 main_gui(g).element_type = GUI_INPUT_BOX 'One extra Input box for good measure ;)
 GUI_init_element main_gui(g), "Input Box"
-main_gui(g).row1 = 23
-main_gui(g).col1 = 1
-main_gui(g).col2 = _WIDTH(0)
+
+'Initialize placement
+setup_gui main_gui()
 
 
 'selected_gui = 0 'First selected gui element
@@ -344,6 +312,13 @@ DO 'Main loop
       'popup_dialog_gui "Not Implemented Yet."
     end if
   end if
+  
+  'if _RESIZE then
+  '  WIDTH _RESIZEWIDTH, _RESIZEHEIGHT
+  '  setup_gui main_gui()
+  '  main_gui(2).flags = main_gui(2).flags OR GUI_FLAG_UPDATED
+  
+  'end if
 LOOP UNTIL exit_flag = -1 or _EXIT
 
 'Free the array of elements
@@ -365,6 +340,93 @@ _DEST _CONSOLE
 print p$
 _DEST 0
 END SUB
+
+SUB setup_gui (main_gui() as GUI_element_type)
+g = 1 'Menu
+main_gui(g).row1 = 1
+main_gui(g).col1 = 1
+main_gui(g).col2 = _WIDTH(0)
+
+g=g+1 'Background box
+main_gui(g).row1 = 2  'location
+main_gui(g).row2 = _HEIGHT(0)
+main_gui(g).col1 = 1
+main_gui(g).col2 = _WIDTH(0)
+
+g=g+1 'Inbox box
+main_gui(g).row1 = 2
+main_gui(g).col1 = 1
+main_gui(g).col2 = _WIDTH(0) \ 2
+
+g=g+1 'List box
+main_gui(g).row1 = 2
+main_gui(g).row2 = 10
+main_gui(g).col1 = _WIDTH(0) \ 2 + 1
+main_gui(g).col2 = _WIDTH(0)
+
+g=g+1 'Checkbox 1
+main_gui(g).row1 = 6 'Location
+main_gui(g).col1 = 2
+
+g=g+1 'Checkbox 2
+main_gui(g).row1 = 6
+main_gui(g).col1 = _WIDTH(0) \ 4
+
+g=g+1 'Button 1
+main_gui(g).row1 = 7 'Location
+main_gui(g).col1 = 2 '((_WIDTH(0) \ 2) \ 3) - main_gui(g).nam.length \ 2
+
+g=g+1 'Button 2
+main_gui(g).row1 = 7
+main_gui(g).col1 = ((_WIDTH(0) \ 2) \ 3)  - main_gui(g).nam.length \ 2
+
+g=g+1 'Button 3
+main_gui(g).row1 = 7
+main_gui(g).col1 = ((_WIDTH(0) \ 2) \ 3) * 2 - main_gui(g).nam.length \ 2
+
+g=g+1 'Drop Down 1
+main_gui(g).row1 = 8
+main_gui(g).col1 = 2
+main_gui(g).row2 = 15 '<-- These cords will be used to draw the drop-down box when it is open
+main_gui(g).col2 = _WIDTH(0) \ 2 '<--
+
+g=g+1 'Drop Down 2
+main_gui(g).row1 = 9
+main_gui(g).col1 = 2
+main_gui(g).row2 = _HEIGHT(0) - 1 'A larger row2 value will result in a bigger drop-down box
+main_gui(g).col2 = _WIDTH(0) \ 2
+
+for x = 1 to 4
+  g=g+1 'Radio buttons
+  main_gui(g).row1 = 9 + x
+  main_gui(g).col1 = 2
+next x
+
+for x = 1 to 4
+  g = g + 1 'Radio buttons
+  main_gui(g).row1 = 14 + x
+  main_gui(g).col1 = 2
+next x
+
+for x = 1 to 4
+  g = g + 1 'Labels
+  main_gui(g).row1 = 18 + x
+  main_gui(g).col1 = 2
+next x
+
+g = g + 1 'Text box
+main_gui(g).row1 = 11 'location
+main_gui(g).row2 = 22
+main_gui(g).col1 = _WIDTH(0) \ 2 + 1
+main_gui(g).col2 = _WIDTH(0)
+
+g = g + 1 'Input box
+main_gui(g).row1 = 23
+main_gui(g).col1 = 1
+main_gui(g).col2 = _WIDTH(0)
+
+end sub
+
 
 '$include:'mem_library/mem_lib.bm'
 '$include:'gui_library/gui_lib.bm'
