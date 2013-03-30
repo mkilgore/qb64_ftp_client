@@ -7,8 +7,6 @@
 
 $CONSOLE
 
-'width 60, 25
-
 GUI_init
 
 ON ERROR GOTO DEBUG_ONERROR
@@ -38,7 +36,6 @@ GUI_init_element main_gui(g), "Menu"
 
 main_gui(g).menu_padding = 2
 main_gui(g).flags = main_gui(g).flags OR GUI_FLAG_SKIP OR GUI_FLAG_SHADOW OR GUI_FLAG_MENU_LAST_ON_RIGHT
-
 
 m=0
 MEM_put_str base_menu(1).nam,          "#File":            base_menu(1).ident =   "File "
@@ -331,7 +328,6 @@ COLOR 7, 0
 CLS
 PRINT "ERROR N:"; ERR
 PRINT "ERROR L:"; _ERRORLINE
-print 67
 
 END
 

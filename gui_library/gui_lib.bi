@@ -8,7 +8,7 @@
 
 CONST GUI_VER$ = ".90"
 
-CONST GUI_DEBUG = 0 'Set to -1 to turn on debug mode
+CONST GUI_DEBUG = -1 'Set to -1 to turn on debug mode
 
 'CONST values coresponding to a element type
 CONST GUI_BOX           = 1
@@ -84,7 +84,6 @@ TYPE GUI_element_type
   row2 AS INTEGER
   col2 AS INTEGER
   flags AS _UNSIGNED LONG 'Coresponds to the above flags
-  'inheret AS _UNSIGNED LONG
   c as GUI_element_colors_type
   layer AS _BYTE
   text AS MEM_string_type 'text drawn/edited in a Input-Box
@@ -118,13 +117,22 @@ END TYPE
 
 TYPE GUI_event_type
   event_type as _UNSIGNED LONG
-  e_num as _UNSIGNED _BYTE
+  dat as MEM_string_type
 END TYPE
 
-'shared variables for mouse
-COMMON SHARED GUI_MX         AS INTEGER, GUI_MY             AS INTEGER, GUI_BUT         AS INTEGER,       GUI_MSCROLL  AS INTEGER, GUI_BUTFLAG    AS INTEGER
-COMMON SHARED GUI_CUR_ROW    AS INTEGER, GUI_CUR_COL        AS INTEGER, GUI_alt_flag    AS INTEGER,       GUI_ctl_flag AS INTEGER, GUI_shift_flag AS INTEGER
-COMMON SHARED GUI_DRAG_TIMER AS DOUBLE,  GUI_LAST_USED_RNUM AS LONG
+'shared variables for mouse, keyboard, and screen type of things
+COMMON SHARED GUI_MX            AS INTEGER, GUI_MY                 AS INTEGER, GUI_BUT            AS INTEGER, GUI_MSCROLL  AS INTEGER, GUI_BUTFLAG    AS INTEGER
+COMMON SHARED GUI_CUR_ROW       AS INTEGER, GUI_CUR_COL            AS INTEGER, GUI_alt_flag       AS INTEGER, GUI_ctl_flag AS INTEGER, GUI_shift_flag AS INTEGER
+COMMON SHARED GUI_DRAG_TIMER    AS DOUBLE,  GUI_CLICK_TIMER        AS DOUBLE,  GUI_KEYPRESS_TIMER AS DOUBLE
+COMMON SHARED GUI_LAST_KEYPRESS AS LONG,    GUI_KEYPRESS_REPEATING AS INTEGER
+
+'Delay values for clicking and keypresses
+'When dragging the mouse to select text, if dragging requires scrolling to prevent from scrolling instantly we will only scroll another character after this time in seconds has happened
+COMMON SHARED GUI_DRAG_SELECTION_DELAY 
+COMMON SHARED GUI_DOUBLE_CLICK_DELAY 'Delay two clicks have to be inbetween to be considered a double click
+COMMON SHARED GUI_KEYPRESS_DELAY 'Delay from a keypress before we start repeating the key
+COMMON SHARED GUI_KEYPRESS_REPEAT_DELAY 'Delay between repeating a key again
+
 'default colors -- Values are set by GUI_init and are changable at any time
 COMMON SHARED GUI_DEFAULT_COLOR_BOX   as GUI_element_colors_type, GUI_DEFAULT_COLOR_INPUT    as GUI_element_colors_type
 COMMON SHARED GUI_DEFAULT_COLOR_TEXT  as GUI_element_colors_type, GUI_DEFAULT_COLOR_LIST     as GUI_element_colors_type

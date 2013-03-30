@@ -8,6 +8,12 @@
 
 SUB GUI_init()
 GUI_debug_output "GUI being Initalized"
+
+GUI_DRAG_SELECTION_DELAY = .05
+GUI_DOUBLE_CLICK_DELAY = .3
+GUI_KEYPRESS_DELAY = .7
+GUI_KEYPRESS_REPEAT_DELAY = .1
+
 GUI_debug_output "AltKey codes being setup..."
 a$ = "QWERTYUIOP????ASDFGHJKL?????ZXCVBNM" 'Credit to Galleon for the ALT key code
 FOR x = 1 TO LEN(a$)
@@ -516,6 +522,15 @@ locate row1, col1
 PRINT CHR$(218); STRING$(col2 - col1 - 1, 196); CHR$(191);
 for x = 1 to m.sub_menu_length
   men = _MEMGET(m.sub_menu, m.sub_menu.OFFSET + len(men) * (x - 1), GUI_menu_item_type)
+  if men.sub_menu_open and men.has_sub then
+    men_next_menu = men
+    sub_menu_row1 = row1 + x - 1
+    sub_menu_col1 = col2 + 1
+    sub_menu_open = -1
+  end if
+next x
+for x = 1 to m.sub_menu_length
+  men = _MEMGET(m.sub_menu, m.sub_menu.OFFSET + len(men) * (x - 1), GUI_menu_item_type)
   locate x + row1, col1
   color b.c.mcolor.fr, b.c.mcolor.bk
   print chr$(179);
@@ -529,14 +544,14 @@ for x = 1 to m.sub_menu_length
     PRINT CHR$(195); STRING$(col2 - col1 - 1, 196); CHR$(180);
   else
     if m.selected = x then
-      if GUI_alt_flag then
+      if GUI_alt_flag AND NOT sub_menu_open then
         GUI_print_menu MEM_get_str$(men.nam), b.c.selcolor.fr, b.c.selcolor.bk, b.c.scroll_color.fr, b.c.selcolor.bk
       else
         color b.c.selcolor.fr, b.c.selcolor.bk
         GUI_print_menu_no_hilight MEM_get_str$(men.nam)
       end if
     else
-      if GUI_alt_flag then
+      if GUI_alt_flag AND NOT sub_menu_open then
         GUI_print_menu MEM_get_str$(men.nam), b.c.mcolor.fr, b.c.mcolor.bk, b.c.scroll_color.fr, b.c.mcolor.bk
       else
         GUI_print_menu_no_hilight MEM_get_str$(men.nam)
@@ -547,12 +562,7 @@ for x = 1 to m.sub_menu_length
     else
       PRINT SPACE$(wid - GUI_menu_len(MEM_get_Str$(men.nam)));
     end if
-    if men.sub_menu_open and men.has_sub then
-      men_next_menu = men
-      sub_menu_row1 = row1 + x - 1
-      sub_menu_col1 = col2 + 1
-      sub_menu_open = -1
-    end if
+
     color b.c.mcolor.fr, b.c.mcolor.bk
     print chr$(179);
   end if
@@ -854,80 +864,63 @@ END FUNCTION
 FUNCTION GUI_menu_clicked_on (b as GUI_element_type, cx, cy, debth, selection)
 STATIC count, m AS GUI_menu_item_type
 DIM men as GUI_menu_item_type, mtmp as GUI_menu_item_type
+DIM mem_sav AS GUI_menu_item_type
 GUI_get_menu_location b, count, row1, col1, row2, col2
 
-'else
-  if count = 0 then
-    if b.selected > 0 and b.flags OR GUI_FLAG_MENU_OPEN then
-      m = _MEMGET(b.menu, b.menu.OFFSET + len(men) * (b.selected - 1), GUI_menu_item_type)
-      h_sub_menu = -1
-    end if
-  else
-    if m.has_sub and m.sub_menu_open then
-      m = _MEMGET(m.sub_menu, m.sub_menu.OFFSET + len(m) * (m.selected - 1), GUI_menu_item_type)
-      h_sub_menu = -1
-    end if
+if count = 0 then
+  if b.selected > 0 and (b.flags OR GUI_FLAG_MENU_OPEN) then
+    m = _MEMGET(b.menu, b.menu.OFFSET + len(men) * (b.selected - 1), GUI_menu_item_type)
+    h_sub_menu = -1
   end if
-'end if
-'if clicked = 0 then
+else
+  if m.has_sub and m.sub_menu_open then
+    m = _MEMGET(m.sub_menu, m.sub_menu.OFFSET + len(m) * (m.selected - 1), GUI_menu_item_type)
+    h_sub_menu = -1
+  end if
+end if
+
+mem_sav = m
 count = count + 1
-'d = debth
-'s = selection
-
 if h_sub_menu then 
-  if selection <> 0 then
-    d = debth
-    s = selection
-    selection = 0
-    'c = clicked
-  end if
-' ----- Check for a sub-menu before recursing -- Don't recurse if there isn't a sub-menu
   clicked = GUI_menu_clicked_on(b, cx, cy, debth, selection)
-  
-  if selection = 0 then
-    debth = d
-    selection = s
-  end if
 end if
-
-if cx >= col1 and cx <= col2 and cy >= row1 and cy <= row2 and not clicked then
-  clicked = -1
-  debth = count
-  selection = 0
-  if count = 0 then
-    'row1 = b.row1
-    'col2 = b.col1 + b.menu_padding
-    c = col1 + b.menu_padding
-    for x = 1 to b.length
-      men = _MEMGET(b.menu, b.menu.OFFSET + len(men) * (x - 1), GUI_menu_item_type)
-      if x = b.length AND (b.flags AND GUI_FLAG_MENU_LAST_ON_RIGHT) then
-        c = b.col2 - GUI_menu_len(MEM_get_str$(men.nam)) - 2
-      else
-        c = c
-      end if
-      if cx >= c and cx <= c + 2 + GUI_menu_len(MEM_get_str$(men.nam)) then
-        selection = x
-      end if
-      c = c + 2 + GUI_menu_len(MEM_get_str$(men.nam))
-    next x
-    row2 = row1
-  else
-    s = cy - row1
-    if s > 0 and s <= row2 - row1 then
-      mtmp = _MEMGET(m.sub_menu, m.sub_menu.OFFSET + len(mtmp) * (m.selected - 1), GUI_menu_item_type)
-      if MEM_get_str$(mtmp.nam) <> "-" then
-        selection = s
-      else
-        clicked = 0
-      end if
+count = count - 1
+m = mem_sav
+if not clicked then
+  if cx >= col1 and cx <= col2 and cy >= row1 and cy <= row2 then
+    GUI_debug_output "Click!"
+    clicked = -1
+    debth = count 
+    selection = 0
+    if count = 0 then
+      c = col1 + b.menu_padding
+      for x = 1 to b.length
+        men = _MEMGET(b.menu, b.menu.OFFSET + len(men) * (x - 1), GUI_menu_item_type)
+        if x = b.length AND (b.flags AND GUI_FLAG_MENU_LAST_ON_RIGHT) then
+          c = b.col2 - GUI_menu_len(MEM_get_str$(men.nam)) - 2
+        end if
+        if cx >= c and cx <= c + 2 + GUI_menu_len(MEM_get_str$(men.nam)) then
+          selection = x
+        end if
+        c = c + 2 + GUI_menu_len(MEM_get_str$(men.nam))
+      next x
+      row2 = row1
+    else
+      GUI_debug_output "About to check mem"
+      s = cy - row1
+      'if s > 0 and s <= row2 - row1 then
+      '  mtmp = _MEMGET(m.sub_menu, m.sub_menu.OFFSET + len(mtmp) * (s - 1), GUI_menu_item_type)
+      '  if MEM_get_str$(mtmp.nam) <> "-" then
+          selection = s
+      '  else
+      '    clicked = 0
+      '  end if
+      'end if
+      GUI_debug_output "Done!"
     end if
   end if
-  'selection =
 end if
-'if tclicked = 0 then
-'  d = debth
-count = count - 1
-'end if
+GUI_debug_output "Selection: " + str$(selection)
 if clicked then GUI_menu_clicked_on = -1
 END FUNCTION
 
@@ -961,9 +954,11 @@ DIM tempm AS GUI_menu_item_type, men AS GUI_menu_item_type, mtmp as GUI_menu_ite
 DIM memtmp as _MEM, offset as _OFFSET
 
 if (b.flags AND GUI_FLAG_MENU_OPEN) = 0 OR (b.flags AND GUI_FLAG_MENU_ALT) then
-  if m = M_DOWN OR m = M_ENTER then
+  if (m = M_DOWN OR m = M_ENTER) and b.selected > 0 then
     b.flags = b.flags OR GUI_FLAG_MENU_OPEN OR GUI_FLAG_UPDATED
-    tempm = _MEMGET(b.menu, b.menu.OFFSET + len(tempm) * b.selected, GUI_menu_item_type)
+    tempm = _MEMGET(b.menu, b.menu.OFFSET + len(tempm) * (b.selected - 1), GUI_menu_item_type)
+    tempm.selected = 1
+    _MEMPUT b.menu, b.menu.OFFSET + len(tempm) * (b.selected - 1), tempm
     GUI_close_sub_menu tempm
   elseif m = M_LEFT then
     b.selected = b.selected - 1
@@ -1211,11 +1206,46 @@ GUI_calc_scroll b.row1, b.col1, b.row2, b.col2, b
 END SUB
 
 FUNCTION GUI_inkey$ (gui() AS GUI_element_type, gui_num AS INTEGER, sel)
-DIM tempm AS GUI_menu_item_type, men AS GUI_menu_item_type
+DIM tempm AS GUI_menu_item_type, men AS GUI_menu_item_type, tmpm AS GUI_menu_item_type
 DIM memtmp as _MEM, offset as _OFFSET
+DIM ch as LONG
+ch = _KEYHIT
+if ch > 0 then GUI_debug_output "Keypress: " + str$(ch)
 
-keys = _KEYDOWN(100307) + _KEYDOWN(100308) * 2
-IF (keys) AND GUI_alt_flag = 0 THEN 'Alt Hold
+if ch <= 0 then
+  ch = -ch
+  key_release = -1
+  GUI_LAST_KEYPRESS = 0
+  GUI_KEYPRESS_TIMER = 0
+  GUI_KEYPRESS_REPEATING = 0
+elseif ch > 0 then
+  key_release = 0
+  GUI_LAST_KEYPRESS = ch
+  GUI_KEYPRESS_TIMER = TIMER(.001)
+elseif NOT GUI_KEYPRESS_REPEATING then
+  if (GUI_KEYPRESS_TIMER - TIMER(.001)) > GUI_KEYPRESS_DELAY then
+    GUI_KEYPRESS_REPEATING = -1
+    ch = GUI_LAST_KEYPRESS
+    GUI_KEYPRESS_TIMER = TIMER(.001)
+  end if
+elseif GUI_KEYPRESS_REPEATING then
+  if GUI_KEYPRESS_TIMER - TIMER(.001) > GUI_KEYPRESS_REPEAT_DELAY then
+    GUI_KEYPRESS_REPEATING = -1
+    ch = GUI_LAST_KEYPRESS
+    GUI_KEYPRESS_TIMER = TIMER(.001)
+  end if
+end if
+
+if ch > 0 then
+  if ch >= 255 and ch < 65535 then
+    GUI_debug_output "INKEY$:" + CHR$(ch \ 255) + CHR$(ch AND 255)
+  elseif ch < 256 then
+    GUI_debug_output "INKEY$:" + CHR$(ch)
+  end if
+end if
+
+keys = (ch = 100307) OR (ch = 100308)
+IF (keys) AND NOT key_release AND GUI_alt_flag = 0 THEN 'Alt Hold
   GUI_debug_output "Alt Held"
   GUI_alt_flag = -1
   'Switch to menu item if one is in gui()
@@ -1231,7 +1261,7 @@ IF (keys) AND GUI_alt_flag = 0 THEN 'Alt Hold
     gui(sel).flags = gui(sel).flags OR GUI_FLAG_UPDATED
   end if
 END IF
-IF keys = 0 AND GUI_alt_flag THEN 'Alt Release
+IF keys AND key_release AND GUI_alt_flag THEN 'Alt Release
   GUI_debug_output "Alt Release"
   GUI_alt_flag = 0
   if gui(sel).flags AND GUI_FLAG_MENU_ALT then
@@ -1248,334 +1278,322 @@ IF keys = 0 AND GUI_alt_flag THEN 'Alt Release
     gui(sel).flags = gui(sel).flags OR GUI_FLAG_UPDATED
   end if
 END IF
-keys = _KEYDOWN(100305) + _KEYDOWN(100306) * 2
-if keys AND GUI_ctl_flag = 0 THEN 'Ctl hold
+keys = (ch = 100305) OR (ch = 100306)
+if keys AND NOT key_release AND GUI_ctl_flag = 0 THEN 'Ctl hold
   GUI_debug_output "Ctl Held"
   GUI_ctl_flag = -1
-elseif keys = 0 AND GUI_ctl_flag then 'Ctl Release
+end if
+if keys = 0 AND key_release AND GUI_ctl_flag then 'Ctl Release
   GUI_debug_output "Ctl Release"
   GUI_ctl_flag = 0
 end if
 
-GUI_shift_flag = _KEYDOWN(100303) + _KEYDOWN(100304) * 2
-
-ch$ = INKEY$
-
-if ch$ > "" then
-  if len(ch$) >= 2 then
-    GUI_debug_output "INKEY$:" + str$(ASC(ch$, 1)) + str$(ASC(ch$, 2))
-  else
-    GUI_debug_output "INKEY$:" + str$(ASC(ch$, 1))
-  end if
+keys = (ch = 100303) OR (ch = 100304)
+if keys AND NOT key_release AND GUI_shift_flag = 0 then
+  GUI_debug_output "Shift Held"
+  GUI_shift_flag = -1
+end if
+if keys AND key_release AND GUI_shift_flag then
+  GUI_debug_output "Shift Release"
+  GUI_shift_flag = 0
 end if
 
-SELECT CASE ch$
-  CASE " " TO "~" 'typeable character
-    if gui(sel).element_type = GUI_INPUT_BOX then
-      GUI_add_character gui(sel), ch$
-      gui(sel).flags = gui(sel).flags OR GUI_FLAG_UPDATED
-    ELSEIF gui(sel).element_type = GUI_TEXT_BOX then
-      GUI_add_character_text_box gui(sel), ch$
-      gui(sel).flags = gui(sel).flags OR GUI_FLAG_UPDATED
-    elseif ch$ = " " and gui(sel).element_type = GUI_CHECKBOX then
-      gui(sel).flags = (gui(sel).flags XOR GUI_FLAG_CHECKED) OR GUI_FLAG_UPDATED
-    elseif ch$ = " " and gui(sel).element_type = GUI_RADIO_BUTTON then
-      gui(sel).flags = (gui(sel).flags OR GUI_FLAG_CHECKED) OR GUI_FLAG_UPDATED
-      FOR x = 1 to gui_num
-        if x <> sel then
-          if gui(x).element_type = GUI_RADIO_BUTTON then
-            if gui(x).group = gui(sel).group then
-              gui(x).flags = gui(x).flags AND NOT GUI_FLAG_CHECKED
+if not key_release and not GUI_alt_flag and not GUI_ctl_flag then
+  SELECT CASE ch
+    CASE ASC(" ") TO ASC("~") 'typeable character
+      if gui(sel).element_type = GUI_INPUT_BOX then
+        GUI_add_character gui(sel), chr$(ch)
+        gui(sel).flags = gui(sel).flags OR GUI_FLAG_UPDATED
+      ELSEIF gui(sel).element_type = GUI_TEXT_BOX then
+        GUI_add_character_text_box gui(sel), chr$(ch)
+        gui(sel).flags = gui(sel).flags OR GUI_FLAG_UPDATED
+      elseif ch = asc(" ") and gui(sel).element_type = GUI_CHECKBOX then
+        gui(sel).flags = (gui(sel).flags XOR GUI_FLAG_CHECKED) OR GUI_FLAG_UPDATED
+      elseif ch = asc(" ") and gui(sel).element_type = GUI_RADIO_BUTTON then
+        gui(sel).flags = (gui(sel).flags OR GUI_FLAG_CHECKED) OR GUI_FLAG_UPDATED
+        FOR x = 1 to gui_num
+          if x <> sel then
+            if gui(x).element_type = GUI_RADIO_BUTTON then
+              if gui(x).group = gui(sel).group then
+                gui(x).flags = gui(x).flags AND NOT GUI_FLAG_CHECKED
+              end if
             end if
           end if
+        NEXT x
+      elseif ch = asc(" ") and gui(sel).element_type = GUI_BUTTON then
+        GUI_queue_mouse_click sel
+      end if
+    CASE 8 'BACKSPACE
+      if gui(sel).element_type = GUI_INPUT_BOX then
+        GUI_del_character gui(sel)
+        gui(sel).flags = gui(sel).flags OR GUI_FLAG_UPDATED
+      elseif gui(sel).element_type = GUI_TEXT_BOX then
+        GUI_del_character_text_box gui(sel)
+        gui(sel).flags = gui(sel).flags OR GUI_FLAG_UPDATED
+      end if
+    CASE 9 'Tab
+      do
+        sel = (sel mod gui_num) + 1
+      loop until (gui(sel).flags AND GUI_FLAG_SKIP) = 0
+      gui(sel).flags = gui(sel).flags OR GUI_FLAG_UPDATED
+    CASE 13 'Enter
+      if gui(sel).element_type = GUI_TEXT_BOX then
+        tex$ = mid$(MEM_get_str_array$(gui(sel).lines, gui(sel).selected), gui(sel).text_position + 1)
+  
+        if gui(sel).length + 1 > gui(sel).lines.allocated and (gui(sel).length < gui(sel).max_lines OR gui(sel).max_lines = 0) then
+          MEM_allocate_string_array gui(sel).lines, gui(sel).length + 10
+          gui(sel).length = gui(sel).length + 1
+        elseif gui(sel).length < gui(sel).max_lines OR gui(sel).max_lines = 0 then
+          gui(sel).length = gui(sel).length + 1
         end if
-      NEXT x
-    elseif ch$ = " " and gui(sel).element_type = GUI_BUTTON then
-      GUI_queue_mouse_click sel
-    end if
-  CASE CHR$(8) 'BACKSPACE
-    if gui(sel).element_type = GUI_INPUT_BOX then
-      GUI_del_character gui(sel)
-      gui(sel).flags = gui(sel).flags OR GUI_FLAG_UPDATED
-    elseif gui(sel).element_type = GUI_TEXT_BOX then
-      GUI_del_character_text_box gui(sel)
-      gui(sel).flags = gui(sel).flags OR GUI_FLAG_UPDATED
-    end if
-  CASE chr$(9) 'Tab
-    do
-      sel = (sel mod gui_num) + 1
-    loop until (gui(sel).flags AND GUI_FLAG_SKIP) = 0
-    gui(sel).flags = gui(sel).flags OR GUI_FLAG_UPDATED
-  CASE CHR$(13) 'Enter
-    if gui(sel).element_type = GUI_TEXT_BOX then
-      tex$ = mid$(MEM_get_str_array$(gui(sel).lines, gui(sel).selected), gui(sel).text_position + 1)
-
-      if gui(sel).length + 1 > gui(sel).lines.allocated and (gui(sel).length < gui(sel).max_lines OR gui(sel).max_lines = 0) then
-        MEM_allocate_string_array gui(sel).lines, gui(sel).length + 10
-        gui(sel).length = gui(sel).length + 1
-      elseif gui(sel).length < gui(sel).max_lines OR gui(sel).max_lines = 0 then
-        gui(sel).length = gui(sel).length + 1
+  
+        for x = gui(sel).length to gui(sel).selected + 1 STEP -1
+          MEM_put_str_array gui(sel).lines, x, MEM_get_str_array$(gui(sel).lines, x - 1)
+        next x
+  
+        MEM_put_str_array gui(sel).lines, gui(sel).selected + 1, tex$
+        MEM_put_str_array gui(sel).lines, gui(sel).selected, mid$(MEM_get_str_array$(gui(sel).lines, gui(sel).selected), 1, gui(sel).text_position)
+        gui(sel).selected = gui(sel).selected + 1
+        if gui(sel).selected > gui(sel).length then
+          gui(sel).selected = gui(sel).selected - 1
+        end if
+        gui(sel).text_position = 0
+        gui(sel).scroll_offset_hors = 0
+        gui(sel).flags = gui(sel).flags OR GUI_FLAG_UPDATED
+        if gui(sel).selected > gui(sel).scroll_offset_vert + (gui(sel).row2 - gui(sel).row1 - 1) then
+          gui(sel).scroll_offset_vert = gui(sel).scroll_offset_vert + 1
+        end if
+  
+        GUI_calc_scroll gui(sel).row1, gui(sel).col1, gui(sel).row2, gui(sel).col2, gui(sel)
+      elseif gui(sel).element_type = GUI_MENU then 'and gui(sel).selected > 0 then
+        GUI_menu_movement 5, gui(sel)
+      elseif gui(sel).element_type = GUI_BUTTON then
+        GUI_queue_mouse_click sel
+      elseif gui(sel).element_type = GUI_RADIO_BUTTON then
+        gui(sel).flags = gui(sel).flags XOR GUI_FLAG_CHECKED
+        FOR x = 1 to gui_num
+          if x <> sel then
+            if gui(x).element_type = GUI_RADIO_BUTTON then
+              if gui(x).group = gui(sel).group then
+                gui(x).flags = gui(sel).flags AND NOT GUI_FLAG_CHECKED
+              end if
+            end if
+          end if
+        NEXT x
+      elseif gui(sel).element_type = GUI_CHECKBOX then
+        gui(sel).flags = gui(sel).flags XOR GUI_FLAG_CHECKED
+      elseif gui(sel).element_type = GUI_DROP_DOWN then
+        gui(sel).flags = (gui(sel).flags XOR GUI_FLAG_DROP_FLAG) OR GUI_FLAG_UPDATED
+      elseif gui(sel).element_type = GUI_LIST_BOX then
+        GUI_queue_mouse_click sel
+        gui(sel).flags = gui(sel).flags OR GUI_FLAG_UPDATED
       end if
-
-      for x = gui(sel).length to gui(sel).selected + 1 STEP -1
-        MEM_put_str_array gui(sel).lines, x, MEM_get_str_array$(gui(sel).lines, x - 1)
-      next x
-
-      MEM_put_str_array gui(sel).lines, gui(sel).selected + 1, tex$
-      MEM_put_str_array gui(sel).lines, gui(sel).selected, mid$(MEM_get_str_array$(gui(sel).lines, gui(sel).selected), 1, gui(sel).text_position)
-      gui(sel).selected = gui(sel).selected + 1
-      if gui(sel).selected > gui(sel).length then
-        gui(sel).selected = gui(sel).selected - 1
+    CASE CVI(CHR$(0) + CHR$(80)) 'DOWN
+      if gui(sel).element_type = GUI_LIST_BOX OR gui(sel).element_type = GUI_TEXT_BOX OR (gui(sel).element_type = GUI_DROP_DOWN AND (gui(sel).flags AND GUI_FLAG_DROP_FLAG)) then
+        if gui(sel).selected < gui(sel).length then
+          gui(sel).selected = gui(sel).selected + 1
+          GUI_fix_scroll gui(sel)
+          GUI_calc_scroll gui(sel).row1, gui(sel).col1, gui(sel).row2, gui(sel).col2, gui(sel)
+          gui(sel).flags = gui(sel).flags OR GUI_FLAG_UPDATED
+        end if
+      ELSEIF gui(sel).element_type = GUI_DROP_DOWN then
+        gui(sel).flags = gui(sel).flags OR GUI_FLAG_DROP_FLAG
+      ELSEIF gui(sel).element_type = GUI_MENU then 'and gui(sel).selected > 0  then
+        GUI_menu_movement 3, gui(sel)
       end if
-      gui(sel).text_position = 0
-      gui(sel).scroll_offset_hors = 0
-      gui(sel).flags = gui(sel).flags OR GUI_FLAG_UPDATED
-      if gui(sel).selected > gui(sel).scroll_offset_vert + (gui(sel).row2 - gui(sel).row1 - 1) then
-        gui(sel).scroll_offset_vert = gui(sel).scroll_offset_vert + 1
+    CASE CVI(CHR$(0) + CHR$(72)) 'UP
+      if gui(sel).element_type = GUI_LIST_BOX OR gui(sel).element_type = GUI_TEXT_BOX OR (gui(sel).element_type = GUI_DROP_DOWN AND (gui(sel).flags AND GUI_FLAG_DROP_FLAG))  then
+        if gui(sel).selected > 1 then
+          gui(sel).selected = gui(sel).selected - 1
+          GUI_fix_scroll gui(sel)
+          GUI_calc_scroll gui(sel).row1, gui(sel).col1, gui(sel).row2, gui(sel).col2, gui(sel)
+          gui(sel).flags = gui(sel).flags OR GUI_FLAG_UPDATED
+        end if
+      elseif gui(sel).element_type = GUI_MENU then
+        GUI_menu_movement 1, gui(sel)
       end if
-
-      GUI_calc_scroll gui(sel).row1, gui(sel).col1, gui(sel).row2, gui(sel).col2, gui(sel)
-    elseif gui(sel).element_type = GUI_MENU then 'and gui(sel).selected > 0 then
-      GUI_menu_movement 5, gui(sel)
-      'if ((gui(sel).flags AND GUI_FLAG_MENU_ALT) OR (gui(sel).flags AND GUI_FLAG_MENU_OPEN)) = 0 then
-      '  gui(sel).flags = gui(sel).flags OR GUI_FLAG_MENU_OPEN
-      '  tempm = _MEMGET(gui(sel).menu, gui(sel).menu.OFFSET + len(tempm) * (gui(sel).selected - 1), GUI_menu_item_type)
-      '  GUI_close_sub_menu tempm
-      'elseif gui(sel).flags AND GUI_FLAG_MENU_OPEN then
-      '  tempm = _MEMGET(gui(sel).menu, gui(sel).menu.OFFSET + len(tempm) * (gui(sel).selected - 1), GUI_menu_item_type)
-      '  men = _MEMGET(tempm.sub_menu, tempm.sub_menu.OFFSET + len(tempm) * (tempm.selected - 1), GUI_menu_item_type)
-      '  if NOT men.has_sub then
-      '    gui(sel).menu_choice = men.ident
-      '    gui(sel).selected = 0
-      '    gui(sel).flags = (gui(sel).flags OR GUI_FLAG_MENU_CHOSEN OR GUI_FLAG_UPDATED) AND NOT GUI_FLAG_MENU_OPEN
-      '  else
-      '    men.selected = 1
-      '    gui(sel).flags = gui(sel).flags OR GUI_FLAG_UPDATED
+    CASE CVI(CHR$(0) + CHR$(75)) 'LEFT
+      if gui(sel).element_type = GUI_INPUT_BOX OR gui(sel).element_type = GUI_TEXT_BOX then
+        IF gui(sel).text_position > 0 THEN
+          gui(sel).text_position = gui(sel).text_position - 1
+          IF gui(sel).text_position < gui(sel).scroll_offset_hors THEN
+            gui(sel).scroll_offset_hors = gui(sel).scroll_offset_hors - 1
+          END IF
+          gui(sel).flags = gui(sel).flags OR GUI_FLAG_UPDATED
+          GUI_calc_scroll gui(sel).row1, gui(sel).col1, gui(sel).row2, gui(sel).col2, gui(sel)
+          if GUI_shift_flag = 0 then
+            gui(sel).text_sel_col1 = gui(sel).text_position
+            gui(sel).text_sel_col2 = gui(sel).text_sel_col1
+          else
+            gui(sel).text_sel_col2 = gui(sel).text_position
+          end if
+        END IF
+      ELSEIF gui(sel).element_type = GUI_DROP_DOWN or gui(sel).element_type = GUI_LIST_BOX then
+        if gui(sel).flags AND GUI_FLAG_SCROLL_H then
+          if gui(sel).scroll_offset_hors > 0 then
+            gui(sel).scroll_offset_hors = gui(sel).scroll_offset_hors - 1
+            gui(sel).flags = gui(sel).flags OR GUI_FLAG_UPDATED
+            GUI_calc_scroll gui(sel).row1, gui(sel).col1, gui(sel).row2, gui(sel).col2, gui(sel)
+          end if
+        end if
+      ELSEIF gui(sel).element_type = GUI_MENU then
+        GUI_menu_movement 4, gui(sel)
+      end if
+    CASE CVI(CHR$(0) + CHR$(77)) 'RIGHT
+      if gui(sel).element_type = GUI_INPUT_BOX OR gui(sel).element_type = GUI_TEXT_BOX then
+        IF (gui(sel).text_position < gui(sel).text.length AND gui(sel).element_type = GUI_INPUT_BOX) OR gui(sel).element_type = GUI_TEXT_BOX THEN
+          gui(sel).text_position = gui(sel).text_position + 1
+          IF gui(sel).text_position > gui(sel).scroll_offset_hors + (gui(sel).col2 - gui(sel).col1 - 1) THEN
+            gui(sel).scroll_offset_hors = gui(sel).scroll_offset_hors + 1
+          END IF
+          gui(sel).flags = gui(sel).flags OR GUI_FLAG_UPDATED
+          GUI_calc_scroll gui(sel).row1, gui(sel).col1, gui(sel).row2, gui(sel).col2, gui(sel)
+          if GUI_shift_flag = 0 then
+            gui(sel).text_sel_col1 = gui(sel).text_position
+            gui(sel).text_sel_col2 = gui(sel).text_sel_col1
+          else
+            gui(sel).text_sel_col2 = gui(sel).text_position
+          end if
+        end if
+      ELSEIF gui(sel).element_type = GUI_DROP_DOWN or gui(sel).element_type = GUI_LIST_BOX then
+        if gui(sel).flags AND GUI_FLAG_SCROLL_H then
+          if gui(sel).scroll_offset_hors < gui(sel).scroll_max_hors - (gui(sel).col2 - gui(sel).col1 - 1) then
+            gui(sel).scroll_offset_hors = gui(sel).scroll_offset_hors + 1
+            gui(sel).flags = gui(sel).flags OR GUI_FLAG_UPDATED
+            GUI_calc_scroll gui(sel).row1, gui(sel).col1, gui(sel).row2, gui(sel).col2, gui(sel)
+          end if
+        end if
+      ELSEIF gui(sel).element_type = GUI_MENU then
+        GUI_menu_movement 2, gui(sel)
+  
+      END IF
+    CASE CVI(CHR$(0) + CHR$(73)) 'PageUp
+      if gui(sel).element_type = GUI_LIST_BOX OR gui(sel).element_type = GUI_TEXT_BOX OR (gui(sel).element_type = GUI_DROP_DOWN AND (gui(sel).flags AND GUI_FLAG_DROP_FLAG))  then
+        gui(sel).selected = gui(sel).selected - (gui(sel).row2 - gui(sel).row1 - 1)
+        if gui(sel).selected < 1 then gui(sel).selected = 1
+        GUI_fix_scroll gui(sel)
+        GUI_calc_scroll gui(sel).row1, gui(sel).col1, gui(sel).row2, gui(sel).col2, gui(sel)
+        gui(sel).flags = gui(sel).flags OR GUI_FLAG_UPDATED
+      end if
+    CASE CVI(CHR$(0) + CHR$(81)) 'PageDown
+      if gui(sel).element_type = GUI_LIST_BOX OR gui(sel).element_type = GUI_TEXT_BOX OR (gui(sel).element_type = GUI_DROP_DOWN AND (gui(sel).flags AND GUI_FLAG_DROP_FLAG)) then
+        gui(sel).selected = gui(sel).selected + (gui(sel).row2 - gui(sel).row1 - 1)
+        if gui(sel).selected > gui(sel).length then gui(sel).selected = gui(sel).length
+        GUI_fix_scroll gui(sel)
+        GUI_calc_scroll gui(sel).row1, gui(sel).col1, gui(sel).row2, gui(sel).col2, gui(sel)
+        gui(sel).flags = gui(sel).flags OR GUI_FLAG_UPDATED
+      end if
+    case else
+      'if GUI_alt_flag and  = 2 and NOT GUI_ctl_flag then
+      '  k$ = GUI_alt_codes$(ASC(ch$, 2))
+      '  if gui(sel).element_type = GUI_MENU and GUI_alt_flag then
+      '    if gui(sel).flags AND GUI_FLAG_MENU_ALT then
+      '      for x = 1 to gui(sel).length
+      '        men = _MEMGET(gui(sel).menu, gui(sel).menu.OFFSET + len(men) * (x - 1), GUI_menu_item_type)
+      '        if ucase$(k$) = ucase$(GUI_menu_char$(MEM_get_str$(men.nam))) then
+      '          gui(sel).selected = x
+      '          gui(sel).flags = (gui(sel).flags OR GUI_FLAG_MENU_OPEN OR GUI_FLAG_UPDATED) AND NOT GUI_FLAG_MENU_ALT
+      '          men.selected = 1
+      '          _MEMPUT gui(sel).menu, gui(sel).menu.OFFSET + len(men) * (x - 1), men
+      '        end if
+      '      next x
+      '    elseif gui(sel).flags AND GUI_FLAG_MENU_OPEN then
+      '      men = _MEMGET(gui(sel).menu, gui(sel).menu.OFFSET + len(men) * (gui(sel).selected - 1), GUI_menu_item_type)
+      '      for x = 1 to men.sub_menu_length
+      '        tempm = _MEMGET(men.sub_menu, men.sub_menu.OFFSET + len(men) * (x - 1), GUI_menu_item_type)
+      '        if ucase$(k$) = ucase$(GUI_menu_char$(MEM_get_str$(tempm.nam))) then
+      '          gui(sel).menu_choice = tempm.ident
+      '          gui(sel).flags = (gui(sel).flags OR GUI_FLAG_UPDATED OR GUI_FLAG_MENU_CHOSEN) AND NOT GUI_FLAG_MENU_OPEN
+      '          gui(sel).selected = 0
+      '        end if
+      '      next x
+      '    end if
+      '  end if
+      'elseif GUI_ctl_flag and NOT GUI_alt_flag then
+      '  if ch$ = chr$(22) then 'CTRL + V
+      '    GUI_debug_output "Paste"
+      '    SELECT CASE gui(sel).element_type
+      '      CASE GUI_INPUT_BOX
+      '        GUI_add_character gui(sel), _CLIPBOARD$
+      '        gui(sel).flags = gui(sel).flags OR GUI_FLAG_UPDATED
+      '    END SELECT
+      '  elseif ch$ = chr$(3) then 'CTRL + C
+      '    GUI_debug_output "Copy"
+      '    SELECT CASE gui(sel).element_type
+      '      CASE GUI_INPUT_BOX
+      '        t$ = MEM_get_str$(gui(sel).text)
+      '        _CLIPBOARD$ = mid$(t$, gui(sel).text_sel_col1 + 1, gui(sel).text_sel_col2 - gui(sel).text_sel_col1)
+      '    END SELECT
+      '  elseif ch$ = chr$(24) then 'CTRL + X
+      '    GUI_debug_output "Cut"
+      '    SELECT CASE gui(sel).element_type
+      '      CASE GUI_INPUT_BOX
+      '        t$ = MEM_get_str$(gui(sel).text)
+      '        _CLIPBOARD$ = mid$(t$, gui(sel).text_sel_col1 + 1, gui(sel).text_sel_col2 - gui(sel).text_sel_col1)
+      '        GUI_del_character gui(sel)
+      '        gui(sel).flags = gui(sel).flags OR GUI_FLAG_UPDATED
+      '    END SELECT
       '  end if
       'end if
-    elseif gui(sel).element_type = GUI_BUTTON then
-      GUI_queue_mouse_click sel
-    elseif gui(sel).element_type = GUI_RADIO_BUTTON then
-      gui(sel).flags = gui(sel).flags XOR GUI_FLAG_CHECKED
-      FOR x = 1 to gui_num
-        if x <> sel then
-          if gui(x).element_type = GUI_RADIO_BUTTON then
-            if gui(x).group = gui(sel).group then
-              gui(x).flags = gui(sel).flags AND NOT GUI_FLAG_CHECKED
-            end if
-          end if
-        end if
-      NEXT x
-    elseif gui(sel).element_type = GUI_CHECKBOX then
-      gui(sel).flags = gui(sel).flags XOR GUI_FLAG_CHECKED
-    elseif gui(sel).element_type = GUI_DROP_DOWN then
-      gui(sel).flags = (gui(sel).flags XOR GUI_FLAG_DROP_FLAG) OR GUI_FLAG_UPDATED
-    elseif gui(sel).element_type = GUI_LIST_BOX then
-      GUI_queue_mouse_click sel
-      gui(sel).flags = gui(sel).flags OR GUI_FLAG_UPDATED
-    end if
-  CASE CHR$(0) + CHR$(80) 'DOWN
-    if gui(sel).element_type = GUI_LIST_BOX OR gui(sel).element_type = GUI_TEXT_BOX OR (gui(sel).element_type = GUI_DROP_DOWN AND (gui(sel).flags AND GUI_FLAG_DROP_FLAG)) then
-      if gui(sel).selected < gui(sel).length then
-        gui(sel).selected = gui(sel).selected + 1
-        GUI_fix_scroll gui(sel)
-        GUI_calc_scroll gui(sel).row1, gui(sel).col1, gui(sel).row2, gui(sel).col2, gui(sel)
-        gui(sel).flags = gui(sel).flags OR GUI_FLAG_UPDATED
-      end if
-    ELSEIF gui(sel).element_type = GUI_DROP_DOWN then
-      gui(sel).flags = gui(sel).flags OR GUI_FLAG_DROP_FLAG
-    ELSEIF gui(sel).element_type = GUI_MENU then 'and gui(sel).selected > 0  then
-      GUI_menu_movement 3, gui(sel)
-      'if ((gui(sel).flags AND GUI_FLAG_MENU_ALT) OR (gui(sel).flags AND GUI_FLAG_MENU_OPEN)) = 0 then
-      '  gui(sel).flags = gui(sel).flags OR GUI_FLAG_MENU_OPEN
-      'elseif gui(sel).flags AND GUI_FLAG_MENU_OPEN then
-        'memtmp = gui(sel).menu
-        'offset = len(tempm) * (gui(sel).selected - 1)
-        'tempm = _MEMGET(gui(sel).menu, gui(sel).menu.OFFSET + len(tempm) * (gui(sel).selected - 1), GUI_menu_item_type)
+  END SELECT
+end if
 
-        'FOR d = 1 to debth - 1
-          'if d >= debth - 1 then mtmp.selected = selection
-          'if d < debth  then
-          'men = _MEMGET(mtmp.sub_menu, mtmp.sub_menu.OFFSET + len(men) * (mtmp.selected - 1), GUI_menu_item_type)
-          'else
-          '  men = _MEMGET(mtmp.sub_menu, mtmp.sub_menu.OFFSET + len(men) * (selection - 1), GUI_menu_item_type)
-          'end if
-        '  if d < debth then
-        '    GUI_debug_output "I was here!"
-        '    memtmp = mtmp.sub_menu
-        '    offset = len(mtmp) * (mtmp.selected - 1)
-        '    mtmp = men
-        '  end if
-        
-        'NEXT d
-      '  tempm = _MEMGET(gui(sel).menu, gui(sel).menu.OFFSET + len(tempm) * (gui(sel).selected - 1), GUI_menu_item_type)
-      '  do
-      '    tempm.selected = (tempm.selected mod tempm.sub_menu_length) + 1
-      '    men = _MEMGET(tempm.sub_menu, tempm.sub_menu.OFFSET + len(tempm) * (tempm.selected - 1), GUI_menu_item_type)
-      '  loop until MEM_get_str$(men.nam) <> "-"
-      '  _MEMPUT gui(sel).menu, gui(sel).menu.OFFSET + len(tempm) * (gui(sel).selected - 1), tempm
-      'end if
-      'gui(sel).flags = gui(sel).flags OR GUI_FLAG_UPDATED
-    end if
-  CASE CHR$(0) + CHR$(72) 'UP
-    if gui(sel).element_type = GUI_LIST_BOX OR gui(sel).element_type = GUI_TEXT_BOX OR (gui(sel).element_type = GUI_DROP_DOWN AND (gui(sel).flags AND GUI_FLAG_DROP_FLAG))  then
-      if gui(sel).selected > 1 then
-        gui(sel).selected = gui(sel).selected - 1
-        GUI_fix_scroll gui(sel)
-        GUI_calc_scroll gui(sel).row1, gui(sel).col1, gui(sel).row2, gui(sel).col2, gui(sel)
-        gui(sel).flags = gui(sel).flags OR GUI_FLAG_UPDATED
-      end if
-    elseif gui(sel).element_type = GUI_MENU then
-      GUI_menu_movement 1, gui(sel)
-      'if gui(sel).flags AND GUI_FLAG_MENU_OPEN then
-      '  tempm = _MEMGET(gui(sel).menu, gui(sel).menu.OFFSET + len(tempm) * (gui(sel).selected - 1), GUI_menu_item_type)
-      '  do
-      '    tempm.selected = tempm.selected - 1
-      '    if tempm.selected = 0 then
-      '      tempm.selected = tempm.sub_menu_length
-      '    end if
-      '    men = _MEMGET(tempm.sub_menu, tempm.sub_menu.OFFSET + len(tempm) * (tempm.selected - 1), GUI_menu_item_type)
-      '  loop until MEM_get_str$(men.nam) <> "-"
-      '  _MEMPUT gui(sel).menu, gui(sel).menu.OFFSET + len(tempm) * (gui(sel).selected - 1), tempm
-      'end if
-      'gui(sel).flags = gui(sel).flags OR GUI_FLAG_UPDATED
-    end if
-  CASE CHR$(0) + CHR$(75) 'LEFT
-    if gui(sel).element_type = GUI_INPUT_BOX OR gui(sel).element_type = GUI_TEXT_BOX then
-      IF gui(sel).text_position > 0 THEN
-        gui(sel).text_position = gui(sel).text_position - 1
-        IF gui(sel).text_position < gui(sel).scroll_offset_hors THEN
-          gui(sel).scroll_offset_hors = gui(sel).scroll_offset_hors - 1
-        END IF
-        gui(sel).flags = gui(sel).flags OR GUI_FLAG_UPDATED
-        GUI_calc_scroll gui(sel).row1, gui(sel).col1, gui(sel).row2, gui(sel).col2, gui(sel)
-        if GUI_shift_flag = 0 then
-          gui(sel).text_sel_col1 = gui(sel).text_position
-          gui(sel).text_sel_col2 = gui(sel).text_sel_col1
-        else
-          gui(sel).text_sel_col2 = gui(sel).text_position
-        end if
-      END IF
-    ELSEIF gui(sel).element_type = GUI_DROP_DOWN or gui(sel).element_type = GUI_LIST_BOX then
-      if gui(sel).flags AND GUI_FLAG_SCROLL_H then
-        if gui(sel).scroll_offset_hors > 0 then
-          gui(sel).scroll_offset_hors = gui(sel).scroll_offset_hors - 1
-          gui(sel).flags = gui(sel).flags OR GUI_FLAG_UPDATED
-          GUI_calc_scroll gui(sel).row1, gui(sel).col1, gui(sel).row2, gui(sel).col2, gui(sel)
-        end if
-      end if
-    ELSEIF gui(sel).element_type = GUI_MENU then
-      GUI_menu_movement 4, gui(sel)
-      'gui(sel).selected = gui(sel).selected - 1
-      'if gui(sel).selected = 0 then gui(sel).selected = gui(sel).length
-      'men = _MEMGET(gui(sel).menu, gui(sel).menu.OFFSET + len(men) * (gui(sel).selected - 1), GUI_menu_item_type)
-      'men.selected = 1
-      '_MEMPUT gui(sel).menu, gui(sel).menu.OFFSET + len(men) * (gui(sel).selected - 1), men
-      'gui(sel).flags = gui(sel).flags OR GUI_FLAG_UPDATED
-    end if
-  CASE CHR$(0) + CHR$(77) 'RIGHT
-    if gui(sel).element_type = GUI_INPUT_BOX OR gui(sel).element_type = GUI_TEXT_BOX then
-      IF (gui(sel).text_position < gui(sel).text.length AND gui(sel).element_type = GUI_INPUT_BOX) OR gui(sel).element_type = GUI_TEXT_BOX THEN
-        gui(sel).text_position = gui(sel).text_position + 1
-        IF gui(sel).text_position > gui(sel).scroll_offset_hors + (gui(sel).col2 - gui(sel).col1 - 1) THEN
-          gui(sel).scroll_offset_hors = gui(sel).scroll_offset_hors + 1
-        END IF
-        gui(sel).flags = gui(sel).flags OR GUI_FLAG_UPDATED
-        GUI_calc_scroll gui(sel).row1, gui(sel).col1, gui(sel).row2, gui(sel).col2, gui(sel)
-        if GUI_shift_flag = 0 then
-          gui(sel).text_sel_col1 = gui(sel).text_position
-          gui(sel).text_sel_col2 = gui(sel).text_sel_col1
-        else
-          gui(sel).text_sel_col2 = gui(sel).text_position
-        end if
-      end if
-    ELSEIF gui(sel).element_type = GUI_DROP_DOWN or gui(sel).element_type = GUI_LIST_BOX then
-      if gui(sel).flags AND GUI_FLAG_SCROLL_H then
-        if gui(sel).scroll_offset_hors < gui(sel).scroll_max_hors - (gui(sel).col2 - gui(sel).col1 - 1) then
-          gui(sel).scroll_offset_hors = gui(sel).scroll_offset_hors + 1
-          gui(sel).flags = gui(sel).flags OR GUI_FLAG_UPDATED
-          GUI_calc_scroll gui(sel).row1, gui(sel).col1, gui(sel).row2, gui(sel).col2, gui(sel)
-        end if
-      end if
-    ELSEIF gui(sel).element_type = GUI_MENU then
-      GUI_menu_movement 2, gui(sel)
-      'gui(sel).selected = (gui(sel).selected mod gui(sel).length) + 1
-      'men = _MEMGET(gui(sel).menu, gui(sel).menu.OFFSET + len(men) * (gui(sel).selected - 1), GUI_menu_item_type)
-      'men.selected = 1
-      '_MEMPUT gui(sel).menu, gui(sel).menu.OFFSET + len(men) * (gui(sel).selected - 1), men
-      'gui(sel).flags = gui(sel).flags OR GUI_FLAG_UPDATED
-    END IF
-  CASE CHR$(0) + CHR$(73) 'PageUp
-    if gui(sel).element_type = GUI_LIST_BOX OR gui(sel).element_type = GUI_TEXT_BOX OR (gui(sel).element_type = GUI_DROP_DOWN AND (gui(sel).flags AND GUI_FLAG_DROP_FLAG))  then
-      gui(sel).selected = gui(sel).selected - (gui(sel).row2 - gui(sel).row1 - 1)
-      if gui(sel).selected < 1 then gui(sel).selected = 1
-      GUI_fix_scroll gui(sel)
-      GUI_calc_scroll gui(sel).row1, gui(sel).col1, gui(sel).row2, gui(sel).col2, gui(sel)
-      gui(sel).flags = gui(sel).flags OR GUI_FLAG_UPDATED
-    end if
-  CASE CHR$(0) + CHR$(81) 'PageDown
-    if gui(sel).element_type = GUI_LIST_BOX OR gui(sel).element_type = GUI_TEXT_BOX OR (gui(sel).element_type = GUI_DROP_DOWN AND (gui(sel).flags AND GUI_FLAG_DROP_FLAG)) then
-      gui(sel).selected = gui(sel).selected + (gui(sel).row2 - gui(sel).row1 - 1)
-      if gui(sel).selected > gui(sel).length then gui(sel).selected = gui(sel).length
-      GUI_fix_scroll gui(sel)
-      GUI_calc_scroll gui(sel).row1, gui(sel).col1, gui(sel).row2, gui(sel).col2, gui(sel)
-      gui(sel).flags = gui(sel).flags OR GUI_FLAG_UPDATED
-    end if
-  CASE else 'Alt code
-    if GUI_alt_flag and len(ch$) = 2 and NOT GUI_ctl_flag then
-      k$ = GUI_alt_codes$(ASC(ch$, 2))
-      if gui(sel).element_type = GUI_MENU and GUI_alt_flag then
-        if gui(sel).flags AND GUI_FLAG_MENU_ALT then
-          for x = 1 to gui(sel).length
-            men = _MEMGET(gui(sel).menu, gui(sel).menu.OFFSET + len(men) * (x - 1), GUI_menu_item_type)
-            if ucase$(k$) = ucase$(GUI_menu_char$(MEM_get_str$(men.nam))) then
-              gui(sel).selected = x
-              gui(sel).flags = (gui(sel).flags OR GUI_FLAG_MENU_OPEN OR GUI_FLAG_UPDATED) AND NOT GUI_FLAG_MENU_ALT
-              men.selected = 1
-              _MEMPUT gui(sel).menu, gui(sel).menu.OFFSET + len(men) * (x - 1), men
-            end if
-          next x
-        elseif gui(sel).flags AND GUI_FLAG_MENU_OPEN then
-          men = _MEMGET(gui(sel).menu, gui(sel).menu.OFFSET + len(men) * (gui(sel).selected - 1), GUI_menu_item_type)
-          for x = 1 to men.sub_menu_length
-            tempm = _MEMGET(men.sub_menu, men.sub_menu.OFFSET + len(men) * (x - 1), GUI_menu_item_type)
-            if ucase$(k$) = ucase$(GUI_menu_char$(MEM_get_str$(tempm.nam))) then
-              gui(sel).menu_choice = tempm.ident
+if not key_release and GUI_alt_flag then
+  if ch < 256 and ch > 0 then
+    k$ = ucase$(chr$(ch))
+    GUI_debug_output "K=" + k$
+    if gui(sel).element_type = GUI_MENU then
+      if gui(sel).flags AND GUI_FLAG_MENU_OPEN then
+        memtmp = gui(sel).menu
+        offset = len(mtmp) * (gui(sel).selected - 1)
+        tempm = _MEMGET(gui(sel).menu, gui(sel).menu.OFFSET + len(tempm) * (gui(sel).selected - 1), GUI_menu_item_type)
+        do
+          men = _MEMGET(tempm.sub_menu, tempm.sub_menu.OFFSET + len(men) * (tempm.selected - 1), GUI_menu_item_type)
+          if men.sub_menu_open then
+            memtmp = tempm.sub_menu
+            offset = len(tempm) * (tempm.selected - 1)
+            tempm = men
+          end if
+        loop until not men.sub_menu_open
+        GUI_debug_output "Nam= " + MEM_Get_str$(men.nam)
+        for x = 1 to tempm.sub_menu_length
+          tmpm = _MEMGET(tempm.sub_menu, tempm.sub_menu.OFFSET + len(tmpm) * (x - 1), GUI_menu_item_type)
+          if k$ = ucase$(GUI_menu_char$(MEM_get_str$(tmpm.nam))) then
+            if tmpm.has_sub then
+              tmpm.sub_menu_open = -1
+              tmpm.selected = 1
+              GUI_close_sub_menu tmpm
+              _MEMPUT tempm.sub_menu, tempm.sub_menu.OFFSET + len(tmpm) * (x - 1), tmpm
+              tempm.selected = x
+              _MEMPUT memtmp, memtmp.OFFSET + offset, tempm
+              gui(sel).flags = (gui(sel).flags OR GUI_FLAG_UPDATED)
+            else
+              gui(sel).menu_choice = tmpm.ident
               gui(sel).flags = (gui(sel).flags OR GUI_FLAG_UPDATED OR GUI_FLAG_MENU_CHOSEN) AND NOT GUI_FLAG_MENU_OPEN
               gui(sel).selected = 0
             end if
-          next x
-        end if
-      end if
-    elseif GUI_ctl_flag and NOT GUI_alt_flag then
-      if ch$ = chr$(22) then 'CTRL + V
-        GUI_debug_output "Paste"
-        SELECT CASE gui(sel).element_type
-          CASE GUI_INPUT_BOX
-            GUI_add_character gui(sel), _CLIPBOARD$
-            gui(sel).flags = gui(sel).flags OR GUI_FLAG_UPDATED
-        END SELECT
-      elseif ch$ = chr$(3) then 'CTRL + C
-        GUI_debug_output "Copy"
-        SELECT CASE gui(sel).element_type
-          CASE GUI_INPUT_BOX
-            t$ = MEM_get_str$(gui(sel).text)
-            _CLIPBOARD$ = mid$(t$, gui(sel).text_sel_col1 + 1, gui(sel).text_sel_col2 - gui(sel).text_sel_col1)
-        END SELECT
-      elseif ch$ = chr$(24) then 'CTRL + X
-        GUI_debug_output "Cut"
-        SELECT CASE gui(sel).element_type
-          CASE GUI_INPUT_BOX
-            t$ = MEM_get_str$(gui(sel).text)
-            _CLIPBOARD$ = mid$(t$, gui(sel).text_sel_col1 + 1, gui(sel).text_sel_col2 - gui(sel).text_sel_col1)
-            GUI_del_character gui(sel)
-            gui(sel).flags = gui(sel).flags OR GUI_FLAG_UPDATED
-        END SELECT
+          end if
+        next x
+      else
+        for x = 1 to gui(sel).length
+          men = _MEMGET(gui(sel).menu, gui(sel).menu.OFFSET + len(men) * (x - 1), GUI_menu_item_type)
+          if k$ = ucase$(GUI_menu_char$(MEM_get_str$(men.nam))) then
+            gui(sel).selected = x
+            gui(sel).flags = (gui(sel).flags OR GUI_FLAG_MENU_OPEN OR GUI_FLAG_UPDATED) AND NOT GUI_FLAG_MENU_ALT
+            men.selected = 1
+            _MEMPUT gui(sel).menu, gui(sel).menu.OFFSET + len(men) * (x - 1), men
+          end if
+        next x
       end if
     end if
-END SELECT
+  end if
+end if
 
-GUI_inkey$ = ch$
+if ch < 256 and ch > 0 then
+  GUI_inkey$ = chr$(ch)
+elseif ch < 65536 then
+  GUI_inkey$ = chr$(ch \ 255) + chr$(ch AND 255)
+end if
 
 END FUNCTION
 
@@ -1740,7 +1758,7 @@ IF GUI_but AND GUI_butflag THEN 'Mouse held
     old_col = b(selected_gui).text_position
     if GUI_mx <= b(selected_gui).col1 then
       if b(selected_gui).scroll_offset_hors > 0 then
-        if TIMER(.001) - GUI_DRAG_TIMER > .05 then
+        if TIMER(.001) - GUI_DRAG_TIMER > GUI_DRAG_SELECTION_DELAY then
           b(selected_gui).scroll_offset_hors = b(selected_gui).scroll_offset_hors - 1
           b(selected_gui).text_position = b(selected_gui).scroll_offset_hors
           b(selected_gui).text_sel_col2 = b(selected_gui).text_position
@@ -1933,11 +1951,14 @@ if found > 0 then
       selected_gui = found
       b(found).flags = b(found).flags OR GUI_FLAG_UPDATED
     case GUI_MENU
+      GUI_debug_output "Debth: " + str$(debth)
+      GUI_debug_output "Selection: " + str$(selection)
       if selected_gui <> found then b(found).selected = 0: b(found).flags = b(found).flags AND NOT GUI_FLAG_MENU_OPEN
       selected_gui = found
       b(found).flags = b(found).flags OR GUI_FLAG_UPDATED
       if debth = 0 then
         if selection > 0 then
+          GUI_debug_output "Got here as well!"
           b(found).flags = b(found).flags OR GUI_FLAG_MENU_OPEN
           b(found).selected = selection
           men = _MEMGET(b(found).menu, b(found).menu.OFFSET + len(men) * (b(found).selected - 1), GUI_menu_item_type)
