@@ -6,7 +6,7 @@
 'of the Do What You Want Public License, Version 1, as published by Matt Kilgore
 'See file COPYING that should have been included with this source.
 
-CONST GUI_VER$ = ".90"
+CONST GUI_VER$ = ".91"
 
 CONST GUI_DEBUG = -1 'Set to -1 to turn on debug mode
 
@@ -40,12 +40,39 @@ CONST GUI_FLAG_MENU_ALT           = &H00001000
 CONST GUI_FLAG_MENU_CHOSEN        = &H00002000
 CONST GUI_FLAG_MENU_LAST_ON_RIGHT = &H00004000
 
-'Byte 1
-CONST GUI_EVENT_MOUSE             = &H00000001
-CONST GUI_EVENT_KEYBOARD          = &H00000002
+'For GUI_HAND -- Determines whether to use GUI_MLEFT or GUI_MRIGHT for GUI_BUT
+CONST GUI_HAND_RIGHT              = 1
+CONST GUI_HAND_LEFT               = 2
 
-'Byte 2
-CONST GUI_EVENT_CHECK_CHANGED     =  1 * &H00000100
+'Byte 1
+CONST GUI_EVENT_MOUSE             = 1
+CONST GUI_EVENT_KEY               = 2
+
+'Event_key_type flags
+CONST GUI_EVENT_KEY_PRESSED       = &H00000001
+CONST GUI_EVENT_KEY_RELEASE       = &H00000002
+
+'Event_mouse_type flags
+CONST GUI_EVENT_MOUSE_DRAG                = &H00000001
+
+CONST GUI_EVENT_MOUSE_LEFT_DOWN           = &H00000004
+CONST GUI_EVENT_MOUSE_LEFT_UP             = &H00000010
+CONST GUI_EVENT_MOUSE_LEFT_SINGLE_CLICK   = &H00000080
+CONST GUI_EVENT_MOUSE_LEFT_DOUBLE_CLICK   = &H00000100
+
+CONST GUI_EVENT_MOUSE_RIGHT_DOWN          = &H00000002
+CONST GUI_EVENT_MOUSE_RIGHT_UP            = &H00000020
+CONST GUI_EVENT_MOUSE_RIGHT_SINGLE_CLICK  = &H00000200
+CONST GUI_EVENT_MOUSE_RIGHT_DOUBLE_CLICK  = &H00000400
+
+CONST GUI_EVENT_MOUSE_MIDDLE_DOWN         = &H00000008
+CONST GUI_EVENT_MOUSE_MIDDLE_UP           = &H00000040
+CONST GUI_EVENT_MOUSE_MIDDLE_SINGLE_CLICK = &H00000800
+CONST GUI_EVENT_MOUSE_MIDDLE_DOUBLE_CLICK = &H00001000
+
+CONST GUI_EVENT_MOUSE_SCROLL_UP           = &H00002000
+CONST GUI_EVENT_MOUSE_SCROLL_DOWN         = &H00004000
+CONST GUI_EVENT_MOUSE_MOVEMENT            = &H00008000
 
 TYPE GUI_menu_item_type
   nam as MEM_string_type 'Displayed string for MENU choice
@@ -115,16 +142,37 @@ TYPE GUI_element_type
   'parent AS _MEM
 END TYPE
 
-TYPE GUI_event_type
+TYPE GUI_event_generic_type
   event_type as _UNSIGNED LONG
-  dat as MEM_string_type
+  gui_element AS _UNSIGNED LONG
+  mem as _MEM
+  allocated as _UNSIGNED _BYTE
+END TYPE
+
+TYPE GUI_event_key_type
+  key_code AS _UNSIGNED LONG  
+  flags AS _BYTE
+END TYPE
+
+TYPE GUI_event_mouse_type
+  row AS _UNSIGNED LONG
+  col AS _UNSIGNED LONG
+  row2 AS _UNSIGNED LONG 'Used if a drag occured
+  col2 AS _UNSIGNED LONG
+  scroll AS LONG
+  flags as INTEGER
 END TYPE
 
 'shared variables for mouse, keyboard, and screen type of things
-COMMON SHARED GUI_MX            AS INTEGER, GUI_MY                 AS INTEGER, GUI_BUT            AS INTEGER, GUI_MSCROLL  AS INTEGER, GUI_BUTFLAG    AS INTEGER
-COMMON SHARED GUI_CUR_ROW       AS INTEGER, GUI_CUR_COL            AS INTEGER, GUI_alt_flag       AS INTEGER, GUI_ctl_flag AS INTEGER, GUI_shift_flag AS INTEGER
-COMMON SHARED GUI_DRAG_TIMER    AS DOUBLE,  GUI_CLICK_TIMER        AS DOUBLE,  GUI_KEYPRESS_TIMER AS DOUBLE
-COMMON SHARED GUI_LAST_KEYPRESS AS LONG,    GUI_KEYPRESS_REPEATING AS INTEGER
+COMMON SHARED GUI_MROW           AS INTEGER, GUI_MCOL               AS INTEGER, GUI_BUT                AS INTEGER
+COMMON SHARED GUI_MLEFT          AS INTEGER, GUI_MRIGHT             AS INTEGER, GUI_MMIDDLE            AS INTEGER
+COMMON SHARED GUI_HAND           AS INTEGER
+COMMON SHARED GUI_MSCROLL        AS INTEGER, GUI_BUTFLAG            AS INTEGER
+COMMON SHARED GUI_CUR_ROW        AS INTEGER, GUI_CUR_COL            AS INTEGER, GUI_alt_flag           AS INTEGER
+COMMON SHARED GUI_ctl_flag       AS INTEGER, GUI_shift_flag         AS INTEGER
+COMMON SHARED GUI_DRAG_TIMER     AS DOUBLE, GUI_RIGHT_CLICK_COUNT   AS INTEGER, GUI_LEFT_CLICK_COUNT   AS INTEGER
+COMMON SHARED GUI_MIDDLE_CLICK_COUNT AS INTEGER, GUI_last_mouse_event AS GUI_event_mouse_type
+COMMON SHARED GUI_KEYPRESS_TIMER AS DOUBLE,  GUI_LAST_KEYPRESS      AS LONG,    GUI_KEYPRESS_REPEATING AS INTEGER
 
 'Delay values for clicking and keypresses
 'When dragging the mouse to select text, if dragging requires scrolling to prevent from scrolling instantly we will only scroll another character after this time in seconds has happened
@@ -147,5 +195,3 @@ COMMON SHARED GUI_DEFAULT_DIALOG_COLOR_DROP  as GUI_element_colors_type, GUI_DEF
 COMMON SHARED GUI_DEFAULT_DIALOG_COLOR_MENU  as GUI_element_colors_type, GUI_DEFAULT_DIALOG_COLOR_BUTTON   as GUI_element_colors_type
 COMMON SHARED GUI_DEFAULT_DIALOG_COLOR_RADIO as GUI_element_colors_type, GUI_DEFAULT_DIALOG_COLOR_LABEL    as GUI_element_colors_type
 COMMON SHARED GUI_MOUSE_QUEUE$
-
-DIM SHARED GUI_alt_codes$(51) ' thanks to Galleon for alt-code stuff

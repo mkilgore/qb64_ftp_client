@@ -14,11 +14,8 @@ GUI_DOUBLE_CLICK_DELAY = .3
 GUI_KEYPRESS_DELAY = .7
 GUI_KEYPRESS_REPEAT_DELAY = .1
 
-GUI_debug_output "AltKey codes being setup..."
-a$ = "QWERTYUIOP????ASDFGHJKL?????ZXCVBNM" 'Credit to Galleon for the ALT key code
-FOR x = 1 TO LEN(a$)
-  GUI_alt_codes$(x + 15) = MID$(a$, x, 1)
-NEXT x
+GUI_HAND = GUI_HAND_RIGHT
+
 GUI_debug_output "Setting default colors..."
 GUI_DEFAULT_COLOR_BOX.mcolor.fr = 7
 GUI_DEFAULT_COLOR_BOX.mcolor.bk = 1
@@ -1484,31 +1481,6 @@ if not key_release and not GUI_alt_flag and not GUI_ctl_flag then
         gui(sel).flags = gui(sel).flags OR GUI_FLAG_UPDATED
       end if
     case else
-      'if GUI_alt_flag and  = 2 and NOT GUI_ctl_flag then
-      '  k$ = GUI_alt_codes$(ASC(ch$, 2))
-      '  if gui(sel).element_type = GUI_MENU and GUI_alt_flag then
-      '    if gui(sel).flags AND GUI_FLAG_MENU_ALT then
-      '      for x = 1 to gui(sel).length
-      '        men = _MEMGET(gui(sel).menu, gui(sel).menu.OFFSET + len(men) * (x - 1), GUI_menu_item_type)
-      '        if ucase$(k$) = ucase$(GUI_menu_char$(MEM_get_str$(men.nam))) then
-      '          gui(sel).selected = x
-      '          gui(sel).flags = (gui(sel).flags OR GUI_FLAG_MENU_OPEN OR GUI_FLAG_UPDATED) AND NOT GUI_FLAG_MENU_ALT
-      '          men.selected = 1
-      '          _MEMPUT gui(sel).menu, gui(sel).menu.OFFSET + len(men) * (x - 1), men
-      '        end if
-      '      next x
-      '    elseif gui(sel).flags AND GUI_FLAG_MENU_OPEN then
-      '      men = _MEMGET(gui(sel).menu, gui(sel).menu.OFFSET + len(men) * (gui(sel).selected - 1), GUI_menu_item_type)
-      '      for x = 1 to men.sub_menu_length
-      '        tempm = _MEMGET(men.sub_menu, men.sub_menu.OFFSET + len(men) * (x - 1), GUI_menu_item_type)
-      '        if ucase$(k$) = ucase$(GUI_menu_char$(MEM_get_str$(tempm.nam))) then
-      '          gui(sel).menu_choice = tempm.ident
-      '          gui(sel).flags = (gui(sel).flags OR GUI_FLAG_UPDATED OR GUI_FLAG_MENU_CHOSEN) AND NOT GUI_FLAG_MENU_OPEN
-      '          gui(sel).selected = 0
-      '        end if
-      '      next x
-      '    end if
-      '  end if
       'elseif GUI_ctl_flag and NOT GUI_alt_flag then
       '  if ch$ = chr$(22) then 'CTRL + V
       '    GUI_debug_output "Paste"
@@ -1685,6 +1657,10 @@ END SELECT
 move_to_next_gui = new_gui
 END FUNCTION
 
+FUNCTION GUI_get_selected_text$ ()
+
+END FUNCTION
+
 '###############################################################################
 '###############################################################################
 '#------------------------------MOUSE FUNCTIONS--------------------------------#
@@ -1692,11 +1668,18 @@ END FUNCTION
 '###############################################################################
 
 'returns a clicked on item
-FUNCTION GUI_mouse_range (b() AS GUI_element_type, boxnum, selected_gui) 'Checks if mouse is in one of the boxes in b()
+SUB GUI_mouse_range (b() AS GUI_element_type, boxnum, selected_gui, e as GUI_event_generic_type) 'Checks if mouse is in one of the boxes in b()
 'Returns the array number if it is in one of them
 
 DIM men as GUI_menu_item_type, mtmp as GUI_menu_item_type, mnext as GUI_menu_item_type
 DIM memtmp AS _MEM, offset as _OFFSET
+
+DIM mouse_event as GUI_event_mouse_type
+
+'Reset the event, if an event was sent here we can assume it's not needed anymore
+e.event_type = 0
+
+new_mouse_event = 0
 
 'GUI_butflag is a flag indicating if we've already handled the current mouse click
 'GUI_butflag equals -1 when the mouse button is pressed and that press has already been handled
@@ -1705,18 +1688,80 @@ DIM memtmp AS _MEM, offset as _OFFSET
 
 s = GUI_read_mouse_queue
 if s > 0 then
-  GUI_mouse_range = s
+ ' GUI_mouse_range = s
   GUI_debug_output "Read Queue'd mouse: " + str$(s)
-  EXIT FUNCTION
+  GOTO event_done
 end if
 
 GUI_mscroll = 0
 DO WHILE _MOUSEINPUT
   GUI_mscroll = GUI_mscroll + _MOUSEWHEEL
-  GUI_mx = _MOUSEX
-  GUI_my = _MOUSEY
-  GUI_but = _MOUSEBUTTON(1)
+  GUI_MCOL = _MOUSEX
+  GUI_MROW = _MOUSEY
+  GUI_MLEFT = _MOUSEBUTTON(1)
+  GUI_MRIGHT = _MOUSEBUTTON(2)
+  GUI_MMIDDLE = _MOUSEBUTTON(3)
 LOOP
+
+'Set inital values
+'if GUI_MLEFT then mouse_Event.flags = mouse_event.flags AND GUI_EVENT_MOUSE_LEFT_CLICK
+'if GUI_MRIGHT then mouse_event.flags = mouse_Event.flags AND GUI_EVENT_MOUSE_RIGHT_CLICK
+'if GUI_MMIDDLE then mouse_Event.flags = mouse_event.flags AND GUI_EVENT_MOUSE_MIDDLE_CLICK
+
+mouse_event.scroll = GUI_mscroll
+
+'Check if anything changed from last event
+'if GUI_mscroll <> 0 OR mouse_event.flags <> GUI_last_mouse_event.flags or mouse_event.row <> GUI_last_mouse_event.row or mouse_event.col <> GUI_last_mouse_event.col then
+IF GUI_mscroll <> 0 or mouse_event.flags then
+  new_mouse_event = -1
+  if (GUI_last_mouse_event.flags AND GUI_EVENT_MOUSE_LEFT_CLICK) AND (GUI_MLEFT = 0) then
+    'Left click was lifted up -- Set click to true
+    
+  end if
+  'Check if we had a click event happen
+  if GUI_last_mouse_event.flags AND GUI_EVENT_MOUSE_DOWN then
+  
+  end if
+end if
+
+if mouse_event.flags AND GUI_EVENT_MOUSE_HAND_UP AND mouse_event.row = GUI_last_mouse_event.row and mouse_event.col = GUI_last_mouse_event.col and TIMER(.001) - GUI_CLICK_TIMER <= GUI_DOUBLE_CLICK_DELAY then
+  mouse_event.flags = mouse_event.flags AND GUI_EVENT_MOUSE_DOUBLE_CLICK
+  GUI_CLICK_TIMER = 0
+  
+  GUI_last_mouse_event = mouse_event
+else
+  GUI_CLICK_LAST_ELEMENT = found
+  GUI_CLICK_TIMER = TIMER(.001)
+  mouse_event.flags = mouse_event.flags AND GUI_EVENT_MOUSE_SINGLE_CLICK
+  
+  GUI_last_mouse_event = mouse_event
+end if
+  
+ ' new_flags = mouse_event.flags AND (GUI_EVENT_MOUSE_LEFT_CLICK AND GUI_EVENT_MOUSE_RIGHT_CLICK AND GUI_EVENT_MOUSE_MIDDLE_CLICK)
+  
+'if last_flags > 0 and new_flags = 0 then
+'  mouse_event.flags = mouse_event.flags AND GUI_EVENT_MOUSE_UP
+'else
+'  mouse_event.flags = mouse_event.flags AND GUI_EVENT_MOUSE_DOWN
+'end if
+
+if GUI_HAND = GUI_HAND_RIGHT then
+  GUI_BUT = GUI_MLEFT
+elseif GUI_HAND = GUI_HAND_LEFT then
+  GUI_BUT = GUI_MRIGHT
+end if
+
+'if GUI_MSCROLL or GUI_MCOL OR GUI_MROW OR GUI_MLEFT OR GUI_MRIGHT OR GUI_MMIDDLE then
+'  new_mouse_event = -1
+'end if
+
+
+
+
+
+
+
+
 IF GUI_mscroll and NOT GUI_but then 'handle scrolling
   IF b(selected_gui).element_type = GUI_LIST_BOX OR b(selected_gui).element_type = GUI_TEXT_BOX OR (b(selected_gui).element_type = GUI_DROP_DOWN AND (b(selected_gui).flags AND GUI_FLAG_DROP_FLAG)) then 'List box or open Drop-Down
     b(selected_gui).scroll_offset_vert = b(selected_gui).scroll_offset_vert + GUI_mscroll
@@ -1729,10 +1774,12 @@ IF GUI_mscroll and NOT GUI_but then 'handle scrolling
   END IF
 END IF
 IF GUI_but AND GUI_butflag THEN 'Mouse held
+  mouse_down = -1
+
   'IF b(selected_gui).element_type = GUI_LIST_BOX OR b(selected_gui).element_type = GUI_TEXT_BOX or (b(selected_gui).element_type = GUI_DROP_DOWN AND b(selected_gui).drop_flag) then
   if b(selected_gui).flags AND GUI_FLAG_SCROLL_IS_HELD_H then 'hors
-    if b(selected_gui).scroll_loc_hors <> GUI_mx then
-      b(selected_gui).scroll_loc_hors = GUI_mx
+    if b(selected_gui).scroll_loc_hors <> GUI_MCOL then
+      b(selected_gui).scroll_loc_hors = GUI_MCOL
       if b(selected_gui).scroll_loc_hors - b(selected_gui).col1 - 2 < 0 then
         b(selected_gui).scroll_loc_hors = b(selected_gui).col1 + 2
       end if
@@ -1743,8 +1790,8 @@ IF GUI_but AND GUI_butflag THEN 'Mouse held
       b(selected_gui).flags = b(selected_gui).flags OR GUI_FLAG_UPDATED
     end if
   elseif b(selected_gui).flags AND GUI_FLAG_SCROLL_IS_HELD_V then 'vert
-    if b(selected_gui).scroll_loc_vert <> GUI_my then
-      b(selected_gui).scroll_loc_vert = GUI_my
+    if b(selected_gui).scroll_loc_vert <> GUI_MROW then
+      b(selected_gui).scroll_loc_vert = GUI_MROW
       if b(selected_gui).scroll_loc_vert - b(selected_gui).row1 - 2 < 0 then
         b(selected_gui).scroll_loc_vert = b(selected_gui).row1 + 2
       end if
@@ -1756,7 +1803,7 @@ IF GUI_but AND GUI_butflag THEN 'Mouse held
     end if
   elseif b(selected_gui).element_type = GUI_INPUT_BOX then
     old_col = b(selected_gui).text_position
-    if GUI_mx <= b(selected_gui).col1 then
+    if GUI_MCOL <= b(selected_gui).col1 then
       if b(selected_gui).scroll_offset_hors > 0 then
         if TIMER(.001) - GUI_DRAG_TIMER > GUI_DRAG_SELECTION_DELAY then
           b(selected_gui).scroll_offset_hors = b(selected_gui).scroll_offset_hors - 1
@@ -1766,7 +1813,7 @@ IF GUI_but AND GUI_butflag THEN 'Mouse held
           GUI_DRAG_TIMER = TIMER(.001)
         end if
       end if
-    elseif GUI_mx >= b(selected_gui).col2 then
+    elseif GUI_MCOL >= b(selected_gui).col2 then
       if b(selected_gui).scroll_offset_hors - (b(selected_gui).col2 - b(selected_gui).col1) < b(selected_gui).length + 1 then
         if TIMER(.001) - GUI_DRAG_TIMER > .05 then
           b(selected_gui).scroll_offset_hors = b(selected_gui).scroll_offset_hors + 1
@@ -1777,7 +1824,7 @@ IF GUI_but AND GUI_butflag THEN 'Mouse held
         end if
       end if
     else
-      b(selected_gui).text_position = b(selected_gui).scroll_offset_hors + GUI_mx - b(selected_gui).col1 - 1
+      b(selected_gui).text_position = b(selected_gui).scroll_offset_hors + GUI_MCOL - b(selected_gui).col1 - 1
       IF b(selected_gui).text_position > b(selected_gui).text.length THEN
         b(selected_gui).text_position = b(selected_gui).text.length
       END IF
@@ -1787,36 +1834,41 @@ IF GUI_but AND GUI_butflag THEN 'Mouse held
       end if
     end if
   end if
-  EXIT FUNCTION
+  found = selected_gui
+  GOTO event_done
 ELSEIF GUI_butflag then
+  found = selected_gui
   GUI_butflag = 0
   b(selected_gui).flags = ((b(selected_gui).flags AND NOT GUI_FLAG_SCROLL_IS_HELD_H) AND NOT GUI_FLAG_SCROLL_IS_HELD_V) OR GUI_FLAG_UPDATED
 END IF
-IF GUI_but = 0 THEN EXIT FUNCTION
+
+IF GUI_but = 0 THEN GOTO event_done
+
 GUI_butflag = -1
 current_layer = -128
 found = 0
+
 FOR x = 1 TO boxnum
   k = GUI_get_layer(b(x))
   if k > current_layer then
     select case b(x).element_type
       case GUI_BOX
-        IF GUI_my <= b(x).row2 AND GUI_my >= b(x).row1 THEN
-          IF GUI_mx >= b(x).col1 AND GUI_mx <= b(x).col2 THEN
+        IF GUI_MROW <= b(x).row2 AND GUI_MROW >= b(x).row1 THEN
+          IF GUI_MCOL >= b(x).col1 AND GUI_MCOL <= b(x).col2 THEN
             found = x
             current_layer = k
           END IF
         END IF
       case GUI_INPUT_BOX
-        IF GUI_my <= b(x).row1 + 2 AND GUI_my >= b(x).row1 THEN
-          IF GUI_mx >= b(x).col1 AND GUI_mx <= b(x).col2 THEN
+        IF GUI_MROW <= b(x).row1 + 2 AND GUI_MROW >= b(x).row1 THEN
+          IF GUI_MCOL >= b(x).col1 AND GUI_MCOL <= b(x).col2 THEN
             found = x
             current_layer = k
           END IF
         END IF
       case GUI_LIST_BOX, GUI_TEXT_BOX
-        IF GUI_my <= b(x).row2 AND GUI_my >= b(x).row1 THEN
-          IF GUI_mx >= b(x).col1 AND GUI_mx <= b(x).col2 THEN
+        IF GUI_MROW <= b(x).row2 AND GUI_MROW >= b(x).row1 THEN
+          IF GUI_MCOL >= b(x).col1 AND GUI_MCOL <= b(x).col2 THEN
             found = x
             current_layer = k
           END IF
@@ -1824,38 +1876,38 @@ FOR x = 1 TO boxnum
       case GUI_DROP_DOWN
         if (b(x).flags AND GUI_FLAG_DROP_FLAG) <> GUI_FLAG_DROP_FLAG then
           'GUI_debug_output "Result: " + str$(NOT (b(x).flags AND GUI_FLAG_DROP_FLAG))
-          IF GUI_my = b(x).row1 AND GUI_mx >= b(x).col1 AND GUI_mx <= b(x).col2 THEN
+          IF GUI_MROW = b(x).row1 AND GUI_MCOL >= b(x).col1 AND GUI_MCOL <= b(x).col2 THEN
             found = x
             current_layer = k
           END IF
         else
-          if GUI_my >= b(x).row1 and GUI_my <= b(x).row2 and GUI_mx >= b(x).col1 and GUI_mx <= b(x).col2 then
+          if GUI_MROW >= b(x).row1 and GUI_MROW <= b(x).row2 and GUI_MCOL >= b(x).col1 and GUI_MCOL <= b(x).col2 then
             found = x
             current_layer = k
           end if
         end if
       case GUI_CHECKBOX
-        IF GUI_my = b(x).row1 AND GUI_mx >= b(x).col1 AND GUI_mx <= b(x).col1 + 2 + b(x).nam.length THEN
+        IF GUI_MROW = b(x).row1 AND GUI_MCOL >= b(x).col1 AND GUI_MCOL <= b(x).col1 + 2 + b(x).nam.length THEN
           found = x
           current_layer = k
         END IF
       case GUI_MENU
-        if GUI_menu_clicked_on(b(x), GUI_MX, GUI_MY, debth, selection) then
+        if GUI_menu_clicked_on(b(x), GUI_MCOL, GUI_MROW, debth, selection) then
           found = x
           current_layer = k
         end if
       case GUI_BUTTON
-        IF GUI_my = b(x).row1 AND GUI_mx >= b(x).col1 AND GUI_mx <= b(x).col1 + b(x).nam.length + 1 THEN
+        IF GUI_MROW = b(x).row1 AND GUI_MCOL >= b(x).col1 AND GUI_MCOL <= b(x).col1 + b(x).nam.length + 1 THEN
           found = x
           current_layer = k
         END IF
       case GUI_RADIO_BUTTON
-        if GUI_my = b(x).row1 AND GUI_mx >= b(x).col1 AND GUI_mx <= b(x).col1 + 2 + b(x).nam.length THEN
+        if GUI_MROW = b(x).row1 AND GUI_MCOL >= b(x).col1 AND GUI_MCOL <= b(x).col1 + 2 + b(x).nam.length THEN
           found = x
           current_layer = k
         end if
       CASE GUI_LABEL
-        IF GUI_my = b(x).row1 and GUI_mx >= b(x).col1 AND GUI_mx <= b(x).col1 + b(x).text.length then
+        IF GUI_MROW = b(x).row1 and GUI_MCOL >= b(x).col1 AND GUI_MCOL <= b(x).col1 + b(x).text.length then
           found = x
           current_layer = k
         end if
@@ -1863,9 +1915,8 @@ FOR x = 1 TO boxnum
   end if
 NEXT x
 
-GUI_mouse_range = found
-
 if found > 0 then
+  
   GUI_debug_output "Click:" + str$(found)
   select case b(found).element_type
     case GUI_BOX
@@ -1873,9 +1924,9 @@ if found > 0 then
       b(found).flags = b(found).flags OR GUI_FLAG_UPDATED
     case GUI_INPUT_BOX
       selected_gui = found
-      IF GUI_my = b(found).row1 + 1 THEN
-        IF GUI_mx > b(found).col1 + 1 AND GUI_mx < b(found).col2 - 1 THEN
-          b(found).text_position = b(found).scroll_offset_hors + GUI_mx - b(found).col1 - 1
+      IF GUI_MROW = b(found).row1 + 1 THEN
+        IF GUI_MCOL > b(found).col1 + 1 AND GUI_MCOL < b(found).col2 - 1 THEN
+          b(found).text_position = b(found).scroll_offset_hors + GUI_MCOL - b(found).col1 - 1
           IF b(found).text_position > b(found).text.length THEN
             b(found).text_position = b(found).text.length
           END IF
@@ -1888,10 +1939,10 @@ if found > 0 then
       b(found).flags = b(found).flags OR GUI_FLAG_UPDATED
     case GUI_TEXT_BOX
       selected_gui = found
-      IF GUI_my >= b(found).row1 + 1 and GUI_my <= b(found).row2 - 1 THEN
-        IF GUI_mx >= b(found).col1 + 1 AND GUI_mx <= b(found).col2 - 1 THEN
-          b(found).selected = GUI_my - b(found).row1 + b(found).scroll_offset_vert
-          b(found).text_position = b(found).scroll_offset_hors + GUI_mx - b(found).col1 - 1
+      IF GUI_MROW >= b(found).row1 + 1 and GUI_MROW <= b(found).row2 - 1 THEN
+        IF GUI_MCOL >= b(found).col1 + 1 AND GUI_MCOL <= b(found).col2 - 1 THEN
+          b(found).selected = GUI_MROW - b(found).row1 + b(found).scroll_offset_vert
+          b(found).text_position = b(found).scroll_offset_hors + GUI_MCOL - b(found).col1 - 1
           if b(found).selected > b(found).length then
             b(found).selected = b(found).length
           end if
@@ -1901,9 +1952,9 @@ if found > 0 then
       b(found).flags = b(found).flags OR GUI_FLAG_UPDATED
     case GUI_LIST_BOX
       selected_gui = found
-      IF GUI_my >= b(found).row1 + 1 and GUI_my <= b(found).row2 - 1 THEN
-        IF GUI_mx >= b(found).col1 + 1 AND GUI_mx <= b(found).col2 - 1 then
-          s = GUI_my - b(found).row1 + b(found).scroll_offset_vert
+      IF GUI_MROW >= b(found).row1 + 1 and GUI_MROW <= b(found).row2 - 1 THEN
+        IF GUI_MCOL >= b(found).col1 + 1 AND GUI_MCOL <= b(found).col2 - 1 then
+          s = GUI_MROW - b(found).row1 + b(found).scroll_offset_vert
           if b(found).selected <> s then
             b(found).selected = s
           end if
@@ -1913,13 +1964,13 @@ if found > 0 then
       check_scroll = -1
       b(found).flags = b(found).flags OR GUI_FLAG_UPDATED
     case GUI_DROP_DOWN
-      if selected_gui = found and GUI_my = b(found).row1 then
+      if selected_gui = found and GUI_MROW = b(found).row1 then
         b(found).flags = b(found).flags XOR GUI_FLAG_DROP_FLAG
       end if
       if b(found).flags AND GUI_FLAG_DROP_FLAG then
-        IF GUI_my >= b(found).row1 + 1 and GUI_my <= b(found).row2 - 1 THEN
-          IF GUI_mx >= b(found).col1 + 1 AND GUI_mx <= b(found).col2 - 1 THEN
-            s = GUI_my - b(found).row1 + b(found).scroll_offset_vert
+        IF GUI_MROW >= b(found).row1 + 1 and GUI_MROW <= b(found).row2 - 1 THEN
+          IF GUI_MCOL >= b(found).col1 + 1 AND GUI_MCOL <= b(found).col2 - 1 THEN
+            s = GUI_MROW - b(found).row1 + b(found).scroll_offset_vert
             if s = b(found).selected then
               b(found).flags = (b(found).flags AND NOT GUI_FLAG_DROP_FLAG)
             else
@@ -1932,11 +1983,11 @@ if found > 0 then
       selected_gui = found
       b(found).flags = b(found).flags OR GUI_FLAG_UPDATED
     case GUI_CHECKBOX
-      if GUI_mx = b(found).col1 + 1 then b(found).flags = b(found).flags XOR GUI_FLAG_CHECKED
+      if GUI_MCOL = b(found).col1 + 1 then b(found).flags = b(found).flags XOR GUI_FLAG_CHECKED
       selected_gui = found
       b(found).flags = b(found).flags OR GUI_FLAG_UPDATED
     CASE GUI_RADIO_BUTTON
-      if GUI_mx = b(found).col1 + 1 then
+      if GUI_MCOL = b(found).col1 + 1 then
         b(found).flags = b(found).flags OR GUI_FLAG_CHECKED
         FOR x = 1 to boxnum
           if x <> found then
@@ -2006,41 +2057,61 @@ if found > 0 then
   END SELECT
   if check_scroll then
     if b(found).flags AND GUI_FLAG_SCROLL_H then
-      if GUI_my = b(found).row2 then
-        if GUI_mx = b(found).col1 + 1 then
+      if GUI_MROW = b(found).row2 then
+        if GUI_MCOL = b(found).col1 + 1 then
           if b(found).scroll_offset_hors > 0 then
             b(found).scroll_offset_hors = b(found).scroll_offset_hors - 1
             calc_flag = -1
           end if
-        elseif GUI_mx = b(found).col2 - 1 then
+        elseif GUI_MCOL = b(found).col2 - 1 then
           if b(found).scroll_offset_hors < (b(found).scroll_max_hors - (b(found).col2 - b(found).col1 - 1)) then
             b(found).scroll_offset_hors = b(found).scroll_offset_hors + 1
             calc_flag = -1
           end if
-        elseif GUI_mx = b(found).scroll_loc_hors then
+        elseif GUI_MCOL = b(found).scroll_loc_hors then
           b(found).flags = b(found).flags OR GUI_FLAG_SCROLL_IS_HELD_H
         end if
       end if
     end if
     if b(found).flags AND GUI_FLAG_SCROLL_V then
-      if GUI_mx = b(found).col2 then
-        if GUI_my = b(found).row1 + 1 then
+      if GUI_MCOL = b(found).col2 then
+        if GUI_MROW = b(found).row1 + 1 then
           if b(found).scroll_offset_vert > 0 then
             b(found).scroll_offset_vert = b(found).scroll_offset_vert - 1
             calc_flag = -1
           end if
-        elseif GUI_my = b(found).row2 - 1 then
+        elseif GUI_MROW = b(found).row2 - 1 then
           if b(found).scroll_offset_vert < (b(found).length - (b(found).row2 - b(found).row1 - 1)) then
             b(found).scroll_offset_vert = b(found).scroll_offset_vert + 1
             calc_flag = -1
           end if
-        elseif GUI_my = b(found).scroll_loc_vert then
+        elseif GUI_MROW = b(found).scroll_loc_vert then
           b(found).flags = b(found).flags OR GUI_FLAG_SCROLL_IS_HELD_V
         end if
       end if
     end if
   end if
   if calc_flag then GUI_calc_scroll b(found).row1, b(found).col1, b(found).row2, b(found).col2, b(found)
+end if
+
+
+event_done:
+
+if new_mouse_event then
+  e.event_type = GUI_EVENT_MOUSE
+  e.gui_element = found
+  
+  mouse_event.mcol = GUI_MCOL - b(found).col1
+  mouse_Event.mrow = GUI_MROW - b(found).row1
+
+  last_flags = GUI_last_mouse_event.flags AND (GUI_EVENT_MOUSE_LEFT_CLICK AND GUI_EVENT_MOUSE_RIGHT_CLICK AND GUI_EVENT_MOUSE_MIDDLE_CLICK)
+  
+    
+  'Check for double click
+
+  
+
+
 end if
 
 END SUB
@@ -2059,3 +2130,27 @@ if GUI_MOUSE_QUEUE$ > "" then
   GUI_read_mouse_queue = s
 end if
 END FUNCTION
+
+'###############################################################################
+'###############################################################################
+'#------------------------------EVENT FUNCTIONS--------------------------------#
+'###############################################################################
+'###############################################################################
+
+SUB GUI_init_event (e as GUI_event_generic_type)
+e.mem = _MEMNEW(18) 'Size of the biggest event
+e.allocated = 18
+END SUB
+
+SUB GUI_free_event (e as GUI_event_generic_type)
+_MEMFREE e.mem
+e.allocated = 0
+END SUB
+
+SUB GUI_get_key_event (e as GUI_event_generic_type, e2 as GUI_event_key_type)
+e2 = _MEMGET(e.mem, e.mem.OFFSET, GUI_event_key_type)
+END SUB
+
+SUB GUI_get_mouse_event (e as GUI_event_generic_type, e2 as GUI_event_mouse_type)
+e2 = _MEMGET(e.mem, e.mem.OFFSET, GUI_event_mouse_type)
+END SUB

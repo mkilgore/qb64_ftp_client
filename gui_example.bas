@@ -13,6 +13,10 @@ ON ERROR GOTO DEBUG_ONERROR
 
 gui_num = 25
 
+DIM event   as GUI_event_generic_type
+DIM m_event as GUI_event_mouse_type
+DIM k_event as GUI_event_key_type
+
 DIM main_gui(gui_num) as GUI_element_type 'create 25 GUI elements
 DIM buttons(3) AS INTEGER
 DIM labels(4) AS INTEGER 'Will hold the GUI numbers for 4 labels we have
@@ -251,7 +255,7 @@ DO 'Main loop
   ' -- May need to be increased if there are tons of GUI elements, but low numbers seem to do fine
   ' -- This program has 25 GUI elements, probably more then you'll ever come across, so with that in mind
   ' The Limit doesn't need to be that big.
-  _LIMIT 200
+  _LIMIT 300
 
   'Check if we should update screen because an event happened or otherwise
   if GUI_update_screen(main_gui(), gui_num, selected_gui) then
@@ -260,7 +264,15 @@ DO 'Main loop
   end if
 
   'Mouse events
-  g_clicked = GUI_mouse_range(main_gui(), gui_num, selected_gui)
+  GUI_mouse_range main_gui(), gui_num, selected_gui, event
+  
+  if event.event_type > 0 then
+    if event.event_type = GUI_EVENT_MOUSE then
+      GUI_get_mouse_event event, m_event
+    elseif event.event_type = GUI_EVENT_KEY then
+      GUI_get_key_event event, k_event
+    end if
+  end if
 
   'Keyboard input events
   'Returns the INKEY$ result it got in-case you want to do extra actions
