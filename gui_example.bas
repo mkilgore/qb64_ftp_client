@@ -16,6 +16,7 @@ gui_num = 25
 DIM event   as GUI_event_generic_type
 DIM m_event as GUI_event_mouse_type
 DIM k_event as GUI_event_key_type
+GUI_init_event event
 
 DIM main_gui(gui_num) as GUI_element_type 'create 25 GUI elements
 DIM buttons(3) AS INTEGER
@@ -135,6 +136,7 @@ g=g+1
 main_gui(g).element_type = GUI_LIST_BOX
 GUI_init_element main_gui(g), "List Box"
 main_gui(g).flags = main_gui(g).flags OR GUI_FLAG_SCROLL_V
+list_Box = g
 
 MEM_allocate_string_array main_gui(g).lines, 120
 main_gui(g).length = 80
@@ -248,79 +250,103 @@ setup_gui main_gui()
 
 
 'selected_gui = 0 'First selected gui element
-
+selected_gui = list_box
 DO 'Main loop
 
   'Reduce CPU usage
   ' -- May need to be increased if there are tons of GUI elements, but low numbers seem to do fine
   ' -- This program has 25 GUI elements, probably more then you'll ever come across, so with that in mind
   ' The Limit doesn't need to be that big.
-  _LIMIT 300
+  _LIMIT 400
 
   'Check if we should update screen because an event happened or otherwise
   if GUI_update_screen(main_gui(), gui_num, selected_gui) then
     'Redraw screen (May be improved in the future but currently redraws the entire screen)
     GUI_draw_element_array main_gui(), gui_num, selected_gui
   end if
+  
+  GUI_handle_events
+  
+  DO WHILE GUI_events_in_queue
+    GUI_read_event main_gui(), gui_num, selected_gui, event
+    'GUI_debug_output "Reading event: " + str$(event.event_type)
+    SELECT CASE event.event_type
+      CASE GUI_EVENT_MOUSE
+        GUI_get_mouse_event event, m_event
+        if ((m_event.count - 1) mod 2) + 1 = 2 then
+          if m_event.flags AND GUI_EVENT_MOUSE_LEFT_CLICK then
+            debug_print "Double Left click!"
+          elseif m_event.flags AND GUI_EVENT_MOUSE_RIGHT_CLICK then
+            debug_print "Double Right Click!"
+          elseif m_event.flags AND GUI_EVENT_MOUSE_MIDDLE_CLICK then
+            debug_print "Double Middle Click!"
+          end if
+        elseif m_event.flags AND GUI_EVENT_MOUSE_SCROLL_DOWN OR m_event.flags AND GUI_EVENT_MOUSE_SCROLL_UP then
+          debug_print "Scroll detected"
+        end if
+      CASE GUI_EVENT_KEY
+        GUI_get_key_event event, k_event
+    END SELECT
+  LOOP
 
   'Mouse events
-  GUI_mouse_range main_gui(), gui_num, selected_gui, event
+  'GUI_mouse_range main_gui(), gui_num, selected_gui, event
   
-  if event.event_type > 0 then
-    if event.event_type = GUI_EVENT_MOUSE then
-      GUI_get_mouse_event event, m_event
-    elseif event.event_type = GUI_EVENT_KEY then
-      GUI_get_key_event event, k_event
-    end if
-  end if
+  'if event.event_type > 0 then
+  '  if event.event_type = GUI_EVENT_MOUSE then
+  '    GUI_get_mouse_event event, m_event
+  '  elseif event.event_type = GUI_EVENT_KEY then
+  '    GUI_get_key_event event, k_event
+  '  end if
+  'end if
 
   'Keyboard input events
   'Returns the INKEY$ result it got in-case you want to do extra actions
   ' -- For this reason don't use INKEY$ or _MOUSEINPUT outside of the GUI functions
-  key$ = GUI_inkey$(main_gui(), gui_num, selected_gui)
+  'key$ = GUI_inkey$(main_gui(), gui_num, selected_gui)
 
-  SELECT CASE key$ 'In this example I'll do extra checking for the ESC key.
-    CASE CHR$(27) 'ESC key
-      exit_flag = -1
-  END SELECT
+  'SELECT CASE key$ 'In this example I'll do extra checking for the ESC key.
+  '  CASE CHR$(27) 'ESC key
+  '    exit_flag = -1
+  'END SELECT
 
   'manage interactions here.
-  for x = 1 to 3 'This loop checks the three buttons we have
-    if buttons(x) = g_clicked then
-      click_count(x) = click_count(x) + 1
-      'We're setting the string in a label and then marking it to be updated
-      MEM_put_str main_gui(labels(x)).text, "Button" + str$(x) + " :" + str$(click_count(x)) + " Times!"
-      'main_gui(labels(x)).updated = -1
-      main_gui(labels(x)).flags = main_gui(labels(x)).flags OR GUI_FLAG_UPDATED
-      'main_gui(buttons(x)).pressed = 0 'Reset the button to 0 so we don't end up catching it a second time
-    end if
-  next x
-  if main_gui(1).flags AND GUI_FLAG_MENU_CHOSEN then 'Check our menu
-    MEM_put_str main_gui(labels(4)).text, "Menu Chosen: " + main_gui(1).menu_choice
-    main_gui(1).flags = main_gui(1).flags AND NOT GUI_FLAG_MENU_CHOSEN 'Reset the menu so we don't enter this IF again
-    i$ = main_gui(1).menu_choice
-    'main_gui(1).updated = -1 'set menu to updated
-    main_gui(1).flags = main_gui(1).flags OR GUI_FLAG_UPDATED
-    'Redraw screen so menu doesn't show before opening menu choice
-    GUI_draw_element_array main_gui(), gui_num, selected_gui
+  'for x = 1 to 3 'This loop checks the three buttons we have
+  '  if buttons(x) = g_clicked then
+  '    click_count(x) = click_count(x) + 1
+  '    'We're setting the string in a label and then marking it to be updated
+  '    MEM_put_str main_gui(labels(x)).text, "Button" + str$(x) + " :" + str$(click_count(x)) + " Times!"
+  '    'main_gui(labels(x)).updated = -1
+  '    main_gui(labels(x)).flags = main_gui(labels(x)).flags OR GUI_FLAG_UPDATED
+  '    'main_gui(buttons(x)).pressed = 0 'Reset the button to 0 so we don't end up catching it a second time
+  '  end if
+  'next x
+  'if main_gui(1).flags AND GUI_FLAG_MENU_CHOSEN then 'Check our menu
+  '  MEM_put_str main_gui(labels(4)).text, "Menu Chosen: " + main_gui(1).menu_choice
+  '  main_gui(1).flags = main_gui(1).flags AND NOT GUI_FLAG_MENU_CHOSEN 'Reset the menu so we don't enter this IF again
+  '  i$ = main_gui(1).menu_choice
+  '  'main_gui(1).updated = -1 'set menu to updated
+  '  main_gui(1).flags = main_gui(1).flags OR GUI_FLAG_UPDATED
+  '  'Redraw screen so menu doesn't show before opening menu choice
+  '  GUI_draw_element_array main_gui(), gui_num, selected_gui
 
-    if i$ = "EXIT " then exit_flag = -1 '"EXIT " is for the EXIT menu option -- So set our exit_flag variable
-    if i$ = "ABOUT" then
-      'about_dialog
-    end if
-    if i$ = "RENAM" then
-      'rename_file_GUI 0
-    end if
-    if i$ = "OPEN " then
-      'prompt = prompt_dialog("Test Dialog"+chr$(13) + "Line 2", 10, OK_BUTTON OR CLOSE_BUTTON, OK_BUTTON)
-    end if
-    if i$ = "CONEC" then
-      'Connect_To_FTP
-    end if
-    if i$ = "HELP " then
-      'popup_dialog_gui "Not Implemented Yet."
-    end if
-  end if
+  '  if i$ = "EXIT " then exit_flag = -1 '"EXIT " is for the EXIT menu option -- So set our exit_flag variable
+  '  if i$ = "ABOUT" then
+  '    'about_dialog
+  '  end if
+  '  if i$ = "RENAM" then
+  '    'rename_file_GUI 0
+  '  end if
+  '  if i$ = "OPEN " then
+  '    'prompt = prompt_dialog("Test Dialog"+chr$(13) + "Line 2", 10, OK_BUTTON OR CLOSE_BUTTON, OK_BUTTON)
+  '  end if
+  '  if i$ = "CONEC" then
+  '    'Connect_To_FTP
+  '  end if
+  '  if i$ = "HELP " then
+  '    'popup_dialog_gui "Not Implemented Yet."
+  '  end if
+  'end if
   
   'if _RESIZE then
   '  WIDTH _RESIZEWIDTH, _RESIZEHEIGHT
@@ -438,6 +464,7 @@ end sub
 
 '$include:'mem_library/mem_lib.bm'
 '$include:'gui_library/gui_lib.bm'
+
 ''$include:'dialogs/about.bm'
 ''$include:'dialogs/rename_file.bm'
 ''$include:'dialogs/prompt.bm'

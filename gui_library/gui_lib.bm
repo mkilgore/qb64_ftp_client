@@ -10,7 +10,7 @@ SUB GUI_init()
 GUI_debug_output "GUI being Initalized"
 
 GUI_DRAG_SELECTION_DELAY = .05
-GUI_DOUBLE_CLICK_DELAY = .3
+GUI_DOUBLE_CLICK_DELAY = .33
 GUI_KEYPRESS_DELAY = .7
 GUI_KEYPRESS_REPEAT_DELAY = .1
 
@@ -938,7 +938,6 @@ END SUB
 'm = 3 -> down
 'm = 4 -> left
 'm = 5 -> enter
-
 SUB GUI_menu_movement(m, b as GUI_element_type)
 'The end of the menu chain is where we are located
 M_UP = 1
@@ -1201,6 +1200,15 @@ elseif b.text_position = 0 and b.selected > 1 then
 END IF
 GUI_calc_scroll b.row1, b.col1, b.row2, b.col2, b
 END SUB
+
+SUB GUI_grab_key_events ()
+
+END SUB
+
+SUB GUI_process_key_event (gui() as GUI_element_type, gui_num as INTEGER, sel, e as GUI_event_generic_type)
+
+END SUB
+
 
 FUNCTION GUI_inkey$ (gui() AS GUI_element_type, gui_num AS INTEGER, sel)
 DIM tempm AS GUI_menu_item_type, men AS GUI_menu_item_type, tmpm AS GUI_menu_item_type
@@ -1668,7 +1676,7 @@ END FUNCTION
 '###############################################################################
 
 'returns a clicked on item
-SUB GUI_mouse_range (b() AS GUI_element_type, boxnum, selected_gui, e as GUI_event_generic_type) 'Checks if mouse is in one of the boxes in b()
+SUB GUI_mouse_range (b() AS GUI_element_type, boxnum, selected_gui, event as GUI_event_generic_type) 'Checks if mouse is in one of the boxes in b()
 'Returns the array number if it is in one of them
 
 DIM men as GUI_menu_item_type, mtmp as GUI_menu_item_type, mnext as GUI_menu_item_type
@@ -1676,8 +1684,10 @@ DIM memtmp AS _MEM, offset as _OFFSET
 
 DIM mouse_event as GUI_event_mouse_type
 
+GUI_get_mouse_event event, mouse_event
+
 'Reset the event, if an event was sent here we can assume it's not needed anymore
-e.event_type = 0
+'e.event_type = 0
 
 new_mouse_event = 0
 
@@ -1686,81 +1696,11 @@ new_mouse_event = 0
 'By that logic, if GUI_butflag and GUI_but are both -1, then the mouse-button is being held-down
 'It prevents holding the mouse-button down from being interperated as lots and lots of mouse clicks
 
-s = GUI_read_mouse_queue
-if s > 0 then
- ' GUI_mouse_range = s
-  GUI_debug_output "Read Queue'd mouse: " + str$(s)
-  GOTO event_done
-end if
-
-GUI_mscroll = 0
-DO WHILE _MOUSEINPUT
-  GUI_mscroll = GUI_mscroll + _MOUSEWHEEL
-  GUI_MCOL = _MOUSEX
-  GUI_MROW = _MOUSEY
-  GUI_MLEFT = _MOUSEBUTTON(1)
-  GUI_MRIGHT = _MOUSEBUTTON(2)
-  GUI_MMIDDLE = _MOUSEBUTTON(3)
-LOOP
-
-'Set inital values
-'if GUI_MLEFT then mouse_Event.flags = mouse_event.flags AND GUI_EVENT_MOUSE_LEFT_CLICK
-'if GUI_MRIGHT then mouse_event.flags = mouse_Event.flags AND GUI_EVENT_MOUSE_RIGHT_CLICK
-'if GUI_MMIDDLE then mouse_Event.flags = mouse_event.flags AND GUI_EVENT_MOUSE_MIDDLE_CLICK
-
-mouse_event.scroll = GUI_mscroll
-
-'Check if anything changed from last event
-'if GUI_mscroll <> 0 OR mouse_event.flags <> GUI_last_mouse_event.flags or mouse_event.row <> GUI_last_mouse_event.row or mouse_event.col <> GUI_last_mouse_event.col then
-IF GUI_mscroll <> 0 or mouse_event.flags then
-  new_mouse_event = -1
-  if (GUI_last_mouse_event.flags AND GUI_EVENT_MOUSE_LEFT_CLICK) AND (GUI_MLEFT = 0) then
-    'Left click was lifted up -- Set click to true
-    
-  end if
-  'Check if we had a click event happen
-  if GUI_last_mouse_event.flags AND GUI_EVENT_MOUSE_DOWN then
-  
-  end if
-end if
-
-if mouse_event.flags AND GUI_EVENT_MOUSE_HAND_UP AND mouse_event.row = GUI_last_mouse_event.row and mouse_event.col = GUI_last_mouse_event.col and TIMER(.001) - GUI_CLICK_TIMER <= GUI_DOUBLE_CLICK_DELAY then
-  mouse_event.flags = mouse_event.flags AND GUI_EVENT_MOUSE_DOUBLE_CLICK
-  GUI_CLICK_TIMER = 0
-  
-  GUI_last_mouse_event = mouse_event
-else
-  GUI_CLICK_LAST_ELEMENT = found
-  GUI_CLICK_TIMER = TIMER(.001)
-  mouse_event.flags = mouse_event.flags AND GUI_EVENT_MOUSE_SINGLE_CLICK
-  
-  GUI_last_mouse_event = mouse_event
-end if
-  
- ' new_flags = mouse_event.flags AND (GUI_EVENT_MOUSE_LEFT_CLICK AND GUI_EVENT_MOUSE_RIGHT_CLICK AND GUI_EVENT_MOUSE_MIDDLE_CLICK)
-  
-'if last_flags > 0 and new_flags = 0 then
-'  mouse_event.flags = mouse_event.flags AND GUI_EVENT_MOUSE_UP
-'else
-'  mouse_event.flags = mouse_event.flags AND GUI_EVENT_MOUSE_DOWN
+'if GUI_HAND = GUI_HAND_RIGHT then
+'  GUI_BUT = GUI_MLEFT
+'elseif GUI_HAND = GUI_HAND_LEFT then
+'  GUI_BUT = GUI_MRIGHT
 'end if
-
-if GUI_HAND = GUI_HAND_RIGHT then
-  GUI_BUT = GUI_MLEFT
-elseif GUI_HAND = GUI_HAND_LEFT then
-  GUI_BUT = GUI_MRIGHT
-end if
-
-'if GUI_MSCROLL or GUI_MCOL OR GUI_MROW OR GUI_MLEFT OR GUI_MRIGHT OR GUI_MMIDDLE then
-'  new_mouse_event = -1
-'end if
-
-
-
-
-
-
-
 
 IF GUI_mscroll and NOT GUI_but then 'handle scrolling
   IF b(selected_gui).element_type = GUI_LIST_BOX OR b(selected_gui).element_type = GUI_TEXT_BOX OR (b(selected_gui).element_type = GUI_DROP_DOWN AND (b(selected_gui).flags AND GUI_FLAG_DROP_FLAG)) then 'List box or open Drop-Down
@@ -2094,27 +2034,187 @@ if found > 0 then
   if calc_flag then GUI_calc_scroll b(found).row1, b(found).col1, b(found).row2, b(found).col2, b(found)
 end if
 
-
 event_done:
 
-if new_mouse_event then
-  e.event_type = GUI_EVENT_MOUSE
-  e.gui_element = found
-  
-  mouse_event.mcol = GUI_MCOL - b(found).col1
-  mouse_Event.mrow = GUI_MROW - b(found).row1
+END SUB
 
-  last_flags = GUI_last_mouse_event.flags AND (GUI_EVENT_MOUSE_LEFT_CLICK AND GUI_EVENT_MOUSE_RIGHT_CLICK AND GUI_EVENT_MOUSE_MIDDLE_CLICK)
+SUB GUI_grab_mouse_events ()
+
+'if _MOUSEINPUT = 0 then EXIT SUB
+
+DIM m as GUI_event_mouse_type, e as GUI_event_generic_type
+DIM m_state as GUI_mouse_state
+
+GUI_init_event e
+e.event_type = GUI_EVENT_MOUSE
+'GUI_debug_output "Grabbing mouse input..."
+'Process mouse stuff
+GUI_PERSISTANT_MOUSE_STATE.MSCROLL = 0
+DO WHILE _MOUSEINPUT
+  GUI_PERSISTANT_MOUSE_STATE.MSCROLL = GUI_PERSISTANT_MOUSE_STATE.MSCROLL + _MOUSEWHEEL
+  GUI_PERSISTANT_MOUSE_STATE.MCOL = _MOUSEX
+  GUI_PERSISTANT_MOUSE_STATE.MROW = _MOUSEY
+  GUI_PERSISTANT_MOUSE_STATE.MLEFT = _MOUSEBUTTON(1)
+  GUI_PERSISTANT_MOUSE_STATE.MRIGHT = _MOUSEBUTTON(2)
+  GUI_PERSISTANT_MOUSE_STATE.MMIDDLE = _MOUSEBUTTON(3)
   
+  
+  m_state = GUI_PERSISTANT_MOUSE_STATE
+  
+  
+    'GUI_debug_output "Mleft: " + str$(m_state.mleft)
+    'GUI_debug_output "Row: " + str$(m_state.mrow)
+    'GUI_debug_output "Col: " + str$(m_state.mcol)
+  
+  'end if
+  'Set the row and col info
+  m.m = m_state
+
+  
+  'Check for left button change
+  if GUI_MOUSE_LAST_STATE.MLEFT <> m_state.MLEFT then
+    'Check for mouse-up or mouse-down and register the event
+    if m_state.MLEFT = 0 then
+      m.flags = GUI_EVENT_MOUSE_LEFT_UP
+    else
+      m.flags = GUI_EVENT_MOUSE_LEFT_DOWN
+      m_down = -1
+    end if
+    _MEMPUT e.mem, e.mem.OFFSET, m
+    GUI_add_event_to_queue e
+    if (m.flags AND GUI_EVENT_MOUSE_LEFT_UP) AND GUI_MOVEMENT_FLAG = 0 then
+      'Click -- Check timer to see if we can add to click count or just start it over
+      if TIMER(.001) - GUI_LEFT_CLICK_TIMER <= GUI_DOUBLE_CLICK_DELAY then
+        GUI_LEFT_CLICK_COUNT = GUI_LEFT_CLICK_COUNT + 1
+      else
+        GUI_LEFT_CLICK_COUNT = 1
+      end if
+      m.count = GUI_LEFT_CLICK_COUNT
+      m.flags = GUI_EVENT_MOUSE_LEFT_CLICK
+      _MEMPUT e.mem, e.mem.OFFSET, m
+      GUI_add_event_to_queue e
+      m.count = 0
+      GUI_LEFT_CLICK_TIMER = TIMER(.001)
+    end if
+  end if
+  
+  'Check for RIGHT button change
+  if GUI_MOUSE_LAST_STATE.MRIGHT <> m_state.MRIGHT then
+    'Check for mouse-up or mouse-down and register the event
+    if m_state.MRIGHT = 0 then
+      m.flags = GUI_EVENT_MOUSE_RIGHT_UP
+    else
+      m.flags = GUI_EVENT_MOUSE_RIGHT_DOWN
+      m_down = -1
+    end if
+    _MEMPUT e.mem, e.mem.OFFSET, m
+    GUI_add_event_to_queue e
+    if (m.flags AND GUI_EVENT_MOUSE_RIGHT_UP) AND GUI_MOVEMENT_FLAG = 0 then
+      'Click -- Check timer to see if we can add to click count or just start it over
+      if TIMER(.001) - GUI_RIGHT_CLICK_TIMER <= GUI_DOUBLE_CLICK_DELAY then
+        GUI_RIGHT_CLICK_COUNT = GUI_RIGHT_CLICK_COUNT + 1
+      else
+        GUI_RIGHT_CLICK_COUNT = 1
+      end if
+      m.count = GUI_RIGHT_CLICK_COUNT
+      m.flags = GUI_EVENT_MOUSE_RIGHT_CLICK
+      _MEMPUT e.mem, e.mem.OFFSET, m
+      GUI_add_event_to_queue e
+      m.count = 0
+      GUI_RIGHT_CLICK_TIMER = TIMER(.001)
+    end if
+  end if
     
-  'Check for double click
-
+  'Check for MIDDLE button change
+  if GUI_MOUSE_LAST_STATE.MMIDDLE <> m_state.MMIDDLE then
+    'Check for mouse-up or mouse-down and register the event
+    if m_state.MMIDDLE = 0 then
+      m.flags = GUI_EVENT_MOUSE_MIDDLE_UP
+    else
+      m.flags = GUI_EVENT_MOUSE_MIDDLE_DOWN
+      m_down = -1
+    end if
+    _MEMPUT e.mem, e.mem.OFFSET, m
+    GUI_add_event_to_queue e
+    if (m.flags AND GUI_EVENT_MOUSE_MIDDLE_UP) AND GUI_MOVEMENT_FLAG = 0 then
+      'Click -- Check timer to see if we can add to click count or just start it over
+      if TIMER(.001) - GUI_MIDDLE_CLICK_TIMER <= GUI_DOUBLE_CLICK_DELAY then
+        GUI_MIDDLE_CLICK_COUNT = GUI_MIDDLE_CLICK_COUNT + 1
+      else
+        GUI_MIDDLE_CLICK_COUNT = 1
+      end if
+      m.count = GUI_MIDDLE_CLICK_COUNT
+      m.flags = GUI_EVENT_MOUSE_MIDDLE_CLICK
+      _MEMPUT e.mem, e.mem.OFFSET, m
+      GUI_add_event_to_queue e
+      m.count = 0
+      GUI_MIDDLE_CLICK_TIMER = TIMER(.001)
+    end if
+  end if
   
+  if m_state.mrow <> GUI_MOUSE_LAST_STATE.mrow or m_state.mcol <> GUI_MOUSE_LAST_STATE.mcol then GUI_MOVEMENT_FLAG = -1
+  
+  GUI_MOUSE_LAST_STATE = m_state
+  
+  IF m_down then GUI_MOVEMENT_FLAG = 0: m_down = 0
+loop
+  
+  'Scroll is the easiest -- If scrolling happened then add an event
+  if GUI_PERSISTANT_MOUSE_STATE.mscroll <> 0 then
+    if GUI_PERSISTANT_MOUSE_STATE.mscroll > 0 then
+      m.flags = GUI_EVENT_MOUSE_SCROLL_UP
+    else
+      m.flags = GUI_EVENT_MOUSE_SCROLL_DOWN
+    end if
+    _MEMPUT e.mem, e.mem.OFFSET, m
+    GUI_add_event_to_queue e
+    'Reset event
+    m.flags = 0
+  end if
 
+GUI_free_event e
+'GUI_debug_output "Done reading mouse events"
+END SUB
 
-end if
+SUB GUI_process_mouse_event (b() as GUI_element_type, boxnum, selected_gui, event as GUI_event_generic_type)
+
+DIM men as GUI_menu_item_type, mtmp as GUI_menu_item_type, mnext as GUI_menu_item_type
+DIM memtmp AS _MEM, offset as _OFFSET
+
+DIM mouse_event as GUI_event_mouse_type
+
+GUI_get_mouse_event event, mouse_event
+
+select case mouse_event.flags
+  case GUI_EVENT_MOUSE_SCROLL_DOWN, GUI_EVENT_MOUSE_SCROLL_UP
+'IF GUI_mscroll and NOT GUI_but then 'handle scrolling
+    IF b(selected_gui).element_type = GUI_LIST_BOX OR b(selected_gui).element_type = GUI_TEXT_BOX OR (b(selected_gui).element_type = GUI_DROP_DOWN AND (b(selected_gui).flags AND GUI_FLAG_DROP_FLAG)) then 'List box or open Drop-Down
+      b(selected_gui).scroll_offset_vert = b(selected_gui).scroll_offset_vert + mouse_event.m.mscroll
+      if b(selected_gui).scroll_offset_vert < 0 then b(selected_gui).scroll_offset_vert = 0
+      if b(selected_gui).scroll_offset_vert > b(selected_gui).length - (b(selected_gui).row2 - b(selected_gui).row1 - 1) then
+        b(selected_gui).scroll_offset_vert = b(selected_gui).length - (b(selected_gui).row2 - b(selected_gui).row1 - 1)
+      end if
+      GUI_calc_scroll b(selected_gui).row1, b(selected_gui).col1, b(selected_gui).row2, b(selected_gui).col2, b(selected_gui)
+      b(selected_gui).flags = b(selected_gui).flags OR GUI_FLAG_UPDATED
+    END IF
+  'CASE GUI_EVENT_MOUSE_LEFT_CLICK, GUI_EVENT_MOUSE_RIGHT_CLICK
+  '  if (mouse_event.flags AND GUI_EVENT_MOUSE_LEFT_CLICK) AND (GUI_HAND = GUI_HAND_LEFT) _
+  '    OR (mouse_event.flags AND GUI_EVENT_MOUSE_RIGHT_CLICK) AND (GUI_HAND = GUI_HAND_RIGHT) then
+      
+      
+  '  end if
+    
+  'CASE GUI_EVENT_MOUSE_DRAG
+  
+END SELECT
+
+'EXIT SUB
+
+'END IF
+
 
 END SUB
+
 
 'Records the GUI number sel to be queued up for a mouse click
 'This happens for things such as pressing enter on a button
@@ -2137,11 +2237,105 @@ END FUNCTION
 '###############################################################################
 '###############################################################################
 
-SUB GUI_init_event (e as GUI_event_generic_type)
-e.mem = _MEMNEW(18) 'Size of the biggest event
-e.allocated = 18
+SUB GUI_handle_events () ',e as GUI_event_generic_type)
+
+'GUI_debug_output "Grabbing Mouse events..."
+GUI_grab_mouse_events
+'GUI_debug_output "Grabbing key events..."
+GUI_grab_key_events 
+
 END SUB
 
+FUNCTION GUI_events_in_queue ()
+GUI_events_in_queue = GUI_EVENT_STACK_LENGTH
+END FUNCTION
+
+SUB GUI_read_event (gui() as GUI_element_type, gui_num, sel, e as GUI_event_generic_type)
+if GUI_EVENT_STACK_LENGTH > 0 then
+  GUI_get_event_from_queue e
+  'Do some in-house processing on the event first
+  if e.event_type = GUI_EVENT_KEY then
+    GUI_process_key_event gui(), gui_num, sel, e
+  elseif e.event_type = GUI_EVENT_MOUSE then
+    GUI_process_mouse_event gui(), gui_num, sel, e
+  end if
+else
+  e.event_type = 0
+end if
+END SUB
+
+SUB GUI_add_event_to_queue (e as GUI_event_generic_type)
+DIM s as GUI_event_stack_link, stmp as GUI_event_stack_link
+DIM mtmp as _MEM
+GUI_init_event s.g
+_MEMCOPY e.mem, e.mem.OFFSET, e.allocated TO s.g.mem, s.g.mem.OFFSET
+s.g.allocated = e.allocated
+s.g.event_type = e.event_type
+mtmp = _MEMNEW(LEN(s))
+if GUI_EVENT_STACK_LENGTH = 0 then
+  GUI_EVENT_STACK_END = mtmp
+  's.e_next = GUI_EVENT_STACK_START
+elseif GUI_EVENT_STACK_LENGTH = 1 then
+  'GUI_EVENT_STACK_START.e_next = mtmp
+  GUI_EVENT_STACK_START = mtmp
+  _MEMGET GUI_EVENT_STACK_END, GUI_EVENT_STACK_END.OFFSET, stmp
+  stmp.e_prev = GUI_EVENT_STACK_START
+  _MEMPUT GUI_EVENT_STACK_END, GUI_EVENT_STACK_END.OFFSET, stmp
+  's.e_prev = GUI_EVENT_STACK_START
+else
+  _MEMGET GUI_EVENT_STACK_START, GUI_EVENT_STACK_START.OFFSET, stmp
+  stmp.e_prev = mtmp
+  _MEMPUT GUI_EVENT_STACK_START, GUI_EVENT_STACK_START.OFFSET, stmp
+  
+  's.e_prev = GUI_EVENT_STACK_START
+  'GUI_EVENT_STACK_END.e_next = mtmp
+  GUI_EVENT_STACK_START = mtmp
+end if
+  
+_MEMPUT mtmp, mtmp.OFFSET, s
+GUI_EVENT_STACK_LENGTH = GUI_EVENT_STACK_LENGTH + 1
+'GUI_debug_output "Done adding to stack"
+END SUB
+
+SUB GUI_get_event_from_queue (e as GUI_event_generic_type)
+DIM s as GUI_event_stack_link, mempty as _MEM
+'GUI_debug_output "Taking from stack"
+'IF GUI_EVENT_STACK_LENGTH = 1 then
+  _MEMGET GUI_EVENT_STACK_END, GUI_EVENT_STACK_END.OFFSET, s
+  _MEMFREE GUI_EVENT_STACK_END
+  
+if GUI_EVENT_STACK_LENGTH > 1 then
+  GUI_EVENT_STACK_END = s.e_prev
+end if
+'elseif GUI_EVENT_STACK_LENGTH = 2 then
+'  _MEMGET GUI_EVENT_STACK_START, GUI_EVENT_STACK_START.OFFSET, s
+'  _MEMFREE GUI_EVENT_STACK_START
+ 
+'else
+'  _MEMGET GUI_EVENT_STACK_END, GUI_EVENT_STACK_END.OFFSET, s
+'  _MEMFREE GUI_EVENT_STACK_END
+'  GUI_EVENT_STACK_END = s.e_prev
+  
+'end if
+'_MEMGET GUI_EVENT_STACK_START, GUI_EVENT_STACK_START.OFFSET, s
+'_MEMFREE GUI_EVENT_STACK_START
+
+'GUI_EVENT_STACK_START = s.e_next
+_MEMCOPY s.g.mem, s.g.mem.OFFSET, s.g.allocated TO e.mem, e.mem.OFFSET
+e.event_type = s.g.event_type
+GUI_free_event s.g
+
+GUI_EVENT_STACK_LENGTH = GUI_EVENT_STACK_LENGTH - 1
+'GUI_debug_output "Done taking from stack"
+END SUB
+
+'Allocates a generic events memory
+SUB GUI_init_event (e as GUI_event_generic_type)
+e.mem = _MEMNEW(32) 'Size of the biggest event
+e.allocated = 32
+END SUB
+
+'Frees a generic events memory
 SUB GUI_free_event (e as GUI_event_generic_type)
 _MEMFREE e.mem
 e.allocated = 0
