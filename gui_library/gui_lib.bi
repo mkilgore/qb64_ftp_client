@@ -71,6 +71,10 @@ CONST GUI_EVENT_MOUSE_SCROLL_UP           = &H00000400
 CONST GUI_EVENT_MOUSE_SCROLL_DOWN         = &H00000800
 CONST GUI_EVENT_MOUSE_MOVEMENT            = &H00001000
 
+CONST GUI_MOUSE_DRAG_LEFT   = 1
+CONST GUI_MOUSE_DRAG_RIGHT  = 2
+CONST GUI_MOUSE_DRAG_MIDDLE = 3
+
 TYPE GUI_menu_item_type
   nam as MEM_string_type 'Displayed string for MENU choice
   ident as STRING * 5 'identifer string
@@ -130,7 +134,10 @@ TYPE GUI_element_type
   menu as _MEM ' Points to an actual array of menu_items
   menu_padding as INTEGER 'Spaces padded before start of menu
   menu_choice AS STRING * 5
-
+  
+  menu_depth AS INTEGER
+  menu_sel AS INTEGER
+  
   group as INTEGER 'group number for radio buttons
   cur_row AS INTEGER
   cur_col AS INTEGER
@@ -183,6 +190,7 @@ COMMON SHARED GUI_PERSISTANT_MOUSE_STATE   as GUI_mouse_state
 COMMON SHARED GUI_MROW               AS INTEGER, GUI_MCOL               AS INTEGER, GUI_BUT                AS INTEGER
 COMMON SHARED GUI_MLEFT              AS INTEGER, GUI_MRIGHT             AS INTEGER, GUI_MMIDDLE            AS INTEGER
 COMMON SHARED GUI_HAND               AS INTEGER
+COMMON SHARED GUI_DRAG_FLAG          AS INTEGER, GUI_DRAG_ROW           AS INTEGER, GUI_DRAG_COL          AS INTEGER
 COMMON SHARED GUI_MSCROLL            AS INTEGER, GUI_BUTFLAG            AS INTEGER
 COMMON SHARED GUI_CUR_ROW            AS INTEGER, GUI_CUR_COL            AS INTEGER, GUI_alt_flag           AS INTEGER
 COMMON SHARED GUI_ctl_flag           AS INTEGER, GUI_shift_flag         AS INTEGER
