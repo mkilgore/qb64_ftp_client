@@ -16,6 +16,8 @@ gui_num = 25
 DIM event   as GUI_event_generic_type
 DIM m_event as GUI_event_mouse_type
 DIM k_event as GUI_event_key_type
+DIM label_event as GUI_event_element_label_type, button_event as GUI_event_element_button_type
+
 GUI_init_event event
 
 DIM main_gui(gui_num) as GUI_element_type 'create 25 GUI elements
@@ -215,6 +217,7 @@ FOR x = 1 to 4
   g=g+1
   main_gui(g).element_type = GUI_LABEL 'Initalize 4 lables via a loop
   GUI_init_element main_gui(g), ""
+  MEM_put_str main_gui(g).text, "Label 1"
   labels(x) = g 'Store it's main_gui() element number for later use
 NEXT x
 
@@ -257,7 +260,7 @@ DO 'Main loop
   ' -- May need to be increased if there are tons of GUI elements, but low numbers seem to do fine
   ' -- This program has 25 GUI elements, probably more then you'll ever come across, so with that in mind
   ' The Limit doesn't need to be that big.
-  _LIMIT 400
+  _LIMIT 200
 
   'Check if we should update screen because an event happened or otherwise
   if GUI_update_screen(main_gui(), gui_num, selected_gui) then
@@ -284,8 +287,35 @@ DO 'Main loop
         elseif m_event.flags AND GUI_EVENT_MOUSE_SCROLL_DOWN OR m_event.flags AND GUI_EVENT_MOUSE_SCROLL_UP then
           debug_print "Scroll detected"
         end if
+
       CASE GUI_EVENT_KEY
         GUI_get_key_event event, k_event
+        debug_print "Key event! : " + str$(k_event.key_code)
+        if k_event.flags AND GUI_EVENT_KEY_TYPED then
+          MEM_put_str main_gui(labels(4)).text, chr$(k_event.key_code)
+          main_gui(labels(4)).flags = main_gui(labels(4)).flags OR GUI_FLAG_UPDATED
+        elseif k_event.flags AND GUI_EVENT_KEY_RELEASED and k_event.key_code = 27 then
+          exit_flag = -1
+        end if
+
+      CASE GUI_EVENT_ELEMENT_LABEL
+        GUI_get_element_label_event event, label_event
+        if label_event.flags AND GUI_EVENT_ELEMENT_LABEL_PRESSED then
+          if ((label_event.m_event.count - 1) mod 2) + 1 = 2 then
+            MEM_put_str main_gui(labels(4)).text, "Label " + str$(label_event.gui_element) + " Double Clicked on!"
+          else
+            MEM_put_str main_gui(labels(4)).text, "Label " + str$(label_event.gui_element) + " Clicked on!"
+          end if
+          main_gui(labels(4)).flags = main_gui(labels(4)).flags OR GUI_FLAG_UPDATED
+        end if
+
+      CASE GUI_EVENT_ELEMENT_BUTTON
+        GUI_get_element_button_event event, button_event
+        if button_event.flags AND GUI_EVENT_ELEMENT_BUTTON_PRESSED then
+          MEM_put_str main_gui(labels(4)).text, "Button " + str$(button_event.gui_element) + " Was clicked"
+          main_gui(labels(4)).flags = main_gui(labels(4)).flags OR GUI_FLAG_UPDATED
+        end if
+
     END SELECT
   LOOP
 

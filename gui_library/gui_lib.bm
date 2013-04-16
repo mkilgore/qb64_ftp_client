@@ -202,17 +202,28 @@ g.flags = g.flags OR GUI_FLAG_UPDATED
 END SUB
 
 FUNCTION GUI_get_layer (b as GUI_element_type)
-IF b.element_type <> GUI_DROP_DOWN AND b.element_type <> GUI_MENU then
-  GUI_get_layer = b.layer
-ELSEIF b.element_type = GUI_DROP_DOWN AND (b.flags AND GUI_FLAG_DROP_FLAG) then
-  GUI_get_layer = 128
-ELSEIF b.element_type = GUI_DROP_DOWN and not (b.flags AND GUI_FLAG_DROP_FLAG) THEN
-  GUI_get_layer = b.layer
-ELSEIF b.element_type = GUI_MENU then
-  if b.flags AND GUI_FLAG_MENU_OPEN then
-    GUI_get_layer = 128
-  end if
-END IF
+SELECT CASE b.element_type
+  CASE GUI_BOX
+    GUI_get_layer = GUI_box_get_layer(b)
+  CASE GUI_INPUT_BOX
+    GUI_get_layer = GUI_input_box_get_layer(b)
+  CASE GUI_LIST_BOX
+    GUI_get_layer = GUI_list_box_get_layer(b)
+  CASE GUI_TEXT_BOX
+    GUI_get_layer = GUI_text_box_get_layer(b)
+  CASE GUI_DROP_DOWN
+    GUI_get_layer = GUI_drop_down_get_layer(b)
+  CASE GUI_MENU
+    GUI_get_layer = GUI_menu_get_layer(b)
+  CASE GUI_CHECKBOX
+    GUI_get_layer = GUI_checkbox_get_layer(b)
+  CASE GUI_BUTTON
+    GUI_get_layer = GUI_button_get_layer(b)
+  CASE GUI_RADIO_BUTTON
+    GUI_get_layer = GUI_radio_button_get_layer(b)
+  CASE GUI_LABEL
+    GUI_get_layer = GUI_label_get_layer(b)
+END SELECT
 END FUNCTION
 
 'Output's debug info to the CONSOLE.
@@ -1293,11 +1304,205 @@ END IF
 GUI_calc_scroll b.row1, b.col1, b.row2, b.col2, b
 END SUB
 
+SUB GUI_move_cursor_left (b as GUI_element_type, e as GUI_event_key_type)
+IF b.text_position > 0 THEN
+  b.text_position = b.text_position - 1
+  IF b.text_position < b.scroll_offset_hors THEN
+    b.scroll_offset_hors = b.scroll_offset_hors - 1
+  END IF
+  b.flags = b.flags OR GUI_FLAG_UPDATED
+  GUI_calc_scroll b.row1, b.col1, b.row2, b.col2, b
+  if e.flags AND GUI_EVENT_KEY_RIGHT_SHIFT_DOWN OR e.flags AND GUI_EVENT_KEY_LEFT_SHIFT_DOWN then
+    b.text_sel_col1 = b.text_position
+    b.text_sel_col2 = b.text_sel_col1
+  else
+    b.text_sel_col2 = b.text_position
+  end if
+END IF
+END SUB
+
+SUB GUI_move_cursor_right (b as GUI_element_type, e as GUI_event_key_type)
+IF (b.text_position < b.text.length AND b.element_type = GUI_INPUT_BOX) OR b.element_type = GUI_TEXT_BOX THEN
+  b.text_position = b.text_position + 1
+  IF b.text_position > b.scroll_offset_hors + (b.col2 - b.col1 - 1) THEN
+    b.scroll_offset_hors = b.scroll_offset_hors + 1
+  END IF
+  b.flags = b.flags OR GUI_FLAG_UPDATED
+  GUI_calc_scroll b.row1, b.col1, b.row2, b.col2, b
+  if e.flags AND GUI_EVENT_KEY_RIGHT_SHIFT_DOWN OR e.flags AND GUI_EVENT_KEY_LEFT_SHIFT_DOWN then
+    b.text_sel_col1 = b.text_position
+    b.text_sel_col2 = b.text_sel_col1
+  else
+    b.text_sel_col2 = b.text_position
+  end if
+end if
+END SUB
+
+SUB GUI_move_cursor_up (b as GUI_element_type, e as GUI_event_key_type)
+if b.selected > 1 then
+  b.selected = b.selected - 1
+  GUI_fix_scroll b
+  GUI_calc_scroll b.row1, b.col1, b.row2, b.col2, b
+  b.flags = b.flags OR GUI_FLAG_UPDATED
+end if
+END SUB
+
+SUB GUI_move_cursor_down (b as GUI_element_type, e as GUI_event_key_type)
+if b.selected < b.length then
+  b.selected = b.selected + 1
+  GUI_fix_scroll b
+  GUI_calc_scroll b.row1, b.col1, b.row2, b.col2, b
+  b.flags = b.flags OR GUI_FLAG_UPDATED
+end if
+END SUB
+
+SUB GUI_text_box_handle_enter_key (b as GUI_element_type, e as GUI_event_key_type)
+tex$ = mid$(MEM_get_str_array$(b.lines, b.selected), b.text_position + 1)
+
+if b.length + 1 > b.lines.allocated and (b.length < b.max_lines OR b.max_lines = 0) then
+  MEM_allocate_string_array b.lines, b.length + 10
+  b.length = b.length + 1
+elseif b.length < b.max_lines OR b.max_lines = 0 then
+  b.length = b.length + 1
+end if
+
+for x = b.length to b.selected + 1 STEP -1
+  MEM_put_str_array b.lines, x, MEM_get_str_array$(b.lines, x - 1)
+next x
+
+MEM_put_str_array b.lines, b.selected + 1, tex$
+MEM_put_str_array b.lines, b.selected, mid$(MEM_get_str_array$(b.lines, b.selected), 1, b.text_position)
+b.selected = b.selected + 1
+if b.selected > b.length then
+  b.selected = b.selected - 1
+end if
+b.text_position = 0
+b.scroll_offset_hors = 0
+b.flags = b.flags OR GUI_FLAG_UPDATED
+if b.selected > b.scroll_offset_vert + (b.row2 - b.row1 - 1) then
+  b.scroll_offset_vert = b.scroll_offset_vert + 1
+end if
+
+GUI_calc_scroll b.row1, b.col1, b.row2, b.col2, b
+END SUB
+
+SUB GUI_move_cursor_page_up (b as GUI_element_type, e as GUI_event_key_type)
+b.selected = b.selected - (b.row2 - b.row1 - 1)
+if b.selected < 1 then b.selected = 1
+GUI_fix_scroll b
+GUI_calc_scroll b.row1, b.col1, b.row2, b.col2, b
+b.flags = b.flags OR GUI_FLAG_UPDATED
+END SUB
+
+SUB GUI_move_cursor_page_down (b as GUI_element_type, e as GUI_event_key_type)
+b.selected = b.selected + (b.row2 - b.row1 - 1)
+if b.selected > b.length then b.selected = b.length
+GUI_fix_scroll b
+GUI_calc_scroll b.row1, b.col1, b.row2, b.col2, b
+b.flags = b.flags OR GUI_FLAG_UPDATED
+END SUB
+
 SUB GUI_grab_key_events ()
+DIM e as GUI_event_generic_type, k as GUI_event_key_type
+
+GUI_init_event e
+e.event_type = GUI_EVENT_KEY
+
+ch = _KEYHIT
+
+if ch <= 0 then
+  ch = -ch
+  key_release = -1
+end if
+
+k.key_code = ch
+if ch > 0 then
+  SELECT CASE ch
+    CASE GUI_KEY_CODE_LMETA
+      if key_release then GUI_LMETA_FLAG = 0      ELSE GUI_LMETA_FLAG = GUI_EVENT_KEY_LEFT_META_DOWN
+    CASE GUI_KEY_CODE_RMETA
+      if key_release then GUI_RMETA_FLAG = 0      ELSE GUI_RMETA_FLAG = GUI_EVENT_KEY_RIGHT_META_DOWN
+    CASE GUI_KEY_CODE_RAPPLE
+      if key_release then GUI_RAPPLE_FLAG = 0     ELSE GUI_RAPPLE_FLAG = GUI_EVENT_KEY_RIGHT_APPLE_DOWN
+    CASE GUI_KEY_CODE_LAPPLE
+      if key_release then GUI_LAPPLE_FLAG = 0     ELSE GUI_LAPPLE_FLAG = GUI_EVENT_KEY_LEFT_APPLE_DOWN
+    CASE GUI_KEY_CODE_LCTRL
+      if key_release then GUI_LCTRL_FLAG = 0      ELSE GUI_LCTRL_FLAG = GUI_EVENT_KEY_LEFT_CTRL_DOWN
+    CASE GUI_KEY_CODE_RCTRL
+      if key_release then GUI_RCTRL_FLAG = 0      ELSE GUI_RCTRL_FLAG = GUI_EVENT_KEY_RIGHT_CTRL_DOWN
+    CASE GUI_KEY_CODE_LSHIFT
+      if key_release then GUI_LSHIFT_FLAG = 0     ELSE GUI_LSHIFT_FLAG = GUI_EVENT_KEY_LEFT_SHIFT_DOWN
+    CASE GUI_KEY_CODE_RSHIFT
+      if key_release then GUI_RSHIFT_FLAG = 0     ELSE GUI_RSHIFT_FLAG = GUI_EVENT_KEY_RIGHT_SHIFT_DOWNf
+    CASE GUI_KEY_CODE_LALT
+      if key_release then GUI_LALT_FLAG = 0       ELSE GUI_LALT_FLAG = GUI_EVENT_KEY_LEFT_ALT_DOWN
+    CASE GUI_KEY_CODE_RALT
+      if key_release then GUI_RALT_FLAG = 0       ELSE GUI_RALT_FLAG = GUI_EVENT_KEY_RIGHT_ALT_DOWN
+    CASE GUI_KEY_CODE_CAPSLOCK
+      if key_release then GUI_CAPS_LOCK_FLAG = 0  ELSE GUI_CAPS_LOCK_FLAG = GUI_EVENT_KEY_CAPS_LOCK_DOWN
+    CASE GUI_KEY_CODE_ALT_GR
+      if key_release then GUI_ALT_GR_FLAG = 0     ELSE GUI_ALT_GR_FLAG = GUI_EVENT_KEY_ALT_GR_DOWN
+  END SELECT
+  k.flags = GUI_EVENT_KEY_LEFT_ALT_DOWN OR GUI_EVENT_KEY_RIGHT_ALT_DOWN OR GUI_EVENT_KEY_LEFT_ALT_DOWN OR GUI_EVENT_KEY_RIGHT_ALT_DOWN OR GUI_EVENT_KEY_LEFT_CTL_DOWN OR GUI_EVENT_KEY_RIGHT_CTL_DOWN OR GUI_EVENT_KEY_LEFT_META_DOWN OR GUI_EVENT_KEY_RIGHT_META_DOWN OR GUI_EVENT_KEY_LEFT_SHIFT_DOWN OR GUI_EVENT_KEY_RIGHT_SHIFT_DOWN OR GUI_EVENT_KEY_CAPS_LOCK_DOWN OR GUI_EVENT_KEY_ALT_GR_DOWN 
+  if key_release then
+    k.flags = k.flags OR GUI_EVENT_KEY_RELEASED
+    _MEMPUT e.mem, e.mem.OFFSET, k
+    GUI_add_event_to_queue e
+  elseif NOT key_release then
+    k.flags = k.flags OR GUI_EVENT_KEY_PRESSED
+    _MEMPUT e.mem, e.mem.OFFSET, k
+    GUI_add_event_to_queue e
+    if ch >= 32 and ch <= ASC("~") then
+      k.flags = (k.flags AND NOT GUI_EVENT_KEY_PRESSED) OR GUI_EVENT_KEY_TYPED
+      _MEMPUT e.mem, e.mem.OFFSET, k
+      GUI_add_event_to_queue e
+    end if
+  end if
+end if
+
+GUI_free_event e
 
 END SUB
 
 SUB GUI_process_key_event (gui() as GUI_element_type, gui_num as INTEGER, sel, e as GUI_event_generic_type)
+'Special case for the Alt key
+DIM k_event as GUI_event_key_type
+GUI_get_key_event e, k_event
+
+SELECT CASE gui(sel).element_type
+  CASE GUI_BOX
+    GUI_box_process_key_event gui(), gui_num, sel, k_event
+  CASE GUI_INPUT_BOX
+    GUI_input_box_process_key_event gui(), gui_num, sel, k_event
+  CASE GUI_TEXT_BOX
+    GUI_text_box_process_key_event gui(), gui_num, sel, k_event
+  CASE GUI_LIST_BOX
+    GUI_list_box_process_key_event gui(), gui_num, sel, k_event
+  CASE GUI_DROP_DOWN
+    GUI_drop_down_process_key_event gui(), gui_num, sel, k_event
+  CASE GUI_CHECKBOX
+    GUI_checkbox_process_key_event gui(), gui_num, sel, k_event
+  CASE GUI_MENU
+    GUI_menu_process_key_event gui(), gui_num, sel, k_event
+  CASE GUI_BUTTON
+    GUI_button_process_key_event gui(), gui_num, sel, k_event
+  CASE GUI_RADIO_BUTTON
+    GUI_radio_button_process_key_event gui(), gui_num, sel, k_event
+  CASE GUI_LABEL
+    GUI_label_process_key_event gui(), gui_num, sel, k_event
+END SELECT
+
+'Any element that doesn't want TAB handled internally should set the key_code equal to 0 (Or anything besdes GUI_KEY_CODE_TAB)
+if k_event.flags AND GUI_EVENT_KEY_PRESSED AND k_event.key_code = GUI_KEY_CODE_TAB then
+  do
+    sel = (sel mod gui_num) + 1
+  loop until (gui(sel).flags AND GUI_FLAG_SKIP) = 0
+  gui(sel).flags = gui(sel).flags OR GUI_FLAG_UPDATED
+end if
+
+IF k_event.flags AND GUI_EVENT_KEY_PRESSED AND (k_event.key_code = GUI_KEY_CODE_RALT OR k_event.key_code = GUI_KEY_CODE_LALT) then
+  GUI_debug_output "Here"
+end if
 
 END SUB
 
@@ -1807,6 +2012,7 @@ DO WHILE _MOUSEINPUT
   'Check for left button change
   if GUI_MOUSE_LAST_STATE.MLEFT <> m_state.MLEFT then
     'Check for mouse-up or mouse-down and register the event
+    'GUI_debug_output "Left Click"
     if m_state.MLEFT = 0 then
       m.flags = GUI_EVENT_MOUSE_LEFT_UP
       GUI_DRAG_FLAG = 0
@@ -1821,6 +2027,7 @@ DO WHILE _MOUSEINPUT
         GUI_DRAG_FLAG = 0
       end if
     end if
+    'GUI_debug_output "Writing event"
     _MEMPUT e.mem, e.mem.OFFSET, m
     GUI_add_event_to_queue e
     if (m.flags AND GUI_EVENT_MOUSE_LEFT_UP) AND GUI_MOVEMENT_FLAG = 0 then
@@ -1832,8 +2039,11 @@ DO WHILE _MOUSEINPUT
       end if
       m.count = GUI_LEFT_CLICK_COUNT
       m.flags = GUI_EVENT_MOUSE_LEFT_CLICK
+      'GUI_debug_output "Writing click event"
       _MEMPUT e.mem, e.mem.OFFSET, m
+      'GUI_debug_output "Adding click"
       GUI_add_event_to_queue e
+      'GUI_debug_output "Done adding click"
       m.count = 0
       GUI_LEFT_CLICK_TIMER = TIMER(.001)
     end if
@@ -1841,6 +2051,7 @@ DO WHILE _MOUSEINPUT
   
   'Check for RIGHT button change
   if GUI_MOUSE_LAST_STATE.MRIGHT <> m_state.MRIGHT then
+    'GUI_debug_output "Right Click"
     'Check for mouse-up or mouse-down and register the event
     if m_state.MRIGHT = 0 then
       m.flags = GUI_EVENT_MOUSE_RIGHT_UP
@@ -1877,6 +2088,7 @@ DO WHILE _MOUSEINPUT
     
   'Check for MIDDLE button change
   if GUI_MOUSE_LAST_STATE.MMIDDLE <> m_state.MMIDDLE then
+    'GUI_debug_output "Middle Click"
     'Check for mouse-up or mouse-down and register the event
     if m_state.MMIDDLE = 0 then
       m.flags = GUI_EVENT_MOUSE_MIDDLE_UP
@@ -1931,6 +2143,7 @@ if GUI_PERSISTANT_MOUSE_STATE.mscroll <> 0 then
   m.flags = 0
 end if
 
+'We handle movements inbetween grabbing mouse state
 if old_state.mrow <> GUI_PERSISTANT_MOUSE_STATE.mrow or old_state.mcol <> GUI_PERSISTANT_MOUSE_STATE.mcol then
   'Mouse movement
   m.flags = GUI_EVENT_MOUSE_MOVEMENT
@@ -1954,118 +2167,94 @@ DIM men as GUI_menu_item_type, mtmp as GUI_menu_item_type, mnext as GUI_menu_ite
 DIM memtmp AS _MEM, offset as _OFFSET
 
 DIM mouse_event as GUI_event_mouse_type
-
 GUI_get_mouse_event event, mouse_event
 
-select case mouse_event.flags
-  case GUI_EVENT_MOUSE_SCROLL_DOWN, GUI_EVENT_MOUSE_SCROLL_UP
-    GUI_debug_output "Mouse Scroll up/down Event!"
-    SELECT CASE b(selected_gui).element_type
-      CASE GUI_LIST_BOX
-        GUI_list_box_process_scroll b(), boxnum, selected_gui, mouse_event
-      CASE GUI_TEXT_BOX
-        GUI_text_box_process_scroll b(), boxnum, selected_gui, mouse_event
-      CASE GUI_DROP_DOWN
-        GUI_drop_down_process_scroll b(), boxnum, selected_gui, mouse_event
-    END SELECT
-  CASE GUI_EVENT_MOUSE_DRAG
-    GUI_debug_output "Mouse Drag event!"
-    SELECT CASE b(selected_gui).element_type
-      CASE GUI_INPUT_BOX
-        GUI_input_box_process_drag b(), boxnum, selected_gui, mouse_event
-      CASE GUI_DROP_DOWN
-        GUI_drop_down_process_drag b(), boxnum, selected_gui, mouse_event
-      CASE GUI_LIST_BOX
-        GUI_list_box_process_drag b(), boxnum, selected_gui, mouse_event
-      CASE GUI_TEXT_BOX
-        GUI_text_box_process_drag b(), boxnum, selected_gui, mouse_event
-    END SELECT
+current_layer = -129
+found = -1
+FOR x = 1 TO boxnum
+
+  select case b(x).element_type
+    case GUI_BOX
+      k = GUI_box_should_handle_event(b(x), mouse_event)
+    case GUI_INPUT_BOX
+      k = GUI_input_box_should_handle_event(b(x), mouse_event)
+    case GUI_LIST_BOX
+      k = GUI_list_box_should_handle_event(b(x), mouse_event)
+    case GUI_TEXT_BOX
+      k = GUI_text_box_should_handle_event(b(x), mouse_event)
+    case GUI_DROP_DOWN
+      k = GUI_drop_down_should_handle_event(b(x), mouse_event)
+    case GUI_CHECKBOX
+      k = GUI_checkbox_should_handle_event(b(x), mouse_event)
+    case GUI_MENU
+      k = GUI_menu_should_handle_event(b(x), mouse_event)
+    case GUI_BUTTON
+      k = GUI_button_should_handle_event(b(x), mouse_event)
+    case GUI_RADIO_BUTTON
+      k = GUI_radio_button_should_handle_event(b(x), mouse_event)
+    CASE GUI_LABEL
+      k = GUI_label_should_handle_event(b(x), mouse_event)
+  END SELECT
   
-  CASE GUI_EVENT_MOUSE_LEFT_DOWN, GUI_EVENT_MOUSE_RIGHT_DOWN, GUI_EVENT_MOUSE_MIDDLE_DOWN
-    GUI_debug_output "Mouse down event!"
-    SELECT CASE b(selected_gui).element_type
-      CASE GUI_LIST_BOX
-        GUI_list_box_process_mouse_down b(), boxnum, selected_gui, mouse_event
-      CASE GUI_TEXT_BOX
-        GUI_text_box_process_mouse_down b(), boxnum, selected_gui, mouse_event
-      CASE GUI_DROP_DOWN 
-        GUI_drop_down_process_mouse_down b(), boxnum, selected_gui, mouse_event
-    END SELECT
-  CASE GUI_EVENT_MOUSE_LEFT_CLICK, GUI_EVENT_MOUSE_RIGHT_CLICK, GUI_EVENT_MOUSE_MIDDLE_CLICK
-    GUI_debug_output "Mouse Click event!"
-    current_layer = -129
-    FOR x = 1 TO boxnum
-      k = GUI_get_layer(b(x))
-      if k > current_layer then
-        select case b(x).element_type
-          case GUI_BOX
-            if GUI_box_was_clicked_on(b(x), mouse_event) then
-              found = x: current_layer = k: GUI_debug_output "Found one!"
-            end if
-          case GUI_INPUT_BOX
-            if GUI_input_box_was_clicked_on(b(x), mouse_event) then
-              found = x: current_layer = k: GUI_debug_output "Found one!"
-            end if
-          case GUI_LIST_BOX
-            if GUI_list_box_was_clicked_on(b(x), mouse_event) then
-              found = x: current_layer = k: GUI_debug_output "Found one!"
-            end if
-          case GUI_TEXT_BOX
-            if GUI_text_box_was_clicked_on(b(x), mouse_event) then
-              found = x: current_layer = k: GUI_debug_output "Found one!"
-            end if
-          case GUI_DROP_DOWN
-            if GUI_drop_down_was_clicked_on(b(x), mouse_event) then
-              found = x: current_layer = k: GUI_debug_output "Found one!"
-            end if
-          case GUI_CHECKBOX
-            if GUI_checkbox_was_clicked_on(b(x), mouse_event) then
-              found = x: current_layer = k: GUI_debug_output "Found one!"
-            end if
-          case GUI_MENU
-            if GUI_menu_was_clicked_on(b(x), mouse_event) then
-              found = x: current_layer = k: GUI_debug_output "Found one!"
-            end if
-          case GUI_BUTTON
-            if GUI_button_was_clicked_on(b(x), mouse_event) then
-              found = x: current_layer = k: GUI_debug_output "Found one!"
-            end if
-          case GUI_RADIO_BUTTON
-            if GUI_radio_button_was_clicked_on(b(x), mouse_event) then
-              found = x: current_layer = k: GUI_debug_output "Found one!"
-            end if
-          CASE GUI_LABEL
-            if GUI_label_was_clicked_on(b(x), mouse_event) then
-              found = x: current_layer = k: GUI_debug_output "Found one!"
-            end if
-        END SELECT
-      end if
-    NEXT x
-    GUI_debug_output "Found: " + str$(found)
-    SELECT CASE b(found).element_type
-      case GUI_BOX
-        GUI_box_process_click b(), boxnum, selected_gui, found, mouse_event
-      case GUI_INPUT_BOX
-        GUI_input_box_process_click b(), boxnum, selected_gui, found, mouse_event
-      case GUI_TEXT_BOX
-        GUI_text_box_process_click b(), boxnum, selected_gui, found, mouse_event
-      case GUI_LIST_BOX
-        GUI_list_box_process_click b(), boxnum, selected_gui, found, mouse_event
-      case GUI_DROP_DOWN
-        GUI_drop_down_process_click b(), boxnum, selected_gui, found, mouse_event
-      case GUI_CHECKBOX
-        GUI_checkbox_process_click b(), boxnum, selected_gui, found, mouse_event
-      CASE GUI_RADIO_BUTTON
-        GUI_radio_button_process_click b(), boxnum, selected_gui, found, mouse_event
-      case GUI_MENU
-        GUI_menu_process_click b(), boxnum, selected_gui, found, mouse_event
-      case GUI_BUTTON
-        GUI_button_process_click b(), boxnum, selected_gui, found, mouse_event
-      case GUI_LABEL
-        GUI_label_process_click b(), buxnum, selected_gui, found, mouse_event
-    END SELECT
-    selected_gui = found
-END SELECT
+  if k > current_layer then
+    GUI_debug_output "Found: " + str$(x) + str$(k)
+    found = x
+    current_layer = k
+  end if
+
+NEXT x
+
+if found <> selected_gui and found >= 1 then
+  SELECT CASE b(found).element_type
+    CASE GUI_BOX
+      GUI_box_process_focus_release b(), boxnum, selected_gui
+    CASE GUI_INPUT_BOX
+      GUI_input_box_process_focus_release b(), boxnum, selected_gui
+    CASE GUI_TEXT_BOX
+      GUI_text_box_process_focus_release b(), boxnum, selected_gui
+    CASE GUI_LIST_BOX
+      GUI_list_box_process_focus_release b(), boxnum, selected_gui
+    CASE GUI_DROP_DOWN
+      GUI_drop_down_process_focus_release b(), boxnum, selected_gui
+    CASE GUI_CHECKBOX
+      GUI_checkbox_process_focus_release b(), boxnum, selected_gui
+    CASE GUI_MENU
+      GUI_menu_process_focus_release b(), boxnum, selected_gui
+    CASE GUI_BUTTON
+      GUI_button_process_focus_release b(), boxnum, selected_gui
+    CASE GUI_RADIO_BUTTON
+      GUI_radio_button_process_focus_release b(), boxnum, selected_gui
+    CASE GUI_LABEL
+      GUI_label_process_focus_release b(), boxnum, selected_gui
+  END SELECT
+end if
+
+if found >= 1 then
+  SELECT CASE b(found).element_type
+    CASE GUI_BOX
+      GUI_box_process_mouse_event b(), boxnum, selected_gui, found, mouse_event
+    CASE GUI_INPUT_BOX
+      GUI_input_box_process_mouse_event b(), boxnum, selected_gui, found, mouse_event
+    CASE GUI_TEXT_BOX
+      GUI_text_box_process_mouse_event b(), boxnum, selected_gui, found, mouse_event
+    CASE GUI_LIST_BOX
+      GUI_list_box_process_mouse_event b(), boxnum, selected_gui, found, mouse_event
+    CASE GUI_DROP_DOWN
+      GUI_drop_down_process_mouse_event b(), boxnum, selected_gui, found, mouse_event
+    CASE GUI_CHECKBOX
+      GUI_checkbox_process_mouse_event b(), boxnum, selected_gui, found, mouse_event
+    CASE GUI_MENU
+      GUI_menu_process_mouse_event b(), boxnum, selected_gui, found, mouse_event
+    CASE GUI_BUTTON
+      GUI_button_process_mouse_event b(), boxnum, selected_gui, found, mouse_event
+    CASE GUI_RADIO_BUTTON
+      GUI_radio_button_process_mouse_event b(), boxnum, selected_gui, found, mouse_event
+    CASE GUI_LABEL
+      GUI_label_process_mouse_event b(), boxnum, selected_gui, found, mouse_event
+  END SELECT
+
+  selected_gui = found
+end if
 
 END SUB
 
@@ -2126,23 +2315,23 @@ s.g.allocated = e.allocated
 s.g.event_type = e.event_type
 mtmp = _MEMNEW(LEN(s))
 if GUI_EVENT_STACK_LENGTH = 0 then
-  GUI_EVENT_STACK_END = mtmp
+  GUI_EVENT_STACK_START = mtmp
   's.e_next = GUI_EVENT_STACK_START
 elseif GUI_EVENT_STACK_LENGTH = 1 then
   'GUI_EVENT_STACK_START.e_next = mtmp
-  GUI_EVENT_STACK_START = mtmp
-  _MEMGET GUI_EVENT_STACK_END, GUI_EVENT_STACK_END.OFFSET, stmp
-  stmp.e_prev = GUI_EVENT_STACK_START
-  _MEMPUT GUI_EVENT_STACK_END, GUI_EVENT_STACK_END.OFFSET, stmp
+  GUI_EVENT_STACK_END = mtmp
+  _MEMGET GUI_EVENT_STACK_START, GUI_EVENT_STACK_START.OFFSET, stmp
+  stmp.e_prev = GUI_EVENT_STACK_END
+  _MEMPUT GUI_EVENT_STACK_START, GUI_EVENT_STACK_START.OFFSET, stmp
   's.e_prev = GUI_EVENT_STACK_START
 else
-  _MEMGET GUI_EVENT_STACK_START, GUI_EVENT_STACK_START.OFFSET, stmp
+  _MEMGET GUI_EVENT_STACK_END, GUI_EVENT_STACK_END.OFFSET, stmp
   stmp.e_prev = mtmp
-  _MEMPUT GUI_EVENT_STACK_START, GUI_EVENT_STACK_START.OFFSET, stmp
+  _MEMPUT GUI_EVENT_STACK_END, GUI_EVENT_STACK_END.OFFSET, stmp
   
   's.e_prev = GUI_EVENT_STACK_START
   'GUI_EVENT_STACK_END.e_next = mtmp
-  GUI_EVENT_STACK_START = mtmp
+  GUI_EVENT_STACK_END = mtmp
 end if
   
 _MEMPUT mtmp, mtmp.OFFSET, s
@@ -2154,11 +2343,11 @@ SUB GUI_get_event_from_queue (e as GUI_event_generic_type)
 DIM s as GUI_event_stack_link, mempty as _MEM
 'GUI_debug_output "Taking from stack"
 'IF GUI_EVENT_STACK_LENGTH = 1 then
-  _MEMGET GUI_EVENT_STACK_END, GUI_EVENT_STACK_END.OFFSET, s
-  _MEMFREE GUI_EVENT_STACK_END
+  _MEMGET GUI_EVENT_STACK_START, GUI_EVENT_STACK_START.OFFSET, s
+  _MEMFREE GUI_EVENT_STACK_START
   
 if GUI_EVENT_STACK_LENGTH > 1 then
-  GUI_EVENT_STACK_END = s.e_prev
+  GUI_EVENT_STACK_START = s.e_prev
 end if
 'elseif GUI_EVENT_STACK_LENGTH = 2 then
 '  _MEMGET GUI_EVENT_STACK_START, GUI_EVENT_STACK_START.OFFSET, s
@@ -2184,8 +2373,8 @@ END SUB
 
 'Allocates a generic events memory
 SUB GUI_init_event (e as GUI_event_generic_type)
-e.mem = _MEMNEW(32) 'Size of the biggest event
-e.allocated = 32
+e.mem = _MEMNEW(60) 'Size of the biggest event
+e.allocated = 60
 END SUB
 
 'Frees a generic events memory
@@ -2202,347 +2391,639 @@ SUB GUI_get_mouse_event (e as GUI_event_generic_type, e2 as GUI_event_mouse_type
 e2 = _MEMGET(e.mem, e.mem.OFFSET, GUI_event_mouse_type)
 END SUB
 
+SUB GUI_get_element_label_event (e as GUI_event_generic_type, e2 as GUI_event_element_label_type)
+_MEMGET e.mem, e.mem.OFFSET, e2
+END SUB
+
+SUB GUI_get_element_button_event (e as GUI_event_generic_type, e2 as GUI_event_element_button_type)
+_MEMGET e.mem, e.mem.OFFSET, e2
+END SUB
+
 '###############################################################################
 '###############################################################################
 '#-------------------------ELEMENT CLICK FUNCTIONS-----------------------------#
 '###############################################################################
 '###############################################################################
-'Functions return TRUE (-1) if the event is sufficent to result in an action
-'on the element (And is a click in the correct location)
-'You can assume that when these functions are called, a 'click' as been recieved
+'Functions return TRUE (-1) if the event is sufficent to result in the GUI being
+'selected
 
-FUNCTION GUI_box_was_clicked_on (e as GUI_element_type, event as GUI_event_mouse_type)
-IF event.m.mrow <= e.row2 AND event.m.mrow >= e.row1 THEN
-  IF event.m.mcol >= e.col1 AND event.m.mcol <= e.col2 THEN
-    GUI_box_was_clicked_on = -1
+FUNCTION GUI_box_should_handle_event (e as GUI_element_type, event as GUI_event_mouse_type)
+GUI_box_should_handle_event = -130
+if event.flags AND GUI_EVENT_MOUSE_LEFT_CLICK or event.flags AND GUI_EVENT_MOUSE_RIGHT_CLICK OR event.flags AND GUI_EVENT_MOUSE_RIGHT_DOWN or event.flags AND GUI_EVENT_MOUSE_LEFT_DOWN then
+  IF event.m.mrow <= e.row2 AND event.m.mrow >= e.row1 THEN
+    IF event.m.mcol >= e.col1 AND event.m.mcol <= e.col2 THEN
+      GUI_box_should_handle_event = e.layer
+    END IF
   END IF
-END IF
+end if
 END FUNCTION
 
-FUNCTION GUI_input_box_was_clicked_on (e as GUI_element_type, event as GUI_event_mouse_type)
-IF event.m.mrow <= e.row1 + 2 AND event.m.mrow >= e.row1 THEN
-  IF event.m.mcol >= e.col1 AND event.m.mcol <= e.col2 THEN
-    GUI_input_box_was_clicked_on = -1
+FUNCTION GUI_input_box_should_handle_event (e as GUI_element_type, event as GUI_event_mouse_type)
+GUI_input_box_should_handle_event = -130
+if event.flags AND GUI_EVENT_MOUSE_LEFT_CLICK or event.flags AND GUI_EVENT_MOUSE_RIGHT_CLICK OR event.flags AND GUI_EVENT_MOUSE_RIGHT_DOWN or event.flags AND GUI_EVENT_MOUSE_LEFT_DOWN then
+  IF event.m.mrow <= e.row1 + 2 AND event.m.mrow >= e.row1 THEN
+    IF event.m.mcol >= e.col1 AND event.m.mcol <= e.col2 THEN
+      GUI_input_box_should_handle_event = e.layer
+    END IF
   END IF
-END IF
+end if
 END FUNCTION
 
-FUNCTION GUI_list_box_was_clicked_on (e as GUI_element_type, event as GUI_event_mouse_type)
-IF event.m.mrow <= e.row2 AND event.m.mrow >= e.row1 THEN
-  IF event.m.mcol >= e.col1 AND event.m.mcol <= e.col2 THEN
-    GUI_list_box_was_clicked_on = -1
+FUNCTION GUI_list_box_should_handle_event (e as GUI_element_type, event as GUI_event_mouse_type)
+GUI_list_box_should_handle_event = -130
+if event.flags AND GUI_EVENT_MOUSE_LEFT_CLICK or event.flags AND GUI_EVENT_MOUSE_RIGHT_CLICK or event.flags AND GUI_EVENT_MOUSE_DRAG OR event.flags AND GUI_EVENT_MOUSE_SCROLL_DOWN OR event.flags AND GUI_EVENT_MOUSE_SCROLL_UP OR event.flags AND GUI_EVENT_MOUSE_LEFT_DOWN OR event.flags AND GUI_EVENT_MOUSE_RIGHT_DOWN then
+  if e.flags AND GUI_FLAG_SCROLL_IS_HELD_H OR e.flags AND GUI_FLAG_SCROLL_IS_HELD_V then
+    GUI_list_box_should_handle_event = 128
+  elseIF event.m.mrow <= e.row2 AND event.m.mrow >= e.row1 THEN
+    IF event.m.mcol >= e.col1 AND event.m.mcol <= e.col2 THEN
+      GUI_list_box_should_handle_event = e.layer
+    END IF
   END IF
-END IF
+'elseif event.flags AND GUI_EVENT_MOUSE_DRAG then
+  
+'  end if
+end if
 END FUNCTION
 
-FUNCTION GUI_text_box_was_clicked_on (e as GUI_element_type, event as GUI_event_mouse_type)
-IF event.m.mrow <= e.row2 AND event.m.mrow >= e.row1 THEN
-  IF event.m.mcol >= e.col1 AND event.m.mcol <= e.col2 THEN
-    GUI_text_box_was_clicked_on = -1
+FUNCTION GUI_text_box_should_handle_event (e as GUI_element_type, event as GUI_event_mouse_type)
+GUI_text_box_should_handle_event = -130
+if event.flags AND GUI_EVENT_MOUSE_LEFT_CLICK or event.flags AND GUI_EVENT_MOUSE_RIGHT_CLICK OR event.flags AND GUI_EVENT_MOUSE_DRAG OR event.flags AND GUI_EVENT_MOUSE_SCROLL_DOWN OR event.flags AND GUI_EVENT_MOUSE_SCROLL_UP OR event.flags AND GUI_EVENT_MOUSE_LEFT_DOWN OR event.flags AND GUI_EVENT_MOUSE_RIGHT_DOWN then
+  if e.flags AND GUI_FLAG_SCROLL_IS_HELD_H OR e.flags AND GUI_FLAG_SCROLL_IS_HELD_V then
+    GUI_text_box_should_handle_event = 128
+  elseIF event.m.mrow <= e.row2 AND event.m.mrow >= e.row1 THEN
+    IF event.m.mcol >= e.col1 AND event.m.mcol <= e.col2 THEN
+      GUI_text_box_should_handle_event = e.layer
+    END IF
   END IF
-END IF
+'elseif event.flags AND GUI_EVENT_MOUSE_DRAG then
+'  i
+'  end if
+end if
 END FUNCTION
 
-FUNCTION GUI_drop_down_was_clicked_on (e as GUI_element_type, event as GUI_event_mouse_type)
-if (e.flags AND GUI_FLAG_DROP_FLAG) <> GUI_FLAG_DROP_FLAG then
-  'GUI_debug_output "Result: " + str$(NOT (b(x).flags AND GUI_FLAG_DROP_FLAG))
-  IF event.m.mrow = e.row1 AND event.m.mcol >= e.col1 AND event.m.mcol <= e.col2 THEN
-    GUI_drop_down_was_clicked_on = -1
+FUNCTION GUI_drop_down_should_handle_event (e as GUI_element_type, event as GUI_event_mouse_type)
+GUI_drop_down_should_handle_event = -130
+if event.flags AND GUI_EVENT_MOUSE_LEFT_CLICK or event.flags AND GUI_EVENT_MOUSE_RIGHT_CLICK OR event.flags AND GUI_EVENT_MOUSE_DRAG OR event.flags AND GUI_EVENT_MOUSE_SCROLL_DOWN OR event.flags AND GUI_EVENT_MOUSE_SCROLL_UP OR event.flags AND GUI_EVENT_MOUSE_LEFT_DOWN OR event.flags AND GUI_EVENT_MOUSE_RIGHT_DOWN then
+  if e.flags AND GUI_FLAG_SCROLL_IS_HELD_H OR e.flags AND GUI_FLAG_SCROLL_IS_HELD_V then
+    GUI_drop_down_should_handle_event = 128
+  elseif (e.flags AND GUI_FLAG_DROP_FLAG) <> GUI_FLAG_DROP_FLAG then
+    'GUI_debug_output "Result: " + str$(NOT (b(x).flags AND GUI_FLAG_DROP_FLAG))
+    IF event.m.mrow = e.row1 AND event.m.mcol >= e.col1 AND event.m.mcol <= e.col2 THEN
+      GUI_drop_down_should_handle_event = e.layer
+    END IF
+  else
+    if event.m.mrow >= e.row1 and event.m.mrow <= e.row2 and event.m.mcol >= e.col1 and event.m.mcol <= e.col2 then
+      GUI_drop_down_should_handle_event = 128
+    end if
+  end if
+'elseif event.flags AND GUI_EVENT_MOUSE_DRAG then
+' 
+'  end if
+end if
+END FUNCTION
+
+FUNCTION GUI_checkbox_should_handle_event (e as GUI_element_type, event as GUI_event_mouse_type)
+GUI_checkbox_should_handle_event = -130
+if event.flags AND GUI_EVENT_MOUSE_LEFT_CLICK or event.flags AND GUI_EVENT_MOUSE_RIGHT_CLICK then
+  IF event.m.mrow = e.row1 AND event.m.mcol >= e.col1 AND event.m.mcol <= e.col1 + 2 + e.nam.length THEN
+    GUI_checkbox_should_handle_event = e.layer
   END IF
-else
-  if event.m.mrow >= e.row1 and event.m.mrow <= e.row2 and event.m.mcol >= e.col1 and event.m.mcol <= e.col2 then
-    GUI_drop_down_was_clicked_on = -1
+end if
+END FUNCTION
+
+FUNCTION GUI_menu_should_handle_event (e as GUI_element_type, event as GUI_event_mouse_type)
+GUI_menu_should_handle_event = -130
+if event.flags AND GUI_EVENT_MOUSE_LEFT_CLICK or event.flags AND GUI_EVENT_MOUSE_RIGHT_CLICK OR event.flags AND GUI_EVENT_MOUSE_RIGHT_DOWN or event.flags AND GUI_EVENT_MOUSE_LEFT_DOWN then
+  if GUI_menu_clicked_on(e, event.m.mcol, event.m.mrow, depth, selection) then
+    GUI_debug_output "Inside menu handle event"
+    e.menu_depth = depth
+    e.menu_sel = selection
+    GUI_menu_should_handle_event = 128
   end if
 end if
 END FUNCTION
 
-FUNCTION GUI_checkbox_was_clicked_on (e as GUI_element_type, event as GUI_event_mouse_type)
-IF event.m.mrow = e.row1 AND event.m.mcol >= e.col1 AND event.m.mcol <= e.col1 + 2 + e.nam.length THEN
-  GUI_checkbox_was_clicked_on = -1
-END IF
-END FUNCTION
-
-FUNCTION GUI_menu_was_clicked_on (e as GUI_element_type, event as GUI_event_mouse_type)
-if GUI_menu_clicked_on(e, event.m.mcol, event.m.mrow, depth, selection) then
-  e.menu_depth = depth
-  e.menu_sel = selection
-  GUI_menu_was_clicked_on = -1
+FUNCTION GUI_button_should_handle_event (e as GUI_element_type, event as GUI_event_mouse_type)
+GUI_button_should_handle_event = -130
+if event.flags AND GUI_EVENT_MOUSE_LEFT_CLICK or event.flags AND GUI_EVENT_MOUSE_RIGHT_CLICK then
+  IF event.m.mrow = e.row1 AND event.m.mcol >= e.col1 AND event.m.mcol <= e.col1 + e.nam.length + 1 THEN
+    GUI_button_should_handle_event = e.layer
+  END IF
 end if
 END FUNCTION
 
-FUNCTION GUI_button_was_clicked_on (e as GUI_element_type, event as GUI_event_mouse_type)
-IF event.m.mrow = e.row1 AND event.m.mcol >= e.col1 AND event.m.mcol <= e.col1 + e.nam.length + 1 THEN
-  GUI_button_was_clicked_on = -1
-END IF
-END FUNCTION
-
-FUNCTION GUI_radio_button_was_clicked_on (e as GUI_element_type, event as GUI_event_mouse_type)
-if event.m.mrow = e.row1 AND event.m.mcol >= e.col1 AND event.m.mcol <= e.col1 + 2 + e.nam.length THEN
-  GUI_radio_button_was_clicked_on = -1
+FUNCTION GUI_radio_button_should_handle_event (e as GUI_element_type, event as GUI_event_mouse_type)
+GUI_radio_button_should_handle_event = -130
+if event.flags AND GUI_EVENT_MOUSE_LEFT_CLICK or event.flags AND GUI_EVENT_MOUSE_RIGHT_CLICK then
+  if event.m.mrow = e.row1 AND event.m.mcol >= e.col1 AND event.m.mcol <= e.col1 + 2 + e.nam.length THEN
+    GUI_radio_button_should_handle_event = e.layer
+  end if
 end if
 END FUNCTION
 
-FUNCTION GUI_label_was_clicked_on (e as GUI_element_type, event as GUI_event_mouse_type)
-IF event.m.mrow = e.row1 and event.m.mcol >= e.col1 AND event.m.mcol <= e.col1 + e.text.length then
-  GUI_label_was_clicked_on = -1
+FUNCTION GUI_label_should_handle_event (e as GUI_element_type, event as GUI_event_mouse_type)
+GUI_label_should_handle_event = -130
+if event.flags AND GUI_EVENT_MOUSE_LEFT_CLICK or event.flags AND GUI_EVENT_MOUSE_RIGHT_CLICK then
+  IF event.m.mrow = e.row1 and event.m.mcol >= e.col1 AND event.m.mcol <= e.col1 + e.text.length then
+    GUI_label_should_handle_event = e.layer
+  end if
 end if
 END FUNCTION
 
 '###############################################################################
 '###############################################################################
-'#---------------------ELEMENT CLICK PROCESS FUNCTIONS-------------------------#
+'#------------------ELEMENT MOUSE EVENT PROCESS FUNCTIONS----------------------#
 '###############################################################################
 '###############################################################################
-'Called when an element was clicked on (Determined by the 'clicked_on' function for that element)
-'These functions handle what should happen on the click
 
-SUB GUI_box_process_click (gui() as GUI_element_type, gui_num, old, new, event as GUI_event_mouse_type)
+SUB GUI_box_process_mouse_event (gui() as GUI_element_type, gui_num, old, new, event as GUI_event_mouse_type)
 gui(new).flags = gui(new).flags OR GUI_FLAG_UPDATED
 END SUB
 
-SUB GUI_input_box_process_click (gui() as GUI_element_type, gui_num, old, new, event as GUI_event_mouse_type)
-IF event.m.mrow = gui(new).row1 + 1 THEN
-  IF event.m.mcol > gui(new).col1 + 1 AND event.m.mcol < gui(new).col2 - 1 THEN
-    gui(new).text_position = gui(new).scroll_offset_hors + event.m.mcol - gui(new).col1 - 1
-    IF gui(new).text_position > gui(new).text.length THEN
-      gui(new).text_position = gui(new).text.length
+SUB GUI_input_box_process_mouse_event (gui() as GUI_element_type, gui_num, old, new, event as GUI_event_mouse_type)
+IF event.flags AND GUI_EVENT_MOUSE_LEFT_CLICK OR event.flags AND GUI_EVENT_MOUSE_RIGHT_CLICK then
+  IF event.m.mrow = gui(new).row1 + 1 THEN
+    IF event.m.mcol > gui(new).col1 + 1 AND event.m.mcol < gui(new).col2 - 1 THEN
+      gui(new).text_position = gui(new).scroll_offset_hors + event.m.mcol - gui(new).col1 - 1
+      IF gui(new).text_position > gui(new).text.length THEN
+        gui(new).text_position = gui(new).text.length
+      END IF
     END IF
   END IF
-END IF
-if NOT GUI_shift_flag then
-  gui(new).text_sel_col1 = gui(new).text_position
-end if
-gui(new).text_sel_col2 = gui(new).text_position
-gui(new).flags = gui(new).flags OR GUI_FLAG_UPDATED
-END SUB
+  if NOT GUI_shift_flag then
+    gui(new).text_sel_col1 = gui(new).text_position
+  end if
+  gui(new).text_sel_col2 = gui(new).text_position
+  gui(new).flags = gui(new).flags OR GUI_FLAG_UPDATED
+'elseif event.flags AND GUI_EVENT_MOUSE_LEFT_DOWN OR event.flags AND GUI_EVENT_MOUSE_RIGHT_DOWN THEN
 
-SUB GUI_text_box_process_click (gui() as GUI_element_type, gui_num, old, new,  event as GUI_event_mouse_type)
-IF event.m.mrow >= gui(new).row1 + 1 and event.m.mrow <= gui(new).row2 - 1 THEN
-  IF event.m.mcol >= gui(new).col1 + 1 AND event.m.mcol <= gui(new).col2 - 1 THEN
-    gui(new).selected = event.m.mrow - gui(new).row1 + gui(new).scroll_offset_vert
-    gui(new).text_position = gui(new).scroll_offset_hors + event.m.mcol - gui(new).col1 - 1
-    if gui(new).selected > gui(new).length then
-      gui(new).selected = gui(new).length
+'ELSEIF event.flags AND GUI_EVENT_MOUSE_LEFT_UP OR event.flags AND GUI_EVENT_MOUSE_LEFT_UP then
+
+elseif event.flags AND GUI_EVENT_MOUSE_DRAG then
+  if not GUI_process_mouse_scroll_bar(gui(new), event.m.mrow, event.m.mcol) then
+    old_col = gui(new).text_position
+    if event.m.mcol <= gui(new).col1 then
+      if gui(new).scroll_offset_hors > 0 then
+        if TIMER(.001) - GUI_DRAG_TIMER > GUI_DRAG_newECTION_DELAY then
+          gui(new).scroll_offset_hors = gui(new).scroll_offset_hors - 1
+          gui(new).text_position = gui(new).scroll_offset_hors
+          gui(new).text_sel_col2 = gui(new).text_position
+          gui(new).flags = gui(new).flags OR GUI_FLAG_UPDATED
+          GUI_DRAG_TIMER = TIMER(.001)
+        end if
+      end if
+    elseif event.m.mcol >= gui(new).col2 then
+      if gui(new).scroll_offset_hors - (gui(new).col2 - gui(new).col1) < gui(new).length + 1 then
+        if TIMER(.001) - GUI_DRAG_TIMER > .05 then
+          gui(new).scroll_offset_hors = gui(new).scroll_offset_hors + 1
+          gui(new).text_position = gui(new).scroll_offset_hors + (gui(new).col2 - gui(new).col1 - 1)
+          gui(new).text_sel_col2 = gui(new).text_position
+          gui(new).flags = gui(new).flags OR GUI_FLAG_UPDATED
+          GUI_DRAG_TIMER = TIMER(.001)
+        end if
+      end if
+    else
+      gui(new).text_position = gui(new).scroll_offset_hors + GUI_MCOL - gui(new).col1 - 1
+      IF gui(new).text_position > gui(new).text.length THEN
+        gui(new).text_position = gui(new).text.length
+      END IF
+      if old_col <> gui(new).text_position then
+        gui(new).text_sel_col2 = gui(new).text_position
+        gui(new).flags = gui(new).flags OR GUI_FLAG_UPDATED' OR GUI_FLAG_TEXT_IS_newECTED
+      end if
     end if
-  END IF
-END IF
-GUI_adjust_scroll gui(new), event.m.mrow, event.m.mcol
-gui(new).flags = gui(new).flags OR GUI_FLAG_UPDATED
-END SUB
-
-SUB GUI_list_box_process_click (gui() as GUI_element_type, gui_num, old, new,  event as GUI_event_mouse_type)
-IF event.m.mrow >= gui(new).row1 + 1 and event.m.mrow <= gui(new).row2 - 1 THEN
-  IF event.m.mcol >= gui(new).col1 + 1 AND event.m.mcol <= gui(new).col2 - 1 then
-    s = event.m.mrow - gui(new).row1 + gui(new).scroll_offset_vert
-    if gui(new).selected <> s then
-      gui(new).selected = s
-    end if
-  END IF
-END IF
-if gui(new).selected > gui(new).length then gui(new).selected = gui(new).length
-GUI_adjust_scroll gui(new), event.m.mrow, event.m.mcol
-gui(new).flags = gui(new).flags OR GUI_FLAG_UPDATED
-END SUB
-
-SUB GUI_drop_down_process_click (gui() as GUI_element_type, gui_num, old, new,  event as GUI_event_mouse_type)
-if old = new and event.m.mrow = gui(new).row1 then
-  gui(new).flags = gui(new).flags XOR GUI_FLAG_DROP_FLAG
+  end if
 end if
-if gui(new).flags AND GUI_FLAG_DROP_FLAG then
+
+END SUB
+
+SUB GUI_text_box_process_mouse_event (gui() as GUI_element_type, gui_num, old, new, event as GUI_event_mouse_type)
+IF event.flags AND GUI_EVENT_MOUSE_LEFT_CLICK OR event.flags AND GUI_EVENT_MOUSE_RIGHT_CLICK then
   IF event.m.mrow >= gui(new).row1 + 1 and event.m.mrow <= gui(new).row2 - 1 THEN
     IF event.m.mcol >= gui(new).col1 + 1 AND event.m.mcol <= gui(new).col2 - 1 THEN
-      s = event.m.mrow - gui(new).row1 + gui(new).scroll_offset_vert
-      if s = gui(new).selected then
-        gui(new).flags = (gui(new).flags AND NOT GUI_FLAG_DROP_FLAG)
-      else
-        gui(new).selected = s
+      gui(new).selected = event.m.mrow - gui(new).row1 + gui(new).scroll_offset_vert
+      gui(new).text_position = gui(new).scroll_offset_hors + event.m.mcol - gui(new).col1 - 1
+      if gui(new).selected > gui(new).length then
+        gui(new).selected = gui(new).length
       end if
     END IF
   END IF
   GUI_adjust_scroll gui(new), event.m.mrow, event.m.mcol
+  gui(new).flags = gui(new).flags OR GUI_FLAG_UPDATED
+elseif event.flags AND GUI_EVENT_MOUSE_LEFT_DOWN OR event.flags AND GUI_EVENT_MOUSE_RIGHT_DOWN THEN
+  GUI_hold_scroll_bar gui(new), event.m.mrow, event.m.mcol
+'ELSEIF event.flags AND GUI_EVENT_MOUSE_LEFT_UP OR event.flags AND GUI_EVENT_MOUSE_LEFT_UP then
+
+ELSEIF event.flags AND GUI_EVENT_MOUSE_SCROLL_UP OR event.flags AND GUI_EVENT_MOUSE_SCROLL_DOWN then
+  GUI_process_scroll_wheel_scroll_bar gui(new), event
+elseif event.flags AND GUI_EVENT_MOUSE_DRAG then
+  n = GUI_process_mouse_scroll_bar(gui(new), event.m.mrow, event.m.mcol)
 end if
-gui(new).flags = gui(new).flags OR GUI_FLAG_UPDATED
-END SUB
 
-SUB GUI_checkbox_process_click (gui() as GUI_element_type, gui_num, old, new,  event as GUI_event_mouse_type)
-if event.m.mcol = gui(new).col1 + 1 then gui(new).flags = gui(new).flags XOR GUI_FLAG_CHECKED
-gui(new).flags = gui(new).flags OR GUI_FLAG_UPDATED
-END SUB
+end sub
 
-SUB GUI_menu_process_click (gui() as GUI_element_type, gui_num, old, new,  event as GUI_event_mouse_type)
+sub GUI_list_box_process_mouse_event (gui() as GUI_element_type, gui_num, old, new, event as GUI_event_mouse_type)
+IF event.flags AND GUI_EVENT_MOUSE_LEFT_CLICK OR event.flags AND GUI_EVENT_MOUSE_RIGHT_CLICK then
+  IF event.m.mrow >= gui(new).row1 + 1 and event.m.mrow <= gui(new).row2 - 1 THEN
+    IF event.m.mcol >= gui(new).col1 + 1 AND event.m.mcol <= gui(new).col2 - 1 then
+      s = event.m.mrow - gui(new).row1 + gui(new).scroll_offset_vert
+      if gui(new).selected <> s then
+        gui(new).selected = s
+      end if
+    END IF
+  END IF
+  if gui(new).selected > gui(new).length then gui(new).selected = gui(new).length
+  GUI_adjust_scroll gui(new), event.m.mrow, event.m.mcol
+  gui(new).flags = gui(new).flags OR GUI_FLAG_UPDATED
+elseif event.flags AND GUI_EVENT_MOUSE_LEFT_DOWN OR event.flags AND GUI_EVENT_MOUSE_RIGHT_DOWN THEN
+  GUI_hold_scroll_bar gui(new), event.m.mrow, event.m.mcol
+'ELSEIF event.flags AND GUI_EVENT_MOUSE_LEFT_UP OR event.flags AND GUI_EVENT_MOUSE_LEFT_UP then
+
+ELSEIF event.flags AND GUI_EVENT_MOUSE_SCROLL_UP OR event.flags AND GUI_EVENT_MOUSE_SCROLL_DOWN then
+  GUI_process_scroll_wheel_scroll_bar gui(new), event
+elseif event.flags AND GUI_EVENT_MOUSE_DRAG then
+  n = GUI_process_mouse_scroll_bar(gui(new), event.m.mrow, event.m.mcol)
+end if
+end sub
+
+sub GUI_drop_down_process_mouse_event (gui() as GUI_element_type, gui_num, old, new, event as GUI_event_mouse_type)
+IF event.flags AND GUI_EVENT_MOUSE_LEFT_CLICK OR event.flags AND GUI_EVENT_MOUSE_RIGHT_CLICK then
+  if old = new and event.m.mrow = gui(new).row1 then
+    gui(new).flags = gui(new).flags XOR GUI_FLAG_DROP_FLAG
+  end if
+  if gui(new).flags AND GUI_FLAG_DROP_FLAG then
+    IF event.m.mrow >= gui(new).row1 + 1 and event.m.mrow <= gui(new).row2 - 1 THEN
+      IF event.m.mcol >= gui(new).col1 + 1 AND event.m.mcol <= gui(new).col2 - 1 THEN
+        s = event.m.mrow - gui(new).row1 + gui(new).scroll_offset_vert
+        if s = gui(new).selected then
+          gui(new).flags = (gui(new).flags AND NOT GUI_FLAG_DROP_FLAG)
+        else
+          gui(new).selected = s
+        end if
+      END IF
+    END IF
+    GUI_adjust_scroll gui(new), event.m.mrow, event.m.mcol
+  end if
+  gui(new).flags = gui(new).flags OR GUI_FLAG_UPDATED
+elseif event.flags AND GUI_EVENT_MOUSE_LEFT_DOWN OR event.flags AND GUI_EVENT_MOUSE_RIGHT_DOWN THEN
+  if gui(new).flags AND GUI_FLAG_DROP_FLAG then
+    GUI_hold_scroll_bar gui(new), event.m.mrow, event.m.mcol
+  end if
+'ELSEIF event.flags AND GUI_EVENT_MOUSE_LEFT_UP OR event.flags AND GUI_EVENT_MOUSE_LEFT_UP then
+
+ELSEIF event.flags AND GUI_EVENT_MOUSE_SCROLL_UP OR event.flags AND GUI_EVENT_MOUSE_SCROLL_DOWN then
+  if gui(new).flags AND GUI_FLAG_DROP_FLAG then
+    GUI_process_scroll_wheel_scroll_bar gui(new), event
+  end if
+elseif event.flags AND GUI_EVENT_MOUSE_DRAG then
+  if gui(new).flags AND GUI_FLAG_DROP_FLAG then
+    n = GUI_process_mouse_scroll_bar(gui(new), event.m.mrow, event.m.mcol)
+  end if
+end if
+end sub
+
+sub GUI_checkbox_process_mouse_event (gui() as GUI_element_type, gui_num, old, new, event as GUI_event_mouse_type)
+IF event.flags AND GUI_EVENT_MOUSE_LEFT_CLICK OR event.flags AND GUI_EVENT_MOUSE_RIGHT_CLICK then
+  if event.m.mcol = gui(new).col1 + 1 then gui(new).flags = gui(new).flags XOR GUI_FLAG_CHECKED
+  gui(new).flags = gui(new).flags OR GUI_FLAG_UPDATED
+'elseif event.flags AND GUI_EVENT_MOUSE_LEFT_DOWN OR event.flags AND GUI_EVENT_MOUSE_RIGHT_DOWN THEN
+
+'ELSEIF event.flags AND GUI_EVENT_MOUSE_LEFT_UP OR event.flags AND GUI_EVENT_MOUSE_LEFT_UP then
+
+'elseif event.flags AND GUI_EVENT_MOUSE_DRAG then
+
+end if
+end sub
+
+SUB GUI_menu_process_mouse_event (gui() as GUI_element_type, gui_num, old, new, event as GUI_event_mouse_type)
 DIM men as GUI_menu_item_type, mtmp as GUI_menu_item_type, mnext as GUI_menu_item_type
 DIM memtmp AS _MEM, offset as _OFFSET
 
-GUI_debug_output "Debth: " + str$(gui(new).menu_depth)
-GUI_debug_output "Selection: " + str$(gui(new).menu_sel)
-if old <> new then gui(new).selected = 0: gui(new).flags = gui(new).flags AND NOT GUI_FLAG_MENU_OPEN
-gui(new).flags = gui(new).flags OR GUI_FLAG_UPDATED
-if gui(new).menu_depth = 0 then
-  if gui(new).menu_sel > 0 then
-    GUI_debug_output "Got here as well!"
-    gui(new).flags = gui(new).flags OR GUI_FLAG_MENU_OPEN
-    gui(new).selected = gui(new).menu_sel
-    men = _MEMGET(gui(new).menu, gui(new).menu.OFFSET + len(men) * (gui(new).selected - 1), GUI_menu_item_type)
-    if men.has_sub then
-      men.sub_menu_open = -1
-      GUI_close_sub_menu men
+IF event.flags AND GUI_EVENT_MOUSE_LEFT_CLICK OR event.flags AND GUI_EVENT_MOUSE_RIGHT_CLICK then
+  GUI_debug_output "Debth: " + str$(gui(new).menu_depth)
+  GUI_debug_output "Selection: " + str$(gui(new).menu_sel)
+  if old <> new then gui(new).selected = 0: gui(new).flags = gui(new).flags AND NOT GUI_FLAG_MENU_OPEN
+  gui(new).flags = gui(new).flags OR GUI_FLAG_UPDATED
+  if gui(new).menu_depth = 0 then
+    if gui(new).menu_sel > 0 then
+      GUI_debug_output "Got here as well!"
+      gui(new).flags = gui(new).flags OR GUI_FLAG_MENU_OPEN
+      gui(new).selected = gui(new).menu_sel
+      men = _MEMGET(gui(new).menu, gui(new).menu.OFFSET + len(men) * (gui(new).selected - 1), GUI_menu_item_type)
+      if men.has_sub then
+        men.sub_menu_open = -1
+        GUI_close_sub_menu men
+      end if
+      men.selected = 1
+      _MEMPUT gui(new).menu, gui(new).menu.OFFSET + len(men) * (gui(new).selected - 1), men
+    else
+      gui(new).selected = 0
+      gui(new).flags = gui(new).flags AND NOT GUI_FLAG_MENU_OPEN
     end if
-    men.selected = 1
-    _MEMPUT gui(new).menu, gui(new).menu.OFFSET + len(men) * (gui(new).selected - 1), men
   else
-    gui(new).selected = 0
-    gui(new).flags = gui(new).flags AND NOT GUI_FLAG_MENU_OPEN
-  end if
-else
-  memtmp = gui(new).menu
-  offset = len(mtmp) * (gui(new).selected - 1)
-  mtmp = _MEMGET(gui(new).menu, gui(new).menu.OFFSET + len(mtmp) * (gui(new).selected - 1), GUI_menu_item_type)
-  FOR d = 1 to gui(new).menu_depth - 1
+    memtmp = gui(new).menu
+    offset = len(mtmp) * (gui(new).selected - 1)
+    mtmp = _MEMGET(gui(new).menu, gui(new).menu.OFFSET + len(mtmp) * (gui(new).selected - 1), GUI_menu_item_type)
+    FOR d = 1 to gui(new).menu_depth - 1
+      men = _MEMGET(mtmp.sub_menu, mtmp.sub_menu.OFFSET + len(men) * (mtmp.selected - 1), GUI_menu_item_type)
+      if d < gui(new).menu_depth then
+        memtmp = mtmp.sub_menu
+        offset = len(mtmp) * (mtmp.selected - 1)
+        mtmp = men
+      end if
+    NEXT d
+    mtmp.selected = gui(new).menu_sel
+    _MEMPUT memtmp, memtmp.OFFSET + offset, mtmp
     men = _MEMGET(mtmp.sub_menu, mtmp.sub_menu.OFFSET + len(men) * (mtmp.selected - 1), GUI_menu_item_type)
-    if d < gui(new).menu_depth then
-      memtmp = mtmp.sub_menu
-      offset = len(mtmp) * (mtmp.selected - 1)
-      mtmp = men
+    
+    if men.has_Sub then
+      men.sub_menu_open = -1
+      men.selected = 1
+      GUI_close_sub_menu men
+      _MEMPUT mtmp.sub_menu, mtmp.sub_menu.OFFSET + len(men) * (mtmp.selected - 1), men
+    else
+      gui(new).menu_choice = men.ident
+      gui(new).selected = 0
+      gui(new).flags = (gui(new).flags OR GUI_FLAG_MENU_CHOSEN OR GUI_FLAG_UPDATED) AND NOT GUI_FLAG_MENU_OPEN
     end if
-  NEXT d
-  mtmp.selected = gui(new).menu_sel
-  _MEMPUT memtmp, memtmp.OFFSET + offset, mtmp
-  men = _MEMGET(mtmp.sub_menu, mtmp.sub_menu.OFFSET + len(men) * (mtmp.selected - 1), GUI_menu_item_type)
-  
-  if men.has_Sub then
-    men.sub_menu_open = -1
-    men.selected = 1
-    GUI_close_sub_menu men
-    _MEMPUT mtmp.sub_menu, mtmp.sub_menu.OFFSET + len(men) * (mtmp.selected - 1), men
-  else
-    gui(new).menu_choice = men.ident
-    gui(new).selected = 0
-    gui(new).flags = (gui(new).flags OR GUI_FLAG_MENU_CHOSEN OR GUI_FLAG_UPDATED) AND NOT GUI_FLAG_MENU_OPEN
   end if
+end if
+end sub
+
+SUB GUI_button_process_mouse_event (gui() as GUI_element_type, gui_num, old, new, event as GUI_event_mouse_type)
+DIM e as GUI_event_generic_type, b as GUI_event_element_button_type
+
+IF event.flags AND GUI_EVENT_MOUSE_LEFT_CLICK OR event.flags AND GUI_EVENT_MOUSE_RIGHT_CLICK then
+  GUI_init_event e
+  e.event_type = GUI_EVENT_ELEMENT_BUTTON
+  b.m_event = event
+  b.flags = GUI_EVENT_ELEMENT_BUTTON_CLICKED OR GUI_EVENT_ELEMENT_BUTTON_PRESSED
+  b.gui_element = new
+  _MEMPUT e.mem, e.mem.OFFSET, b
+  GUI_add_event_to_queue e
+  GUI_free_event e
+  gui(new).flags = gui(new).flags OR GUI_FLAG_UPDATED
+'elseif event.flags AND GUI_EVENT_MOUSE_LEFT_DOWN OR event.flags AND GUI_EVENT_MOUSE_RIGHT_DOWN THEN
+
+'ELSEIF event.flags AND GUI_EVENT_MOUSE_LEFT_UP OR event.flags AND GUI_EVENT_MOUSE_LEFT_UP then
+
+'elseif event.flags AND GUI_EVENT_MOUSE_DRAG then
+
 end if
 END SUB
 
-SUB GUI_button_process_click (gui() as GUI_element_type, gui_num, old, new,  event as GUI_event_mouse_type)
-gui(new).flags = gui(new).flags OR GUI_FLAG_UPDATED
-END SUB
-
-SUB GUI_radio_button_process_click (gui() as GUI_element_type, gui_num, old, new,  event as GUI_event_mouse_type)
-if event.m.mcol = gui(new).col1 + 1 then
-  gui(new).flags = gui(new).flags OR GUI_FLAG_CHECKED
-  FOR x = 1 to gui_num
-    if x <> new then
-      if gui(x).element_type = GUI_RADIO_BUTTON then
-        if gui(x).group = gui(new).group then
-          gui(x).flags = gui(x).flags AND NOT GUI_FLAG_CHECKED
+SUB GUI_radio_button_process_mouse_event (gui() as GUI_element_type, gui_num, old, new, event as GUI_event_mouse_type)
+IF event.flags AND GUI_EVENT_MOUSE_LEFT_CLICK OR event.flags AND GUI_EVENT_MOUSE_RIGHT_CLICK then
+  if event.m.mcol = gui(new).col1 + 1 then
+    gui(new).flags = gui(new).flags OR GUI_FLAG_CHECKED
+    FOR x = 1 to gui_num
+      if x <> new then
+        if gui(x).element_type = GUI_RADIO_BUTTON then
+          if gui(x).group = gui(new).group then
+            gui(x).flags = gui(x).flags AND NOT GUI_FLAG_CHECKED
+          end if
         end if
       end if
-    end if
-  NEXT x
-end if
-gui(new).flags = gui(new).flags OR GUI_FLAG_UPDATED
-END SUB
-
-SUB GUI_label_process_click (gui() as GUI_element_type, gui_num, old, new,  event as GUI_event_mouse_type)
-
-END SUB
-
-'###############################################################################
-'###############################################################################
-'#-----------------------ELEMENT MOUSE HELD FUNCTIONS--------------------------#
-'###############################################################################
-'###############################################################################
-'Called when the mouse is held down on an element and a drag happens
-
-SUB GUI_input_box_process_drag (gui() as GUI_element_type, gui_num, sel, event as GUI_event_mouse_type)
-if not GUI_process_mouse_scroll_bar(gui(sel), event.m.mrow, event.m.mcol) then
-  old_col = gui(sel).text_position
-  if event.m.mcol <= gui(sel).col1 then
-    if gui(sel).scroll_offset_hors > 0 then
-      if TIMER(.001) - GUI_DRAG_TIMER > GUI_DRAG_SELECTION_DELAY then
-        gui(sel).scroll_offset_hors = gui(sel).scroll_offset_hors - 1
-        gui(sel).text_position = gui(sel).scroll_offset_hors
-        gui(sel).text_sel_col2 = gui(sel).text_position
-        gui(sel).flags = gui(sel).flags OR GUI_FLAG_UPDATED
-        GUI_DRAG_TIMER = TIMER(.001)
-      end if
-    end if
-  elseif event.m.mcol >= gui(sel).col2 then
-    if gui(sel).scroll_offset_hors - (gui(sel).col2 - gui(sel).col1) < gui(sel).length + 1 then
-      if TIMER(.001) - GUI_DRAG_TIMER > .05 then
-        gui(sel).scroll_offset_hors = gui(sel).scroll_offset_hors + 1
-        gui(sel).text_position = gui(sel).scroll_offset_hors + (gui(sel).col2 - gui(sel).col1 - 1)
-        gui(sel).text_sel_col2 = gui(sel).text_position
-        gui(sel).flags = gui(sel).flags OR GUI_FLAG_UPDATED
-        GUI_DRAG_TIMER = TIMER(.001)
-      end if
-    end if
-  else
-    gui(sel).text_position = gui(sel).scroll_offset_hors + GUI_MCOL - gui(sel).col1 - 1
-    IF gui(sel).text_position > gui(sel).text.length THEN
-      gui(sel).text_position = gui(sel).text.length
-    END IF
-    if old_col <> gui(sel).text_position then
-      gui(sel).text_sel_col2 = gui(sel).text_position
-      gui(sel).flags = gui(sel).flags OR GUI_FLAG_UPDATED' OR GUI_FLAG_TEXT_IS_SELECTED
-    end if
+    NEXT x
   end if
+  gui(new).flags = gui(new).flags OR GUI_FLAG_UPDATED
+'elseif event.flags AND GUI_EVENT_MOUSE_LEFT_DOWN OR event.flags AND GUI_EVENT_MOUSE_RIGHT_DOWN THEN
+
+'ELSEIF event.flags AND GUI_EVENT_MOUSE_LEFT_UP OR event.flags AND GUI_EVENT_MOUSE_LEFT_UP then
+
+'elseif event.flags AND GUI_EVENT_MOUSE_DRAG then
+
 end if
 END SUB
 
-SUB GUI_drop_down_process_drag (gui() as GUI_element_type, gui_num, sel, event as GUI_event_mouse_type)
-if gui(sel).flags AND GUI_FLAG_DROP_FLAG then
-  n = GUI_process_mouse_scroll_bar(gui(sel), event.m.mrow, event.m.mcol)
-end if
-END SUB
+SUB GUI_label_process_mouse_event (gui() as GUI_element_type, gui_num, old, new, event as GUI_event_mouse_type)
+DIM e as GUI_event_generic_type, l as GUI_event_element_label_type
+IF event.flags AND GUI_EVENT_MOUSE_LEFT_CLICK OR event.flags AND GUI_EVENT_MOUSE_RIGHT_CLICK then
+  GUI_init_event e
+  e.event_type = GUI_EVENT_ELEMENT_LABEL
+  l.m_event = event
+  l.flags = GUI_EVENT_ELEMENT_LABEL_CLICKED OR GUI_EVENT_ELEMENT_LABEL_PRESSED
+  l.gui_element = new
+  _MEMPUT e.mem, e.mem.OFFSET, l
+  GUI_add_event_to_queue e
+  GUI_free_event e
+'elseif event.flags AND GUI_EVENT_MOUSE_LEFT_DOWN OR event.flags AND GUI_EVENT_MOUSE_RIGHT_DOWN THEN
 
-SUB GUI_text_box_process_drag (gui() as GUI_element_type, gui_num, sel, event as GUI_event_mouse_type)
-n = GUI_process_mouse_scroll_bar(gui(sel), event.m.mrow, event.m.mcol)
-END SUB
+'ELSEIF event.flags AND GUI_EVENT_MOUSE_LEFT_UP OR event.flags AND GUI_EVENT_MOUSE_LEFT_UP then
 
-SUB GUI_list_box_process_drag (gui() as GUI_element_type, gui_num, sel, event as GUI_event_mouse_type)
-n = GUI_process_mouse_scroll_bar(gui(sel), event.m.mrow, event.m.mcol)
-END SUB
+'elseif event.flags AND GUI_EVENT_MOUSE_DRAG then
 
-'###############################################################################
-'###############################################################################
-'#-----------------------ELEMENT MOUSE HELD FUNCTIONS--------------------------#
-'###############################################################################
-'###############################################################################
-'Called when scrolling happens while the element is selected
-
-SUB GUI_text_box_process_scroll (gui() as GUI_element_type, gui_num, sel, event as GUI_event_mouse_type)
-GUI_process_scroll_wheel_scroll_bar gui(sel), event
-END SUB
-
-SUB GUI_list_box_process_scroll (gui() as GUI_element_type, gui_num, sel, event as GUI_event_mouse_type)
-GUI_process_scroll_wheel_scroll_bar gui(sel), event
-END SUB
-
-SUB GUI_drop_down_process_scroll (gui() as GUI_element_type, gui_num, sel, event as GUI_event_mouse_type)
-if gui(sel).flags AND GUI_FLAG_DROP_FLAG then
-  GUI_process_scroll_wheel_scroll_bar gui(sel), event
 end if
 END SUB
 
 '###############################################################################
 '###############################################################################
-'#----------------------ELEMENT MOUSE DOWN FUNCTIONS---------------------------#
+'#-----------------ELEMENT CLICK RELEASE PROCESS FUNCTIONS---------------------#
 '###############################################################################
 '###############################################################################
 
-SUB GUI_text_box_process_mouse_down (gui() as GUI_element_type, gui_num, sel, event as GUI_event_mouse_type)
-GUI_debug_output "Text box Mouse down!"
-GUI_hold_scroll_bar gui(sel), event.m.mrow, event.m.mcol
+SUB GUI_box_process_focus_release (gui() as GUI_element_type, gui_num, sel)
+
 END SUB
 
-SUB GUI_list_box_process_mouse_down (gui() as GUI_element_type, gui_num, sel, event as GUI_event_mouse_type)
-GUI_debug_output "List box Mouse down!"
-GUI_hold_scroll_bar gui(sel), event.m.mrow, event.m.mcol
+SUB GUI_input_box_process_focus_release (gui() as GUI_element_type, gui_num, sel)
+
 END SUB
 
-SUB GUI_drop_down_process_mouse_down (gui() as GUI_element_type, gui_num, sel, event as GUI_event_mouse_type)
-if gui(sel).flags AND GUI_FLAG_DROP_FLAG then
-  GUI_debug_output "Drop Down Mouse down!"
-  GUI_hold_scroll_bar gui(sel), event.m.mrow, event.m.mcol
+SUB GUI_text_box_process_focus_release (gui() as GUI_element_type, gui_num, sel)
+gui(sel).flags = (gui(sel).flags AND NOT GUI_FLAG_SCROLL_IS_HELD_H) AND NOT GUI_FLAG_SCROLL_IS_HELD_V
+END SUB
+
+SUB GUI_list_box_process_focus_release (gui() as GUI_element_type, gui_num, sel)
+gui(sel).flags = (gui(sel).flags AND NOT GUI_FLAG_SCROLL_IS_HELD_H) AND NOT GUI_FLAG_SCROLL_IS_HELD_V
+END SUB
+
+SUB GUI_drop_down_process_focus_release (gui() as GUI_element_type, gui_num, sel)
+gui(sel).flags = (gui(sel).flags AND NOT GUI_FLAG_DROP_FLAG)
+END SUB
+
+SUB GUI_checkbox_process_focus_release (gui() as GUI_element_type, gui_num, sel)
+
+END SUB
+
+SUB GUI_menu_process_focus_release (gui() as GUI_element_type, gui_num, sel)
+
+END SUB
+
+SUB GUI_button_process_focus_release (gui() as GUI_element_type, gui_num, sel)
+
+END SUB
+
+SUB GUI_radio_button_process_focus_release (gui() as GUI_element_type, gui_num, sel)
+
+END SUB
+
+SUB GUI_label_process_focus_release (gui() as GUI_element_type, gui_num, sel)
+
+END SUB
+
+'###############################################################################
+'###############################################################################
+'#-----------------------ELEMENT GET LAYER FUNCTIONS---------------------------#
+'###############################################################################
+'###############################################################################
+
+FUNCTION GUI_box_get_layer (b as GUI_element_type)
+GUI_box_get_layer = b.layer
+END FUNCTION
+
+FUNCTION GUI_input_box_get_layer (b as GUI_element_type)
+GUI_input_box_get_layer = b.layer
+END FUNCTION
+
+FUNCTION GUI_text_box_get_layer (b as GUI_element_type)
+GUI_text_box_get_layer = b.layer
+END FUNCTION
+
+FUNCTION GUI_list_box_get_layer (b as GUI_element_type)
+GUI_list_box_get_layer = b.layer
+END FUNCTION
+
+FUNCTION GUI_drop_down_get_layer (b as GUI_element_type)
+if (b.flags AND GUI_FLAG_DROP_FLAG) then
+  GUI_drop_down_get_layer = 128
+else
+  GUI_drop_down_get_layer = b.layer 
+end if
+END FUNCTION
+
+FUNCTION GUI_checkbox_get_layer (b as GUI_element_type)
+GUI_checkbox_get_layer = b.layer
+END FUNCTION
+
+FUNCTION GUI_menu_get_layer (b as GUI_element_type)
+if b.flags AND GUI_FLAG_MENU_OPEN then
+  GUI_menu_get_layer = 128
+else 
+  GUI_menu_get_layer = b.layer
+end if
+END FUNCTION
+
+FUNCTION GUI_button_get_layer (b as GUI_element_type)
+GUI_button_get_layer = b.layer
+END FUNCTION
+
+FUNCTION GUI_radio_button_get_layer (b as GUI_element_type)
+GUI_radio_button_get_layer = b.layer
+END FUNCTION
+
+FUNCTION GUI_label_get_layer (b as GUI_element_type)
+GUI_label_get_layer = b.layer
+END FUNCTION
+
+'###############################################################################
+'###############################################################################
+'#-----------------------ELEMENT KEY EVENT FUNCTIONS---------------------------#
+'###############################################################################
+'###############################################################################
+
+SUB GUI_box_process_key_event (gui() as GUI_element_type, gui_num, sel, event as GUI_event_key_type)
+
+END SUB
+
+SUB GUI_input_box_process_key_event (gui() as GUI_element_type, gui_num, sel, event as GUI_event_key_type)
+if event.flags AND GUI_EVENT_KEY_PRESSED then
+  SELECT CASE event.key_code
+    CASE ASC(" ") to ASC("~")
+      GUI_add_character gui(sel), chr$(event.key_code)
+      gui(sel).flags = gui(sel).flags OR GUI_FLAG_UPDATED
+      event.key_code = 0
+    CASE GUI_KEY_CODE_BACKSPACE
+      GUI_del_character gui(sel)
+      gui(sel).flags = gui(sel).flags OR GUI_FLAG_UPDATED
+      event.key_code = 0
+    CASE GUI_KEY_CODE_LEFT 
+      GUI_move_cursor_left gui(sel), event
+      gui(sel).flags = gui(sel).flags OR GUI_FLAG_UPDATED
+      event.key_code = 0
+    CASE GUI_KEY_CODE_RIGHT
+      GUI_move_cursor_right gui(sel), event
+      gui(sel).flags = gui(sel).flags OR GUI_FLAG_UPDATED
+      event.key_code = 0
+  END SELECT
 end if
 END SUB
+
+SUB GUI_text_box_process_key_event (gui() as GUI_element_type, gui_num, sel, event as GUI_event_key_type)
+if event.flags AND GUI_EVENT_KEY_PRESSED then
+  SELECT CASE event.key_code
+    CASE ASC(" ") TO ASC("~")
+      GUI_add_character_text_box gui(sel), chr$(event.key_code)
+      gui(sel).flags = gui(sel).flags OR GUI_FLAG_UPDATED
+      event.key_code = 0
+    CASE GUI_KEY_CODE_BACKSPACE
+      GUI_del_character_text_box gui(sel)
+      gui(sel).flags = gui(sel).flags OR GUI_FLAG_UPDATED
+      event.key_code = 0
+    CASE GUI_KEY_CODE_ENTER
+      GUI_text_box_handle_enter_key gui(sel), event
+      gui(sel).flags = gui(sel).flags OR GUI_FLAG_UPDATED
+      event.key_code = 0
+    CASE GUI_KEY_CODE_LEFT
+      GUI_move_cursor_left gui(sel), event
+      gui(sel).flags = gui(sel).flags OR GUI_FLAG_UPDATED
+      event.key_code = 0
+    CASE GUI_KEY_CODE_RIGHT
+      GUI_move_cursor_right gui(sel), event
+      gui(sel).flags = gui(sel).flags OR GUI_FLAG_UPDATED
+      event.key_code = 0
+    CASE GUI_KEY_CODE_UP
+      GUI_move_cursor_up gui(sel), event
+      gui(sel).flags = gui(sel).flags OR GUI_FLAG_UPDATED
+      event.key_code = 0
+    CASE GUI_KEY_CODE_DOWN
+      GUI_move_cursor_down gui(sel), event
+      gui(sel).flags = gui(sel).flags OR GUI_FLAG_UPDATED
+      event.key_code = 0
+    CASE GUI_KEY_CODE_PGDN
+      GUI_move_cursor_page_down gui(sel), event
+      gui(sel).flags = gui(sel).flags OR GUI_FLAG_UPDATED
+      event.key_code = 0
+    CASE GUI_KEY_CODE_PGUP
+      GUI_move_cursor_page_up gui(sel), event
+      gui(sel).flags = gui(sel).flags OR GUI_FLAG_UPDATED
+      event.key_code = 0
+  END SELECT
+end if
+END SUB
+
+SUB GUI_list_box_process_key_event (gui() as GUI_element_type, gui_num, sel, event as GUI_event_key_type)
+
+END SUB
+
+SUB GUI_drop_down_process_key_event (gui() as GUI_element_type, gui_num, sel, event as GUI_event_key_type)
+
+END SUB
+
+SUB GUI_checkbox_process_key_event (gui() as GUI_element_type, gui_num, sel, event as GUI_event_key_type)
+
+END SUB
+
+SUB GUI_menu_process_key_event (gui() as GUI_element_type, gui_num, sel, event as GUI_event_key_type)
+
+END SUB
+
+SUB GUI_button_process_key_event (gui() as GUI_element_type, gui_num, sel, event as GUI_event_key_type)
+
+END SUB
+
+SUB GUI_radio_button_process_key_event (gui() as GUI_element_type, gui_num, sel, event as GUI_event_key_type)
+
+END SUB
+
+SUB GUI_label_process_key_event (gui() as GUI_element_type, gui_num, sel, event as GUI_event_key_type)
+
+END SUB
+
+'###############################################################################
+'###############################################################################
+'#-----------------------ELEMENT INITALIZE FUNCTIONS---------------------------#
+'###############################################################################
+'###############################################################################
+
+
