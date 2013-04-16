@@ -13,28 +13,28 @@ ON ERROR GOTO DEBUG_ONERROR
 
 gui_num = 25
 
-DIM event   as GUI_event_generic_type
-DIM m_event as GUI_event_mouse_type
-DIM k_event as GUI_event_key_type
-DIM label_event as GUI_event_element_label_type, button_event as GUI_event_element_button_type
+DIM event   as GUI_event_generic
+DIM m_event as GUI_event_mouse
+DIM k_event as GUI_event_key
+DIM label_event as GUI_event_element_basic', button_event as GUI_event_element_button_type
 
 GUI_init_event event
 
-DIM main_gui(gui_num) as GUI_element_type 'create 25 GUI elements
+DIM main_gui(gui_num) as GUI_element 'create 25 GUI elements
 DIM buttons(3) AS INTEGER
 DIM labels(4) AS INTEGER 'Will hold the GUI numbers for 4 labels we have
 DIM click_count(3) AS INTEGER
-DIM base_menu(4) as GUI_menu_item_type
-'DIM sub_menus(5, 10) as GUI_menu_item_type
-DIM file_menu(10) as GUI_menu_item_type
-DIM file_new_menu(10) as GUI_menu_item_type
-DIM file_new_csrc_menu(10) as GUI_menu_item_type
-DIM file_new_csrc_csrc_menu(10) as GUI_menu_item_type
-DIM file_new_csrc_csrc_csrc_menu(10) AS GUI_menu_item_type
-DIM edit_menu(10) as GUI_menu_item_type
-DIM search_menu(10) as GUI_menu_item_type
-DIM tools_menu(10) as GUI_menu_item_type
-DIM help_menu(10) as GUI_menu_item_type
+DIM base_menu(4) as GUI_menu_item
+'DIM sub_menus(5, 10) as GUI_menu_item
+DIM file_menu(10) as GUI_menu_item
+DIM file_new_menu(10) as GUI_menu_item
+DIM file_new_csrc_menu(10) as GUI_menu_item
+DIM file_new_csrc_csrc_menu(10) as GUI_menu_item
+DIM file_new_csrc_csrc_csrc_menu(10) AS GUI_menu_item
+DIM edit_menu(10) as GUI_menu_item
+DIM search_menu(10) as GUI_menu_item
+DIM tools_menu(10) as GUI_menu_item
+DIM help_menu(10) as GUI_menu_item
 
 'GUI(1) is our main dialog box and is going to be
 g = 1
@@ -298,22 +298,22 @@ DO 'Main loop
           exit_flag = -1
         end if
 
-      CASE GUI_EVENT_ELEMENT_LABEL
-        GUI_get_element_label_event event, label_event
-        if label_event.flags AND GUI_EVENT_ELEMENT_LABEL_PRESSED then
-          if ((label_event.m_event.count - 1) mod 2) + 1 = 2 then
-            MEM_put_str main_gui(labels(4)).text, "Label " + str$(label_event.gui_element) + " Double Clicked on!"
-          else
-            MEM_put_str main_gui(labels(4)).text, "Label " + str$(label_event.gui_element) + " Clicked on!"
+      CASE GUI_EVENT_ELEMENT_BASIC
+        GUI_get_element_basic_event event, label_event
+        if label_event.e_type = GUI_LABEL then
+          if label_event.flags AND GUI_EVENT_ELEMENT_LABEL_PRESSED then
+            if ((label_event.m_event.count - 1) mod 2) + 1 = 2 then
+              MEM_put_str main_gui(labels(4)).text, "Label " + str$(label_event.gui_element) + " Double Clicked on!"
+            else
+              MEM_put_str main_gui(labels(4)).text, "Label " + str$(label_event.gui_element) + " Clicked on!"
+            end if
+            main_gui(labels(4)).flags = main_gui(labels(4)).flags OR GUI_FLAG_UPDATED
           end if
-          main_gui(labels(4)).flags = main_gui(labels(4)).flags OR GUI_FLAG_UPDATED
-        end if
-
-      CASE GUI_EVENT_ELEMENT_BUTTON
-        GUI_get_element_button_event event, button_event
-        if button_event.flags AND GUI_EVENT_ELEMENT_BUTTON_PRESSED then
-          MEM_put_str main_gui(labels(4)).text, "Button " + str$(button_event.gui_element) + " Was clicked"
-          main_gui(labels(4)).flags = main_gui(labels(4)).flags OR GUI_FLAG_UPDATED
+        elseif label_event.e_type = GUI_BUTTON then
+          if label_event.flags AND GUI_EVENT_ELEMENT_BUTTON_PRESSED then
+            MEM_put_str main_gui(labels(4)).text, "Button " + str$(label_event.gui_element) + " Was clicked"
+            main_gui(labels(4)).flags = main_gui(labels(4)).flags OR GUI_FLAG_UPDATED
+          end if
         end if
 
     END SELECT
@@ -405,7 +405,7 @@ print p$
 _DEST 0
 END SUB
 
-SUB setup_gui (main_gui() as GUI_element_type)
+SUB setup_gui (main_gui() as GUI_element)
 g = 1 'Menu
 main_gui(g).row1 = 1
 main_gui(g).col1 = 1

@@ -136,9 +136,10 @@ CONST GUI_EVENT_ELEMENT_LIST_BOX     = &H0400
 CONST GUI_EVENT_ELEMENT_DROP_DOWN    = &H0500
 CONST GUI_EVENT_ELEMENT_CHECKBOX     = &H0600
 CONST GUI_EVENT_ELEMENT_MENU         = &H0700
-CONST GUI_EVENT_ELEMENT_BUTTON       = &H0800
+CONST GUI_EVENT_ELEMENT_BASIC        = &H0800
+'CONST GUI_EVENT_ELEMENT_BUTTON       = &H0800
 CONST GUI_EVENT_ELEMENT_RADIO_BUTTON = &H0900
-CONST GUI_EVENT_ELEMENT_LABEL        = &H0A00
+'CONST GUI_EVENT_ELEMENT_LABEL        = &H0A00
 
 'Event_mouse_type flags
 CONST GUI_EVENT_MOUSE_DRAG                = &H00000001
@@ -182,13 +183,18 @@ CONST GUI_EVENT_ELEMENT_BUTTON_PRESSED    = &H00000001
 CONST GUI_EVENT_ELEMENT_BUTTON_CLICKED    = &H00000002
 CONST GUI_EVENT_ELEMENT_BUTTON_KEY_DOWN   = &H00000004
 
+'Scroll bar
+CONST GUI_ELEMENT_SCROLL_BAR_FLAG_SCROLL_V = &H00000001
+CONST GUI_ELEMENT_SCROLL_BAR_FLAG_SCROLL_H = &H00000002
+'CONST GUI_ELEMENT_SCROLL_BAR_FLAG_SCROLL_IS_HELD = &H00000004
+
 'GUI_DRAG_FLAG flags
 CONST GUI_MOUSE_DRAG_LEFT   = 1
 CONST GUI_MOUSE_DRAG_RIGHT  = 2
 CONST GUI_MOUSE_DRAG_MIDDLE = 3
 
-TYPE GUI_menu_item_type
-  nam as MEM_string_type 'Displayed string for MENU choice
+TYPE GUI_menu_item
+  nam as MEM_string 'Displayed string for MENU choice
   ident as STRING * 5 'identifer string
   'The ident string will be returned in menu_choice
   'when a choice is chosen. Use the identifier to match
@@ -201,33 +207,69 @@ TYPE GUI_menu_item_type
   sub_menu as _MEM 'Points to an array of GUI_menu_item_type
   sub_menu_length AS INTEGER
   sub_menu_open as _BYTE
-  key_combo as MEM_string_type
+  key_combo as MEM_string
   selected AS INTEGER 'current
 END TYPE
 
-TYPE GUI_color_type 'Holds color info -- forground and background
-  fr as _BYTE
-  bk as _BYTE
+TYPE GUI_color 'Holds color info -- forground and background
+  fr as _UNSIGNED _BYTE
+  bk as _UNSIGNED _BYTE
 END TYPE
 
-TYPE GUI_element_colors_type 'holds colors
-  mcolor as GUI_color_type
-  selcolor as GUI_color_type
-  scroll_color as GUI_color_type
+TYPE GUI_location
+  row as _UNSIGNED INTEGER
+  col as _UNSIGNED INTEGER
 END TYPE
 
-TYPE GUI_element_type
-  nam AS MEM_string_type 'name of item
+TYPE GUI_element_scroll_bar
+  top_left as GUI_location
+  bar_length as _UNSIGNED INTEGER
+  scroll_location as _UNSIGNED INTEGER
+  
+  'Number of items to scroll through
+  'These _MEM's should point to LONG's.
+  itemsL as _MEM
+  first_itemL as _MEM 'The current first_item according to the scroll bar
+  flags as _UNSIGNED INTEGER
+END TYPE
+
+TYPE GUI_element_text_area
+  top_left as GUI_location
+  bottom_right as GUI_location
+  
+  box_nam as MEM_string
+  
+  vert_scroll as GUI_element_scroll_bar
+  hors_scroll as GUI_element_scroll_bar
+  
+  cur_row as _UNSIGNED INTEGER
+  cur_col as _UNSIGNED INTEGER
+  
+  line_count as _UNSIGNED INTEGER
+  
+  text as MEM_array
+  max_lines as _UNSIGNED INTEGER
+  flags as _UNSIGNED LONG
+END TYPE
+
+TYPE GUI_element_colors 'holds colors
+  mcolor as GUI_color
+  selcolor as GUI_color
+  scroll_color as GUI_color
+END TYPE
+
+TYPE GUI_element
+  nam AS MEM_string 'name of item
   element_type AS _BYTE
   row1 AS INTEGER 'location
   col1 AS INTEGER
   row2 AS INTEGER
   col2 AS INTEGER
   flags AS _UNSIGNED LONG 'Coresponds to the above flags
-  c as GUI_element_colors_type
+  c as GUI_element_colors
   layer AS _BYTE
   old_layer as _BYTE
-  text AS MEM_string_type 'text drawn/edited in a Input-Box
+  text AS MEM_string 'text drawn/edited in a Input-Box
   text_position AS INTEGER 'position of the cursor in the input
   text_sel_row1 AS INTEGER
   text_sel_row2 AS INTEGER
@@ -243,7 +285,7 @@ TYPE GUI_element_type
   length AS INTEGER ' Length of string array
   selected AS INTEGER 'selected line in list-box, drop-down, etc.
   selected_old AS INTEGER
-  lines AS MEM_array_type ' Array to store strings for list-box, drop-down, etc.
+  lines AS MEM_array ' Array to store strings for list-box, drop-down, etc.
   menu as _MEM ' Points to an actual array of menu_items
   menu_padding as INTEGER 'Spaces padded before start of menu
   menu_choice AS STRING * 5
@@ -268,19 +310,19 @@ TYPE GUI_mouse_state '12
   MSCROLL AS INTEGER
 END TYPE
 
-TYPE GUI_event_generic_type
+TYPE GUI_event_generic
   event_type as _UNSIGNED LONG
   mem as _MEM
   allocated as _UNSIGNED _BYTE
 END TYPE
 
-TYPE GUI_event_key_type '6
+TYPE GUI_event_key '6
   key_code AS _UNSIGNED LONG  
   'gui_element AS _UNSIGNED LONG
   flags AS _UNSIGNED INTEGER
 END TYPE
 
-TYPE GUI_event_mouse_type '28
+TYPE GUI_event_mouse '28
   'gui_element AS _UNSIGNED LONG
   m as GUI_mouse_state
   row2 AS _UNSIGNED LONG 'Used if a drag occured
@@ -289,23 +331,28 @@ TYPE GUI_event_mouse_type '28
   count as INTEGER
 END TYPE
 
-'Represents an event that happened to a LABEL element
-TYPE GUI_event_element_label_type '48
-  m_event as GUI_event_mouse_type 'Mouse event that happened on the label
-  k_event as GUI_event_key_type 'Key event that happened on the label
+'Represents an event that happened to a generic element
+'It's worth nothing this is just here because many element only need a very
+'Simple return like this one
+TYPE GUI_event_element_basic '48
+  m_event as GUI_event_mouse 'Mouse event that happened on the label
+  k_event as GUI_event_key 'Key event that happened on the label
   flags as _BYTE
+  e_type as _BYTE
   gui_element AS _UNSIGNED LONG
 END TYPE
 
-TYPE GUI_event_element_button_type
-  m_event as GUI_event_mouse_type
-  k_event as GUI_event_key_type
-  flags as _BYTE
-  gui_element as _UNSIGNED LONG
-END TYPE
+'Represents an event that happened to
+'TYPE GUI_event_element_button_type
+'  m_event as GUI_event_mouse_type
+'  k_event as GUI_event_key_type
+'  flags as _BYTE
+'  gui_element as _UNSIGNED LONG
+'END TYPE
 
+'For the event stack
 TYPE GUI_event_stack_link
-  g as GUI_event_generic_type
+  g as GUI_event_generic
   flags as _UNSIGNED _BYTE
   'e_next AS _MEM 'Pointer to next event
   e_prev as _MEM
@@ -330,8 +377,7 @@ COMMON SHARED GUI_CAPS_LOCK_FLAG     AS INTEGER, GUI_ALT_GR_FLAG        AS INTEG
 COMMON SHARED GUI_DRAG_TIMER         AS DOUBLE
 COMMON SHARED GUI_RIGHT_CLICK_TIMER  AS DOUBLE,  GUI_LEFT_CLICK_TIMER   AS DOUBLE,  GUI_MIDDLE_CLICK_TIMER AS DOUBLE
 COMMON SHARED GUI_RIGHT_CLICK_COUNT  AS INTEGER, GUI_LEFT_CLICK_COUNT   AS INTEGER, GUI_MIDDLE_CLICK_COUNT AS INTEGER
-COMMON SHARED GUI_last_mouse_event   AS GUI_event_mouse_type
-'COMMON SHARED GUI_KEYPRESS_TIMER     AS DOUBLE,  GUI_LAST_KEYPRESS      AS LONG,    GUI_KEYPRESS_REPEATING AS INTEGER
+COMMON SHARED GUI_last_mouse_event   AS GUI_event_mouse
 
 COMMON SHARED GUI_EVENT_STACK_START as _MEM, GUI_EVENT_STACK_END as _MEM, GUI_EVENT_STACK_LENGTH AS LONG
 
@@ -339,19 +385,17 @@ COMMON SHARED GUI_EVENT_STACK_START as _MEM, GUI_EVENT_STACK_END as _MEM, GUI_EV
 'When dragging the mouse to select text, if dragging requires scrolling to prevent from scrolling instantly we will only scroll another character after this time in seconds has happened
 COMMON SHARED GUI_DRAG_SELECTION_DELAY 
 COMMON SHARED GUI_DOUBLE_CLICK_DELAY 'Delay two clicks have to be inbetween to be considered a double click
-'COMMON SHARED GUI_KEYPRESS_DELAY 'Delay from a keypress before we start repeating the key
-'COMMON SHARED GUI_KEYPRESS_REPEAT_DELAY 'Delay between repeating a key again
 
 'default colors -- Values are set by GUI_init and are changable at any time
-COMMON SHARED GUI_DEFAULT_COLOR_BOX   as GUI_element_colors_type, GUI_DEFAULT_COLOR_INPUT    as GUI_element_colors_type
-COMMON SHARED GUI_DEFAULT_COLOR_TEXT  as GUI_element_colors_type, GUI_DEFAULT_COLOR_LIST     as GUI_element_colors_type
-COMMON SHARED GUI_DEFAULT_COLOR_DROP  as GUI_element_colors_type, GUI_DEFAULT_COLOR_CHECKBOX as GUI_element_colors_type
-COMMON SHARED GUI_DEFAULT_COLOR_MENU  as GUI_element_colors_type, GUI_DEFAULT_COLOR_BUTTON   as GUI_element_colors_type
-COMMON SHARED GUI_DEFAULT_COLOR_RADIO as GUI_element_colors_type, GUI_DEFAULT_COLOR_LABEL    as GUI_element_colors_type
+COMMON SHARED GUI_DEFAULT_COLOR_BOX   as GUI_element_colors, GUI_DEFAULT_COLOR_INPUT    as GUI_element_colors
+COMMON SHARED GUI_DEFAULT_COLOR_TEXT  as GUI_element_colors, GUI_DEFAULT_COLOR_LIST     as GUI_element_colors
+COMMON SHARED GUI_DEFAULT_COLOR_DROP  as GUI_element_colors, GUI_DEFAULT_COLOR_CHECKBOX as GUI_element_colors
+COMMON SHARED GUI_DEFAULT_COLOR_MENU  as GUI_element_colors, GUI_DEFAULT_COLOR_BUTTON   as GUI_element_colors
+COMMON SHARED GUI_DEFAULT_COLOR_RADIO as GUI_element_colors, GUI_DEFAULT_COLOR_LABEL    as GUI_element_colors
 
 'Default colors for dialogs
-COMMON SHARED GUI_DEFAULT_DIALOG_COLOR_BOX   as GUI_element_colors_type, GUI_DEFAULT_DIALOG_COLOR_INPUT    as GUI_element_colors_type
-COMMON SHARED GUI_DEFAULT_DIALOG_COLOR_TEXT  as GUI_element_colors_type, GUI_DEFAULT_DIALOG_COLOR_LIST     as GUI_element_colors_type
-COMMON SHARED GUI_DEFAULT_DIALOG_COLOR_DROP  as GUI_element_colors_type, GUI_DEFAULT_DIALOG_COLOR_CHECKBOX as GUI_element_colors_type
-COMMON SHARED GUI_DEFAULT_DIALOG_COLOR_MENU  as GUI_element_colors_type, GUI_DEFAULT_DIALOG_COLOR_BUTTON   as GUI_element_colors_type
-COMMON SHARED GUI_DEFAULT_DIALOG_COLOR_RADIO as GUI_element_colors_type, GUI_DEFAULT_DIALOG_COLOR_LABEL    as GUI_element_colors_type
+COMMON SHARED GUI_DEFAULT_DIALOG_COLOR_BOX   as GUI_element_colors, GUI_DEFAULT_DIALOG_COLOR_INPUT    as GUI_element_colors
+COMMON SHARED GUI_DEFAULT_DIALOG_COLOR_TEXT  as GUI_element_colors, GUI_DEFAULT_DIALOG_COLOR_LIST     as GUI_element_colors
+COMMON SHARED GUI_DEFAULT_DIALOG_COLOR_DROP  as GUI_element_colors, GUI_DEFAULT_DIALOG_COLOR_CHECKBOX as GUI_element_colors
+COMMON SHARED GUI_DEFAULT_DIALOG_COLOR_MENU  as GUI_element_colors, GUI_DEFAULT_DIALOG_COLOR_BUTTON   as GUI_element_colors
+COMMON SHARED GUI_DEFAULT_DIALOG_COLOR_RADIO as GUI_element_colors, GUI_DEFAULT_DIALOG_COLOR_LABEL    as GUI_element_colors
