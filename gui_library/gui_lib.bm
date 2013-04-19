@@ -2625,12 +2625,18 @@ end if
 end sub
 
 sub GUI_list_box_process_mouse_event (gui() as GUI_element, gui_num, old, new, event as GUI_event_mouse)
+DIM bas as GUI_event_element_basic, g as GUI_event_generic
 IF event.flags AND GUI_EVENT_MOUSE_LEFT_CLICK OR event.flags AND GUI_EVENT_MOUSE_RIGHT_CLICK then
   IF event.m.mrow >= gui(new).row1 + 1 and event.m.mrow <= gui(new).row2 - 1 THEN
     IF event.m.mcol >= gui(new).col1 + 1 AND event.m.mcol <= gui(new).col2 - 1 then
       s = event.m.mrow - gui(new).row1 + gui(new).scroll_offset_vert
       if gui(new).selected <> s then
         gui(new).selected = s
+        flag = -1: c_flag = -1
+        bas.flags = GUI_EVENT_ELEMENT_LIST_BOX_SEL_CHANGED
+      else
+        flag = -1: c_flag = -1
+        bas.flags = GUI_EVENT_ELEMENT_LIST_BOX_PRESSED
       end if
     END IF
   END IF
@@ -2643,8 +2649,21 @@ elseif event.flags AND GUI_EVENT_MOUSE_LEFT_DOWN OR event.flags AND GUI_EVENT_MO
 
 ELSEIF event.flags AND GUI_EVENT_MOUSE_SCROLL_UP OR event.flags AND GUI_EVENT_MOUSE_SCROLL_DOWN then
   GUI_process_scroll_wheel_scroll_bar gui(new), event
+  flag = -1
+  bas.flags = GUI_EVENT_ELEMENT_LIST_BOX_SEL_CHANGED
 elseif event.flags AND GUI_EVENT_MOUSE_DRAG then
   n = GUI_process_mouse_scroll_bar(gui(new), event.m.mrow, event.m.mcol)
+end if
+if flag then
+  GUI_init_event g
+  g.event_type = GUI_EVENT_ELEMENT_BASIC
+  bas.e_type = GUI_LIST_BOX
+  bas.m_event = event
+  bas.gui_element = new
+  if c_flag then bas.flags = bas.flags OR GUI_EVENT_ELEMENT_LIST_BOX_CLICKED
+  _MEMPUT g.mem, g.mem.OFFSET, bas
+  GUI_add_event_to_queue g
+  GUI_free_event g
 end if
 end sub
 
@@ -2987,7 +3006,42 @@ end if
 END SUB
 
 SUB GUI_list_box_process_key_event (gui() as GUI_element, gui_num, sel, event as GUI_event_key)
-
+DIM b as GUI_event_element_basic, g as GUI_event_generic
+if event.flags AND GUI_EVENT_KEY_PRESSED then
+  SELECT CASE event.key_code
+    CASE GUI_KEY_CODE_UP
+      GUI_move_cursor_up gui(sel), event
+      flag = -1:m_flag = -1
+    CASE GUI_KEY_CODE_DOWN
+      GUI_move_cursor_down gui(sel), event
+      flag = -1: m_flag = -1
+    CASE GUI_KEY_CODE_PGDN
+      GUI_move_cursor_page_down gui(sel), event
+      flag = -1: m_flag = -1
+    CASE GUI_KEY_CODE_PGUP
+      GUI_move_cursor_page_up gui(sel), event
+      flag = -1: m_flag = -1
+    CASE GUI_KEY_CODE_ENTER
+      flag = -1: p_flag = -1
+  END SELECT
+  if m_flag or p_flag then
+    GUI_debug_output "Queueing List box event!"
+    b.e_type = GUI_LIST_BOX
+    b.k_event = event
+    b.gui_element = sel
+    if p_flag then
+      b.flags = GUI_EVENT_ELEMENT_LIST_BOX_PRESSED OR GUI_EVENT_ELEMENT_LIST_BOX_KEY_DOWN
+    else
+      b.flags = GUI_EVENT_ELEMENT_LIST_BOX_SEL_CHANGED OR GUI_EVENT_ELEMENT_LIST_BOX_KEY_DOWN
+    end if
+    GUI_init_event g
+    g.event_type = GUI_EVENT_ELEMENT_BASIC
+    _MEMPUT g.mem, g.mem.OFFSET, b
+    GUI_add_event_to_queue g
+    GUI_free_event g
+  end if
+  if flag then gui(sel).flags = gui(sel).flags OR GUI_FLAG_UPDATED: event.key_code = 0
+end if
 END SUB
 
 SUB GUI_drop_down_process_key_event (gui() as GUI_element, gui_num, sel, event as GUI_event_key)

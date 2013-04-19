@@ -314,6 +314,16 @@ DO 'Main loop
             MEM_put_str main_gui(labels(4)).text, "Button " + str$(label_event.gui_element) + " Was clicked"
             main_gui(labels(4)).flags = main_gui(labels(4)).flags OR GUI_FLAG_UPDATED
           end if
+        elseif label_event.e_type = GUI_LIST_BOX then
+          debug_print "Recieved list event!"
+          if label_event.flags AND GUI_EVENT_ELEMENT_LIST_BOX_PRESSED then
+            debug_print "Pressed event"
+            if (label_event.flags AND GUI_EVENT_ELEMENT_LIST_BOX_KEY_DOWN) OR (label_event.flags AND GUI_EVENT_ELEMENT_LIST_BOX_CLICKED AND label_event.m_event.count = 2) then
+              debug_print "Modifying label..."
+              MEM_put_str main_gui(labels(4)).text, "List box item " + str$(main_gui(label_event.gui_element).selected) + " was chosen!"
+              main_gui(labels(4)).flags = main_gui(labels(4)).flags OR GUI_FLAG_UPDATED
+            end if
+          end if
         end if
 
     END SELECT

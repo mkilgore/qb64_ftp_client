@@ -8,7 +8,7 @@
 
 CONST GUI_VER$ = ".96"
 
-CONST GUI_DEBUG = -1 'Set to -1 to turn on debug mode
+CONST GUI_DEBUG = 0 'Set to -1 to turn on debug mode
 
 'Various key codes for _KEYHIT -- Used for keycode in key event
 CONST GUI_KEY_CODE_PAUSE            = 100019
@@ -183,6 +183,12 @@ CONST GUI_EVENT_ELEMENT_BUTTON_PRESSED    = &H00000001
 CONST GUI_EVENT_ELEMENT_BUTTON_CLICKED    = &H00000002
 CONST GUI_EVENT_ELEMENT_BUTTON_KEY_DOWN   = &H00000004
 
+'List box event flags
+CONST GUI_EVENT_ELEMENT_LIST_BOX_PRESSED     = &H00000001
+CONST GUI_EVENT_ELEMENT_LIST_BOX_CLICKED     = &H00000002
+CONST GUI_EVENT_ELEMENT_LIST_BOX_KEY_DOWN    = &H00000004
+CONST GUI_EVENT_ELEMENT_LIST_BOX_SEL_CHANGED = &H00000008
+
 'Scroll bar
 CONST GUI_ELEMENT_SCROLL_BAR_FLAG_SCROLL_V = &H00000001
 CONST GUI_ELEMENT_SCROLL_BAR_FLAG_SCROLL_H = &H00000002
@@ -216,41 +222,50 @@ TYPE GUI_color 'Holds color info -- forground and background
   bk as _UNSIGNED _BYTE
 END TYPE
 
-TYPE GUI_location
-  row as _UNSIGNED INTEGER
-  col as _UNSIGNED INTEGER
-END TYPE
+'TYPE GUI_location
+'  row as _UNSIGNED INTEGER
+'  col as _UNSIGNED INTEGER
+'END TYPE
 
-TYPE GUI_element_scroll_bar
-  top_left as GUI_location
-  bar_length as _UNSIGNED INTEGER
-  scroll_location as _UNSIGNED INTEGER
-  
-  'Number of items to scroll through
-  'These _MEM's should point to LONG's.
-  itemsL as _MEM
-  first_itemL as _MEM 'The current first_item according to the scroll bar
-  flags as _UNSIGNED INTEGER
-END TYPE
+'TYPE GUI_element_scroll_bar
+'  top_left as GUI_location
+'  bar_length as _UNSIGNED INTEGER
+'  scroll_location as _UNSIGNED INTEGER
+'  
+'  'Number of items to scroll through
+'  'These _MEM's should point to LONG's.
+'  itemsL as _MEM
+'  first_itemL as _MEM 'The current first_item according to the scroll bar
+'  flags as _UNSIGNED INTEGER
+'END TYPE
 
-TYPE GUI_element_text_area
-  top_left as GUI_location
-  bottom_right as GUI_location
-  
-  box_nam as MEM_string
-  
-  vert_scroll as GUI_element_scroll_bar
-  hors_scroll as GUI_element_scroll_bar
-  
-  cur_row as _UNSIGNED INTEGER
-  cur_col as _UNSIGNED INTEGER
-  
-  line_count as _UNSIGNED INTEGER
-  
-  text as MEM_array
-  max_lines as _UNSIGNED INTEGER
-  flags as _UNSIGNED LONG
-END TYPE
+'TYPE GUI_element_frame
+'  top_left as GUI_location
+'  bottom_right as GUI_location
+'  flags as _UNSIGNED INTEGER
+'  'Points to a MEM_String
+'  titleMS as _MEM 
+'END TYPE
+
+
+'TYPE GUI_element_text_area
+'  top_left as GUI_location
+'  bottom_right as GUI_location
+'  
+'  box_nam as MEM_string
+'  
+'  vert_scroll as GUI_element_scroll_bar
+'  hors_scroll as GUI_element_scroll_bar
+'  
+'  cur_row as _UNSIGNED INTEGER
+'  cur_col as _UNSIGNED INTEGER
+'  
+'  line_count as _UNSIGNED INTEGER
+'  
+'  text as MEM_array
+'  max_lines as _UNSIGNED INTEGER
+'  flags as _UNSIGNED LONG
+'END TYPE
 
 TYPE GUI_element_colors 'holds colors
   mcolor as GUI_color
@@ -341,14 +356,6 @@ TYPE GUI_event_element_basic '48
   e_type as _BYTE
   gui_element AS _UNSIGNED LONG
 END TYPE
-
-'Represents an event that happened to
-'TYPE GUI_event_element_button_type
-'  m_event as GUI_event_mouse_type
-'  k_event as GUI_event_key_type
-'  flags as _BYTE
-'  gui_element as _UNSIGNED LONG
-'END TYPE
 
 'For the event stack
 TYPE GUI_event_stack_link
