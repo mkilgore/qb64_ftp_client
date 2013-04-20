@@ -15,8 +15,10 @@ gui_num = 25
 
 DIM event   as GUI_event_generic
 DIM m_event as GUI_event_mouse
+DIM menu_event as GUI_event_element_menu
 DIM k_event as GUI_event_key
 DIM label_event as GUI_event_element_basic', button_event as GUI_event_element_button_type
+DIM radio_group as GUI_event_element_radio_button_group
 
 GUI_init_event event
 
@@ -324,6 +326,36 @@ DO 'Main loop
               main_gui(labels(4)).flags = main_gui(labels(4)).flags OR GUI_FLAG_UPDATED
             end if
           end if
+        elseif label_event.e_type = GUI_DROP_DOWN then
+          debug_print "Recieved drop down event!"
+          if label_event.flags AND GUI_EVENT_ELEMENT_DROP_DOWN_SEL_CHANGED then
+            MEM_put_str main_gui(labels(4)).text, "Drop Down item " + str$(main_gui(label_event.gui_element).selected) + " was chosen!"
+          end if
+        elseif label_event.e_type = GUI_CHECKBOX then
+          if label_event.flags AND GUI_EVENT_ELEMENT_CHECKBOX_CHANGED then
+            if main_gui(label_event.gui_element).flags AND GUI_FLAG_CHECKED then
+              MEM_put_str main_gui(labels(4)).text, "Checkbox #" + ltrim$(rtrim$(str$(label_event.gui_element))) + " was checked!"
+            else
+              MEM_put_str main_gui(labels(4)).text, "Checkbox #" + ltrim$(rtrim$(str$(label_event.gui_element))) + " was unchecked!"
+            end if
+          end if
+        end if
+
+      CASE GUI_EVENT_ELEMENT_MENU
+        GUI_get_element_menu_event event, menu_event
+        debug_print "Menu event recieved!"
+        if menu_event.flags AND GUI_EVENT_ELEMENT_MENU_SELECTED then
+          MEM_put_str main_gui(labels(4)).text, "Menu item " + menu_event.mident + " was selected!"
+          main_gui(labels(4)).flags = main_gui(labels(4)).flags OR GUI_FLAG_UPDATED
+          if menu_event.mident = "EXIT " then exit_flag = -1
+        end if
+
+      CASE GUI_EVENT_ELEMENT_RADIO_BUTTON_GROUP
+        GUI_get_element_radio_b_g_event event, radio_group
+        debug_print "Radio event recieved!"
+        if radio_group.flags AND GUI_EVENT_ELEMENT_RADIO_B_G_CHANGED then
+          MEM_put_str main_gui(labels(4)).text, "GUI" + str$(radio_group.gui_element) + " from group" + str$(radio_group.group) + " selected!"
+          main_gui(labels(4)).flags = main_gui(labels(4)).flags OR GUI_FLAG_UPDATED
         end if
 
     END SELECT
