@@ -33,7 +33,7 @@ END SUB
 FUNCTION MEM_get_str_array$ (a AS MEM_array, array_number)
 DIM s AS MEM_string
 $CHECKING:OFF
-_MEMGET a.mem, a.mem.OFFSET + array_number * LEN(s), s
+_MEMGET a.mem, a.mem.OFFSET + array_number * MEM_SIZEOF_MEM_STRING, s
 '_MEMCOPY a.mem, a.mem.OFFSET + array_number * LEN(string_type), LEN(string_type) TO m, m.OFFSET
 $CHECKING:ON
 
@@ -43,9 +43,9 @@ END FUNCTION
 SUB MEM_put_str_array (a AS MEM_array, array_number, s$)
 $CHECKING:OFF
 DIM st as MEM_string
-_MEMGET a.mem, a.mem.OFFSET + array_number * LEN(st), st
+_MEMGET a.mem, a.mem.OFFSET + array_number * MEM_SIZEOF_MEM_STRING, st
 MEM_put_str st, s$
-_MEMPUT a.mem, a.mem.OFFSET + array_number * LEN(st), st
+_MEMPUT a.mem, a.mem.OFFSET + array_number * MEM_SIZEOF_MEM_STRING, st
 
 $CHECKING:ON
 END SUB
@@ -96,8 +96,8 @@ $CHECKING:ON
 END SUB
 
 SUB MEM_allocate_string_array (a as MEM_array, number_of_elements)
-DIM s as MEM_string
-MEM_allocate_array a, number_of_elements, LEN(s)
+'DIM s as MEM_string
+MEM_allocate_array a, number_of_elements, MEM_SIZEOF_MEM_STRING
 END SUB
 
 SUB MEM_free_string_array (a as MEM_array)
@@ -105,7 +105,7 @@ DIM s as MEM_string
 $CHECKING:OFF
 if a.is_allocated then
   FOR x = 1 to a.length 'Free each individual string
-    s = _MEMGET(a.mem, a.mem.OFFSET + LEN(s) * (x - 1), MEM_string)
+    s = _MEMGET(a.mem, a.mem.OFFSET + MEM_SIZEOF_MEM_STRING * (x - 1), MEM_string)
     MEM_free_string s
   next x
   _MEMFREE a.mem

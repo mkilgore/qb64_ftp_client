@@ -40,8 +40,9 @@ DIM help_menu(10) as GUI_menu_item
 
 'GUI(1) is our main dialog box and is going to be
 g = 1
-main_gui(g).element_type = GUI_MENU
-GUI_init_element main_gui(g), "Menu"
+GUI_menu_init main_gui(g)
+'main_gui(g).element_type = GUI_MENU
+'GUI_init_element main_gui(g), "Menu"
 
 main_gui(g).menu_padding = 2
 main_gui(g).flags = main_gui(g).flags OR GUI_FLAG_SKIP OR GUI_FLAG_SHADOW OR GUI_FLAG_MENU_LAST_ON_RIGHT
@@ -124,21 +125,27 @@ GUI_attach_menu base_menu(4), m, _OFFSET(help_menu(1))
 GUI_attach_base_menu main_gui(g), 4, _OFFSET(base_menu(1))
 
 g=g+1
-main_gui(g).element_type = GUI_BOX
-GUI_init_element main_gui(g), "Plain Box"
+GUI_box_init main_gui(g)
+MEM_put_str main_gui(g).nam, "Plain Box"
+'main_gui(g).element_type = GUI_BOX
+'GUI_init_element main_gui(g), "Plain Box"
 main_gui(g).layer = -1 ' -- Set in background. Layer 0 is the default
 ' -- We don't want to be able to TAB to this gui element
 ' -- Don't draw box characters or box name, etc.
 main_gui(g).flags = main_gui(g).flags OR GUI_FLAG_SKIP OR GUI_FLAG_HIDE
 
 g=g+1
-main_gui(g).element_type = GUI_INPUT_BOX
-GUI_init_element main_gui(g), "Input Box"
+GUI_input_box_init main_gui(g)
+MEM_put_str main_gui(g).nam, "Input Box"
+'main_gui(g).element_type = GUI_INPUT_BOX
+'GUI_init_element main_gui(g), "Input Box"
 
 
 g=g+1
-main_gui(g).element_type = GUI_LIST_BOX
-GUI_init_element main_gui(g), "List Box"
+GUI_list_box_init main_gui(g)
+MEM_put_str main_gui(g).nam, "List Box"
+'main_gui(g).element_type = GUI_LIST_BOX
+'GUI_init_element main_gui(g), "List Box"
 main_gui(g).flags = main_gui(g).flags OR GUI_FLAG_SCROLL_V
 list_Box = g
 
@@ -151,33 +158,46 @@ list_box_n = g
 'main_gui(g).scroll_max_hors = 90 'Max horisontal column to scroll to
 
 g=g+1
-main_gui(g).element_type = GUI_CHECKBOX 'Initalize a few Checkbox's
-GUI_init_element main_gui(g), "CheckBox1"
+GUI_checkbox_init main_gui(g)
+MEM_put_str main_gui(g).nam, "CheckBox1"
+'main_gui(g).element_type = GUI_CHECKBOX 'Initalize a few Checkbox's
+'GUI_init_element main_gui(g), "CheckBox1"
 
 
 g=g+1
-main_gui(g).element_type = GUI_CHECKBOX 'Same as the last one
-GUI_init_element main_gui(g), "CheckBox2"
+GUI_checkbox_init main_gui(g)
+MEM_put_str main_gui(g).nam, "CheckBox2"
+
+'main_gui(g).element_type = GUI_CHECKBOX 'Same as the last one
+'GUI_init_element main_gui(g), "CheckBox2"
 
 g=g+1
-main_gui(g).element_type = GUI_BUTTON 'Initalize some buttons -- Virtually the same as buttons
-GUI_init_element main_gui(g), "Button"
+GUI_button_init main_gui(g)
+MEM_put_str main_gui(g).nam, "Button"
+'main_gui(g).element_type = GUI_BUTTON 'Initalize some buttons -- Virtually the same as buttons
+'GUI_init_element main_gui(g), "Button"
 buttons(1) = g 'Store main_gui() number for later use
 
 g=g+1
-main_gui(g).element_type = GUI_BUTTON 'Same as before
-GUI_init_element main_gui(g), "Button2"
+GUI_button_init main_gui(g)
+MEM_put_str main_gui(g).nam, "Button2"
+'main_gui(g).element_type = GUI_BUTTON 'Same as before
+'GUI_init_element main_gui(g), "Button2"
 buttons(2) = g
 
 g=g+1
-main_gui(g).element_type = GUI_BUTTON 'Same as before
-GUI_init_element main_gui(g), "Button3"
+GUI_button_init main_gui(g)
+MEM_put_str main_gui(g).nam, "Button3"
+'main_gui(g).element_type = GUI_BUTTON 'Same as before
+'GUI_init_element main_gui(g), "Button3"
 buttons(3) = g
 
 
 g=g+1
-main_gui(g).element_type = GUI_DROP_DOWN 'Initalize a drop-down selection
-GUI_init_element main_gui(g), "Drop Down"
+GUI_drop_down_init main_gui(g)
+MEM_put_str main_gui(g).nam, "Drop Down"
+'main_gui(g).element_type = GUI_DROP_DOWN 'Initalize a drop-down selection
+'GUI_init_element main_gui(g), "Drop Down"
 
 'Just vertical scroll (No hoisontal)
 'Draws shadow under box when drop-down is opened
@@ -192,8 +212,10 @@ next x
 
 
 g=g+1
-main_gui(g).element_type = GUI_DROP_DOWN 'Almost exactly the same as before
-GUI_init_element main_gui(g), "Drop Down"
+GUI_drop_down_init main_gui(g)
+MEM_put_Str main_gui(g).nam, "Drop Down"
+'main_gui(g).element_type = GUI_DROP_DOWN 'Almost exactly the same as before
+'GUI_init_element main_gui(g), "Drop Down"
 main_gui(g).flags = main_gui(g).flags OR GUI_FLAG_SCROLL_V OR GUI_FLAG_SHADOW
 main_gui(g).selected = 1
 MEM_allocate_string_array main_gui(g).lines, 80
@@ -204,28 +226,35 @@ next x
 
 for x = 1 to 4 'group 0
   g=g+1
-  main_gui(g).element_type = GUI_RADIO_BUTTON 'Initalize 4 radio buttons linked by their group number
-  GUI_init_element main_gui(g), "Radio Button" + str$(x)
+  GUI_radio_button_init main_gui(g)
+  MEM_put_str main_gui(g).nam, "Radio Button" + str$(x)
+  'main_gui(g).element_type = GUI_RADIO_BUTTON 'Initalize 4 radio buttons linked by their group number
+  'GUI_init_element main_gui(g), "Radio Button" + str$(x)
 next x
 
 for x = 1 to 4 'group 1
   g=g+1
-  main_gui(g).element_type = GUI_RADIO_BUTTON 'Same as before, but different group number
-  GUI_init_element main_gui(g), "Radio Button" + str$(x)
+  GUI_radio_button_init main_gui(g)
+  MEM_put_str main_gui(g).nam, "Radio Button" + str$(x)
+  'main_gui(g).element_type = GUI_RADIO_BUTTON 'Same as before, but different group number
+  'GUI_init_element main_gui(g), "Radio Button" + str$(x)
   main_gui(g).group = 1
 next x
 
 FOR x = 1 to 4
   g=g+1
-  main_gui(g).element_type = GUI_LABEL 'Initalize 4 lables via a loop
-  GUI_init_element main_gui(g), ""
+  GUI_label_init main_gui(g)
+  'main_gui(g).element_type = GUI_LABEL 'Initalize 4 lables via a loop
+  'GUI_init_element main_gui(g), ""
   MEM_put_str main_gui(g).text, "Label 1"
   labels(x) = g 'Store it's main_gui() element number for later use
 NEXT x
 
 g=g+1
-main_gui(g).element_type = GUI_TEXT_BOX 'Initalize a Text-Box
-GUI_init_element main_gui(g), "Text Box"
+GUI_text_box_init main_gui(g)
+MEM_put_str main_gui(g).nam, "Text Box"
+'main_gui(g).element_type = GUI_TEXT_BOX 'Initalize a Text-Box
+'GUI_init_element main_gui(g), "Text Box"
 main_gui(g).flags = main_gui(g).flags OR GUI_FLAG_SCROLL_V OR GUI_FLAG_SCROLL_H
 'We allocate 120 Lines for the array (main_gui(g).lines won't be allocated for you, but it may be reallocated if you allow it)
 'Just set this to a reasonable value for your program.
@@ -247,8 +276,10 @@ for x = 1 to 10 'Fill the first 10 lines with some data.
 next x
 
 g=g+1
-main_gui(g).element_type = GUI_INPUT_BOX 'One extra Input box for good measure ;)
-GUI_init_element main_gui(g), "Input Box"
+GUI_input_box_init main_gui(g)
+MEM_put_str main_gui(g).nam, "Input Box"
+'main_gui(g).element_type = GUI_INPUT_BOX 'One extra Input box for good measure ;)
+'GUI_init_element main_gui(g), "Input Box"
 
 'Initialize placement
 setup_gui main_gui()
