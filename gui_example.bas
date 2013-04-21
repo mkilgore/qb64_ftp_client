@@ -17,7 +17,7 @@ DIM event   as GUI_event_generic
 DIM m_event as GUI_event_mouse
 DIM menu_event as GUI_event_element_menu
 DIM k_event as GUI_event_key
-DIM label_event as GUI_event_element_basic', button_event as GUI_event_element_button_type
+DIM basic_event as GUI_event_element_basic
 DIM radio_group as GUI_event_element_radio_button_group
 
 GUI_init_event event
@@ -80,7 +80,7 @@ sm = sm + 1: MEM_put_str file_new_csrc_csrc_menu(sm).nam, "C++ #Source     ": fi
 sm = sm + 1: MEM_put_str file_new_csrc_csrc_menu(sm).nam, "-"               : file_new_csrc_csrc_menu(sm).ident = "-----"
 sm = sm + 1: MEM_put_str file_new_csrc_csrc_menu(sm).nam, "#Plain Text     ": file_new_csrc_csrc_menu(sm).ident = "PLAIN"
 
-GUI_attach_menu file_new_csrc_menu(2), sm, _OFFSET(file_new_csrc_csrc_menu(1))
+GUI_attach_menu file_new_menu(4), sm, _OFFSET(file_new_csrc_csrc_menu(1))
 
 sm = 0
 sm = sm + 1: MEM_put_str file_new_csrc_csrc_csrc_menu(sm).nam, "#C Source       ": file_new_csrc_csrc_csrc_menu(sm).ident = "CSRC "
@@ -253,7 +253,6 @@ GUI_init_element main_gui(g), "Input Box"
 'Initialize placement
 setup_gui main_gui()
 
-
 'selected_gui = 0 'First selected gui element
 selected_gui = list_box
 DO 'Main loop
@@ -262,16 +261,16 @@ DO 'Main loop
   ' -- May need to be increased if there are tons of GUI elements, but low numbers seem to do fine
   ' -- This program has 25 GUI elements, probably more then you'll ever come across, so with that in mind
   ' The Limit doesn't need to be that big.
-  _LIMIT 200
+  _LIMIT 250
 
   'Check if we should update screen because an event happened or otherwise
   if GUI_update_screen(main_gui(), gui_num, selected_gui) then
     'Redraw screen (May be improved in the future but currently redraws the entire screen)
     GUI_draw_element_array main_gui(), gui_num, selected_gui
   end if
-  
+
   GUI_handle_events
-  
+
   DO WHILE GUI_events_in_queue
     GUI_read_event main_gui(), gui_num, selected_gui, event
     'GUI_debug_output "Reading event: " + str$(event.event_type)
@@ -289,7 +288,7 @@ DO 'Main loop
         elseif m_event.flags AND GUI_EVENT_MOUSE_SCROLL_DOWN OR m_event.flags AND GUI_EVENT_MOUSE_SCROLL_UP then
           debug_print "Scroll detected"
         end if
-
+      
       CASE GUI_EVENT_KEY
         GUI_get_key_event event, k_event
         debug_print "Key event! : " + str$(k_event.key_code)
@@ -299,44 +298,44 @@ DO 'Main loop
         elseif k_event.flags AND GUI_EVENT_KEY_RELEASED and k_event.key_code = 27 then
           exit_flag = -1
         end if
-
+        
       CASE GUI_EVENT_ELEMENT_BASIC
-        GUI_get_element_basic_event event, label_event
-        if label_event.e_type = GUI_LABEL then
-          if label_event.flags AND GUI_EVENT_ELEMENT_LABEL_PRESSED then
-            if ((label_event.m_event.count - 1) mod 2) + 1 = 2 then
-              MEM_put_str main_gui(labels(4)).text, "Label " + str$(label_event.gui_element) + " Double Clicked on!"
+        GUI_get_element_basic_event event, basic_event
+        if basic_event.e_type = GUI_LABEL then
+          if basic_event.flags AND GUI_EVENT_ELEMENT_LABEL_PRESSED then
+            if ((basic_event.m_event.count - 1) mod 2) + 1 = 2 then
+              MEM_put_str main_gui(labels(4)).text, "Label " + str$(basic_event.gui_element) + " Double Clicked on!"
             else
-              MEM_put_str main_gui(labels(4)).text, "Label " + str$(label_event.gui_element) + " Clicked on!"
+              MEM_put_str main_gui(labels(4)).text, "Label " + str$(basic_event.gui_element) + " Clicked on!"
             end if
             main_gui(labels(4)).flags = main_gui(labels(4)).flags OR GUI_FLAG_UPDATED
           end if
-        elseif label_event.e_type = GUI_BUTTON then
-          if label_event.flags AND GUI_EVENT_ELEMENT_BUTTON_PRESSED then
-            MEM_put_str main_gui(labels(4)).text, "Button " + str$(label_event.gui_element) + " Was clicked"
+        elseif basic_event.e_type = GUI_BUTTON then
+          if basic_event.flags AND GUI_EVENT_ELEMENT_BUTTON_PRESSED then
+            MEM_put_str main_gui(labels(4)).text, "Button " + str$(basic_event.gui_element) + " Was clicked"
             main_gui(labels(4)).flags = main_gui(labels(4)).flags OR GUI_FLAG_UPDATED
           end if
-        elseif label_event.e_type = GUI_LIST_BOX then
+        elseif basic_event.e_type = GUI_LIST_BOX then
           debug_print "Recieved list event!"
-          if label_event.flags AND GUI_EVENT_ELEMENT_LIST_BOX_PRESSED then
+          if basic_event.flags AND GUI_EVENT_ELEMENT_LIST_BOX_PRESSED then
             debug_print "Pressed event"
-            if (label_event.flags AND GUI_EVENT_ELEMENT_LIST_BOX_KEY_DOWN) OR (label_event.flags AND GUI_EVENT_ELEMENT_LIST_BOX_CLICKED AND label_event.m_event.count = 2) then
+            if (basic_event.flags AND GUI_EVENT_ELEMENT_LIST_BOX_KEY_DOWN) OR (basic_event.flags AND GUI_EVENT_ELEMENT_LIST_BOX_CLICKED AND basic_event.m_event.count = 2) then
               debug_print "Modifying label..."
-              MEM_put_str main_gui(labels(4)).text, "List box item " + str$(main_gui(label_event.gui_element).selected) + " was chosen!"
+              MEM_put_str main_gui(labels(4)).text, "List box item " + str$(main_gui(basic_event.gui_element).selected) + " was chosen!"
               main_gui(labels(4)).flags = main_gui(labels(4)).flags OR GUI_FLAG_UPDATED
             end if
           end if
-        elseif label_event.e_type = GUI_DROP_DOWN then
+        elseif basic_event.e_type = GUI_DROP_DOWN then
           debug_print "Recieved drop down event!"
-          if label_event.flags AND GUI_EVENT_ELEMENT_DROP_DOWN_SEL_CHANGED then
-            MEM_put_str main_gui(labels(4)).text, "Drop Down item " + str$(main_gui(label_event.gui_element).selected) + " was chosen!"
+          if basic_event.flags AND GUI_EVENT_ELEMENT_DROP_DOWN_SEL_CHANGED then
+            MEM_put_str main_gui(labels(4)).text, "Drop Down item " + str$(main_gui(basic_event.gui_element).selected) + " was chosen!"
           end if
-        elseif label_event.e_type = GUI_CHECKBOX then
-          if label_event.flags AND GUI_EVENT_ELEMENT_CHECKBOX_CHANGED then
-            if main_gui(label_event.gui_element).flags AND GUI_FLAG_CHECKED then
-              MEM_put_str main_gui(labels(4)).text, "Checkbox #" + ltrim$(rtrim$(str$(label_event.gui_element))) + " was checked!"
+        elseif basic_event.e_type = GUI_CHECKBOX then
+          if basic_event.flags AND GUI_EVENT_ELEMENT_CHECKBOX_CHANGED then
+            if main_gui(basic_event.gui_element).flags AND GUI_FLAG_CHECKED then
+              MEM_put_str main_gui(labels(4)).text, "Checkbox #" + ltrim$(rtrim$(str$(basic_event.gui_element))) + " was checked!"
             else
-              MEM_put_str main_gui(labels(4)).text, "Checkbox #" + ltrim$(rtrim$(str$(label_event.gui_element))) + " was unchecked!"
+              MEM_put_str main_gui(labels(4)).text, "Checkbox #" + ltrim$(rtrim$(str$(basic_event.gui_element))) + " was unchecked!"
             end if
           end if
         end if
