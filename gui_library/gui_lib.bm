@@ -448,7 +448,7 @@ print space$(b.col2 - b.col1 + 1)
 locate b.row1, b.col1
 PRINT SPACE$(b.menu_padding);
 for x = 1 to b.length
-  men = _MEMGET(b.menu, b.menu.OFFSET + GUI_SIZEOF_MENU_ITEM * (x - 1), GUI_menu_item)
+  MEM_MEMCPY _OFFSET(men), b.menu + GUI_SIZEOF_MENU_ITEM * (x - 1), GUI_SIZEOF_MENU_ITEM
   if x = b.length and (b.flags AND GUI_FLAG_MENU_LAST_ON_RIGHT) then
     locate , b.col2 - GUI_menu_len(MEM_get_Str$(men.nam)) - 2
   end if
@@ -469,7 +469,6 @@ for x = 1 to b.length
   end if
 next x
 if b.flags AND GUI_FLAG_MENU_OPEN then
-  'men = _MEMGET(b.menu, b.menu.OFFSET + len(men) * (b.selected - 1), GUI_menu_item)
   GUI_draw_gui_menu b ', men, menu_row1, menu_col1
 end if
 b.cur_row = 0
@@ -515,8 +514,9 @@ DIM men_next_menu as GUI_menu_item, sub_menu_row1, sub_menu_col1, sub_menu_open
 GUI_debug_output "Finding Menu location..."
 GUI_get_menu_location b, count + 1, row1, col1, row2, col2
 
-if count = 0 then m = _MEMGET(b.menu, b.menu.OFFSET + GUI_SIZEOF_MENU_ITEM * (b.selected - 1), GUI_menu_item)
-
+if count = 0 then 
+  MEM_MEMCPY _OFFSET(m), b.menu + GUI_SIZEOF_MENU_ITEM * (b.selected - 1), GUI_SIZEOF_MENU_ITEM
+end if
 GUI_debug_output "Row1:" + str$(row1) + " Col1" + str$(col1) + " Row2:" + str$(row2) + " Col2:" + str$(col2)
 wid = col2 - col1 - 3
 IF b.flags AND GUI_FLAG_SHADOW THEN
@@ -527,7 +527,7 @@ color b.c.mcolor.fr, b.c.mcolor.bk
 locate row1, col1
 PRINT CHR$(218); STRING$(col2 - col1 - 1, 196); CHR$(191);
 for x = 1 to m.sub_menu_length
-  men = _MEMGET(m.sub_menu, m.sub_menu.OFFSET + GUI_SIZEOF_MENU_ITEM * (x - 1), GUI_menu_item)
+  MEM_MEMCPY _OFFSET(men), m.sub_menu + GUI_SIZEOF_MENU_ITEM * (x - 1), GUI_SIZEOF_MENU_ITEM
   if men.sub_menu_open and men.has_sub then
     men_next_menu = men
     sub_menu_row1 = row1 + x - 1
@@ -536,7 +536,7 @@ for x = 1 to m.sub_menu_length
   end if
 next x
 for x = 1 to m.sub_menu_length
-  men = _MEMGET(m.sub_menu, m.sub_menu.OFFSET + GUI_SIZEOF_MENU_ITEM * (x - 1), GUI_menu_item)
+  MEM_MEMCPY _OFFSET(men), m.sub_menu + GUI_SIZEOF_MENU_ITEM * (x - 1), GUI_SIZEOF_MENU_ITEM
   locate x + row1, col1
   color b.c.mcolor.fr, b.c.mcolor.bk
   print chr$(179);
@@ -716,10 +716,10 @@ MEM_free_string m.nam 'First free it's strings
 MEM_free_string m.key_combo
 if m.has_sub then
   FOR x = 1 to m.sub_menu_length 'free any sub menus of this item
-    men = _MEMGET(m.sub_menu, m.sub_menu.OFFSET + GUI_SIZEOF_MENU_ITEM * (x - 1), GUI_menu_item)
+    MEM_MEMCPY _OFFSET(men), m.sub_menu + GUI_SIZEOF_MENU_ITEM * (x - 1), GUI_SIZEOF_MENU_ITEM 
     GUI_free_menu men
   next x
-  _MEMFREE m.sub_menu
+  'MEM_FREE m.sub_menu
 end if
 '... I don't think I need to free the _MEM (m.sub_menu) because it points to a fixed array
 ' EDIT I was wrong... I think...
@@ -741,11 +741,11 @@ MEM_free_array b.lines
 IF b.element_type = GUI_MENU then 'If we're a menu, then we have to free our menu items
   if b.length > 0 then
     FOR x = 1 to b.length
-      m = _MEMGET(b.menu, b.menu.OFFSET + GUI_SIZEOF_MENU_ITEM * (x - 1), GUI_menu_item)
+      MEM_MEMCPY _OFFSET(m), b.menu + GUI_SIZEOF_MENU_ITEM * (x - 1), GUI_SIZEOF_MENU_ITEM
       GUI_free_menu m
     next x
   end if
-  _MEMFREE b.menu
+  '_MEMFREE b.menu
 end if
 END SUB
 
@@ -763,7 +763,7 @@ END SUB
 'Call just like GUI_attach_base_menu, except with a GUI_menu_item in place of the GUI element
 SUB GUI_attach_menu (menu_item as GUI_menu_item, item_num AS INTEGER, items as _OFFSET)
 menu_item.sub_menu_length = item_num
-menu_item.sub_menu = _MEM(items, GUI_SIZEOF_MENU_ITEM * item_num)
+menu_item.sub_menu = items
 menu_item.has_sub = -1
 menu_item.selected = 0
 END SUB
@@ -776,7 +776,7 @@ END SUB
 'If you just use arrays of GUI_menu_item then call this using _OFFSET(array_name) for the last parameter
 SUB GUI_attach_base_menu (g as GUI_element, item_num AS INTEGER, items as _OFFSET)
 'DIM m as GUI_menu_item
-g.menu = _MEM(items, GUI_SIZEOF_MENU_ITEM * item_num)
+g.menu = items
 g.length = item_num
 END SUB
 
@@ -793,7 +793,7 @@ else
     row1 = b.row1
     col2 = b.col1 + b.menu_padding - 1
     for x = 1 to b.selected
-      men = _MEMGET(b.menu, b.menu.OFFSET + GUI_SIZEOF_MENU_ITEM * (x - 1), GUI_menu_item)
+      MEM_MEMCPY _OFFSET(men), b.menu + GUI_SIZEOF_MENU_ITEM * (x - 1), GUI_SIZEOF_MENU_ITEM
       if x = b.length AND (b.flags AND GUI_FLAG_MENU_LAST_ON_RIGHT) then
         col1 = b.col2 - GUI_menu_len(MEM_get_str$(men.nam)) - 2
       else
@@ -818,7 +818,7 @@ else
   row1 = sub_row - 1 'row1 + 1
   row2 = row1 + m.sub_menu_length + 1
   for x = 1 to m.sub_menu_length
-    men = _MEMGET(m.sub_menu, m.sub_menu.OFFSET + GUI_SIZEOF_MENU_ITEM * (x - 1), GUI_menu_item)
+    MEM_MEMCPY _OFFSET(men), m.sub_menu + GUI_SIZEOF_MENU_ITEM * (x - 1), GUI_SIZEOF_MENU_ITEM
     GUI_debug_output "Menu item: " + MEM_get_str$(men.nam)
     l = GUI_menu_len(MEM_get_str$(men.nam))
     if l > wid then
@@ -875,20 +875,23 @@ DIM mem_sav AS GUI_menu_item
 GUI_get_menu_location b, count, row1, col1, row2, col2
 
 if count = 0 then
-  if b.selected > 0 and (b.flags OR GUI_FLAG_MENU_OPEN) then
-    m = _MEMGET(b.menu, b.menu.OFFSET + GUI_SIZEOF_MENU_ITEM * (b.selected - 1), GUI_menu_item)
+  if b.selected > 0 and (b.flags AND GUI_FLAG_MENU_OPEN) then
+    MEM_MEMCPY _OFFSET(m), b.menu + GUI_SIZEOF_MENU_ITEM * (b.selected - 1), GUI_SIZEOF_MENU_ITEM
     h_sub_menu = -1
   end if
 else
   if m.has_sub and m.sub_menu_open then
-    m = _MEMGET(m.sub_menu, m.sub_menu.OFFSET + GUI_SIZEOF_MENU_ITEM * (m.selected - 1), GUI_menu_item)
-    h_sub_menu = -1
+    MEM_MEMCPY _OFFSET(m), m.sub_menu + GUI_SIZEOF_MENU_ITEM * (m.selected - 1), GUI_SIZEOF_MENU_ITEM
+    if m.sub_menu_open then
+      h_sub_menu = -1
+    end if
   end if
 end if
 
 mem_sav = m
 count = count + 1
-if h_sub_menu then 
+if h_sub_menu then
+  GUI_debug_output "Sub menu" + str$(count)
   clicked = GUI_menu_clicked_on(b, cx, cy, debth, selection)
 end if
 count = count - 1
@@ -902,7 +905,7 @@ if not clicked then
     if count = 0 then
       c = col1 + b.menu_padding
       for x = 1 to b.length
-        men = _MEMGET(b.menu, b.menu.OFFSET + GUI_SIZEOF_MENU_ITEM * (x - 1), GUI_menu_item)
+        MEM_MEMCPY _OFFSET(men), b.menu + GUI_SIZEOF_MENU_ITEM * (x - 1), GUI_SIZEOF_MENU_ITEM
         if x = b.length AND (b.flags AND GUI_FLAG_MENU_LAST_ON_RIGHT) then
           c = b.col2 - GUI_menu_len(MEM_get_str$(men.nam)) - 2
         end if
@@ -914,15 +917,7 @@ if not clicked then
       row2 = row1
     else
       GUI_debug_output "About to check mem"
-      s = cy - row1
-      'if s > 0 and s <= row2 - row1 then
-      '  mtmp = _MEMGET(m.sub_menu, m.sub_menu.OFFSET + len(mtmp) * (s - 1), GUI_menu_item)
-      '  if MEM_get_str$(mtmp.nam) <> "-" then
-          selection = s
-      '  else
-      '    clicked = 0
-      '  end if
-      'end if
+      selection =  cy - row1
       GUI_debug_output "Done!"
     end if
   end if
@@ -936,9 +931,10 @@ SUB GUI_close_sub_menu (m as GUI_menu_item)
 DIM men as GUI_menu_item
 if m.has_sub then
   FOR x = 1 to m.sub_menu_length
-    men = _MEMGET(m.sub_menu, m.sub_menu.OFFSET + GUI_SIZEOF_MENU_ITEM * (x - 1), GUI_menu_item)
+    MEM_MEMCPY _OFFSET(men), m.sub_menu + GUI_SIZEOF_MENU_ITEM * (x - 1), GUI_SIZEOF_MENU_ITEM
     men.sub_menu_open = 0
-    _MEMPUT m.sub_menu, m.sub_menu.OFFSET + GUI_SIZEOF_MENU_ITEM * (x - 1), men
+    MEM_MEMCPY m.sub_menu + GUI_SIZEOF_MENU_ITEM * (x - 1), _OFFSET(men), GUI_SIZEOF_MENU_ITEM
+    GUI_close_sub_menu men
   next x
 end if
 END SUB
@@ -948,7 +944,7 @@ SUB GUI_menu_movement(m AS GUI_event_key, b as GUI_element)
 DIM e as GUI_event_element_menu, g as GUI_event_generic
 
 DIM tempm AS GUI_menu_item, men AS GUI_menu_item, mtmp as GUI_menu_item
-DIM memtmp as _MEM, offset as _OFFSET
+DIM memtmp as _OFFSET, offset as _OFFSET
 
 GUI_init_event g
 e.k_event = m
@@ -956,9 +952,9 @@ e.k_event = m
 if (b.flags AND GUI_FLAG_MENU_OPEN) = 0 OR (b.flags AND GUI_FLAG_MENU_ALT) then
   if (M.key_code = GUI_KEY_CODE_DOWN OR m.key_code = GUI_KEY_CODE_ENTER) and b.selected > 0 then
     b.flags = b.flags OR GUI_FLAG_MENU_OPEN OR GUI_FLAG_UPDATED
-    tempm = _MEMGET(b.menu, b.menu.OFFSET + GUI_SIZEOF_MENU_ITEM * (b.selected - 1), GUI_menu_item)
+    MEM_MEMCPY _OFFSET(tempm), b.menu + (b.selected - 1) * GUI_SIZEOF_MENU_ITEM, GUI_SIZEOF_MENU_ITEM
     tempm.selected = 1
-    _MEMPUT b.menu, b.menu.OFFSET + GUI_SIZEOF_MENU_ITEM * (b.selected - 1), tempm
+    MEM_MEMCPY b.menu + GUI_SIZEOF_MENU_ITEM * (b.selected - 1), _OFFSET(tempm), GUI_SIZEOF_MENU_ITEM
     GUI_close_sub_menu tempm
     e_flag = -1
     e.flags = GUI_EVENT_ELEMENT_MENU_MOVEMENT
@@ -977,10 +973,10 @@ if (b.flags AND GUI_FLAG_MENU_OPEN) = 0 OR (b.flags AND GUI_FLAG_MENU_ALT) then
 elseif b.flags AND GUI_FLAG_MENU_OPEN then
   memtmp = b.menu
   offset = len(mtmp) * (b.selected - 1)
-  mtmp = _MEMGET(b.menu, b.menu.OFFSET + GUI_SIZEOF_MENU_ITEM * (b.selected - 1), GUI_menu_item)
+  MEM_MEMCPY _OFFSET(mtmp), b.menu + GUI_SIZEOF_MENU_ITEM * (b.selected - 1), GUI_SIZEOF_MENU_ITEM
   d = 0
   do
-    men = _MEMGET(mtmp.sub_menu, mtmp.sub_menu.OFFSET + GUI_SIZEOF_MENU_ITEM * (mtmp.selected - 1), GUI_menu_item)
+    MEM_MEMCPY _OFFSET(men), mtmp.sub_menu + GUI_SIZEOF_MENU_ITEM * (mtmp.selected - 1),GUI_SIZEOF_MENU_ITEM
     if men.sub_menu_open then
       d = d + 1
       memtmp = mtmp.sub_menu
@@ -991,7 +987,7 @@ elseif b.flags AND GUI_FLAG_MENU_OPEN then
   if m.key_code = GUI_KEY_CODE_DOWN then
     do  
       mtmp.selected = (mtmp.selected mod mtmp.sub_menu_length) + 1
-      tempm = _MEMGET(mtmp.sub_menu, mtmp.sub_menu.OFFSET + GUI_SIZEOF_MENU_ITEM * (mtmp.selected - 1), GUI_menu_item)
+      MEM_MEMCPY _OFFSET(tempm), mtmp.sub_menu + GUI_SIZEOF_MENU_ITEM * (mtmp.selected - 1), GUI_SIZEOF_MENU_ITEM
     loop until MEM_get_str$(tempm.nam) <> "-"
     e_flag = -1
     e.flags = GUI_EVENT_ELEMENT_MENU_MOVEMENT
@@ -999,12 +995,12 @@ elseif b.flags AND GUI_FLAG_MENU_OPEN then
     do
       mtmp.selected = mtmp.selected - 1
       if mtmp.selected = 0 then mtmp.selected = mtmp.sub_menu_length
-      tempm = _MEMGET(mtmp.sub_menu, mtmp.sub_menu.OFFSET + GUI_SIZEOF_MENU_ITEM * (mtmp.selected - 1), GUI_menu_item)
+      MEM_MEMCPY _OFFSET(tempm), mtmp.sub_menu + GUI_SIZEOF_MENU_ITEM * (mtmp.selected - 1), GUI_SIZEOF_MENU_ITEM
     loop until MEM_get_str$(tempm.nam) <> "-"
     e_flag = -1
     e.flags = GUI_EVENT_ELEMENT_MENU_MOVEMENT
   elseif m.key_code = GUI_KEY_CODE_RIGHT then
-    tempm = _MEMGET(mtmp.sub_menu, mtmp.sub_menu.OFFSET + GUI_SIZEOF_MENU_ITEM * (mtmp.selected - 1), GUI_menu_item)
+    MEM_MEMCPY _OFFSET(tempm), mtmp.sub_menu + GUI_SIZEOF_MENU_ITEM * (mtmp.selected - 1), GUI_SIZEOF_MENU_ITEM
     GUI_debug_output "Menu item: " + MEM_get_str$(mtmp.nam)
     GUI_debug_output "Menu item2: " + MEM_Get_str$(tempm.nam)
     
@@ -1013,14 +1009,14 @@ elseif b.flags AND GUI_FLAG_MENU_OPEN then
       tempm.sub_menu_open = -1
       tempm.selected = 1
       GUI_close_sub_menu tempm
-      _MEMPUT mtmp.sub_menu, mtmp.sub_menu.OFFSET + GUI_SIZEOF_MENU_ITEM * (mtmp.selected - 1), tempm
+      MEM_MEMCPY mtmp.sub_menu + GUI_SIZEOF_MENU_ITEM * (mtmp.selected - 1), _OFFSET(tempm), GUI_SIZEOF_MENU_ITEM
       d = d + 1
     else
       b.selected = (b.selected mod b.length) + 1
-      tempm = _MEMGET(b.menu, b.menu.OFFSET + GUI_SIZEOF_MENU_ITEM * (b.selected - 1), GUI_menu_item)
+      MEM_MEMCPY _OFFSET(tempm), b.menu + GUI_SIZEOF_MENU_ITEM * (b.selected - 1), GUI_SIZEOF_MENU_ITEM
       tempm.selected = 1
       if tempm.has_sub then mtmp.sub_menu_open = -1
-      _MEMPUT b.menu, b.menu.OFFSET + GUI_SIZEOF_MENU_ITEM * (b.selected - 1), tempm
+      MEM_MEMCPY b.menu + GUI_SIZEOF_MENU_ITEM * (b.selected - 1), _OFFSET(tempm), GUI_SIZEOF_MENU_ITEM
       GUI_close_sub_menu tempm
       d = 1
     end if
@@ -1033,7 +1029,7 @@ elseif b.flags AND GUI_FLAG_MENU_OPEN then
     else
       b.selected = b.selected - 1
       if b.selected = 0 then b.selected = b.length
-      mtmp = _MEMGET(b.menu, b.menu.OFFSET + GUI_SIZEOF_MENU_ITEM * (b.selected - 1), GUI_menu_item)
+      MEM_MEMCPY _OFFSET(mtmp), b.menu + GUI_SIZEOF_MENU_ITEM * (b.selected - 1), GUI_SIZEOF_MENU_ITEM
       mtmp.selected = 1
       GUI_close_sub_menu mtmp
       offset = len(mtmp) * (b.selected - 1)
@@ -1043,7 +1039,6 @@ elseif b.flags AND GUI_FLAG_MENU_OPEN then
   elseif m.key_code = GUI_KEY_CODE_ENTER then
     GUI_debug_output "Menu chosen!"
     if not men.has_sub then
-      'b.menu_choice = men.ident
       b.selected = 0
       b.flags = (b.flags OR GUI_FLAG_MENU_CHOSEN OR GUI_FLAG_UPDATED) AND NOT GUI_FLAG_MENU_OPEN
       e_flag = -1
@@ -1052,22 +1047,21 @@ elseif b.flags AND GUI_FLAG_MENU_OPEN then
       e.depth = d
       e.sel = mtmp.selected
     else
-      'tempm = _MEMGET(mtmp.sub_menu, mtmp.sub_menu.OFFSET + len(mtmp) * (mtmp.selected - 1), GUI_menu_item)
       men.sub_menu_open = -1
       men.selected = 1
       GUI_close_sub_menu men
-      _MEMPUT mtmp.sub_menu, mtmp.sub_menu.OFFSET + GUI_SIZEOF_MENU_ITEM * (mtmp.selected - 1), men
+      MEM_MEMCPY mtmp.sub_menu + GUI_SIZEOF_MENU_ITEM * (mtmp.selected - 1), _OFFSET(men), GUI_SIZEOF_MENU_ITEM
       e_flag = -1
       e.flags = GUI_EVENT_ELEMENT_MENU_MOVEMENT
     end if
   end if
-  _MEMPUT memtmp, memtmp.OFFSET + offset, mtmp
+  MEM_MEMCPY memtmp + offset, _OFFSET(mtmp), GUI_SIZEOF_MENU_ITEM
   b.flags = b.flags OR GUI_FLAG_UPDATED
 end if
 
 if e_flag then
   g.event_type = GUI_EVENT_ELEMENT_MENU
-  _MEMPUT g.mem, g.mem.OFFSET, e
+  MEM_MEMCPY g.mem, _OFFSET(e), GUI_SIZEOF_EVENT_ELEMENT_MENU
   GUI_add_event_to_queue g
 end if
 
@@ -1077,7 +1071,7 @@ END SUB
 
 SUB GUI_menu_handle_alt_held (gui() AS GUI_element, gui_num, old, new, event as GUI_event_key)
 DIM tempm AS GUI_menu_item, men AS GUI_menu_item, tmpm AS GUI_menu_item
-DIM memtmp as _MEM, offset as _OFFSET
+DIM memtmp as _OFFSET, offset as _OFFSET
 
 DIM m as GUI_event_element_menu, g as GUI_event_generic
 
@@ -1085,15 +1079,16 @@ if event.key_code = GUI_KEY_CODE_RALT OR event.key_code = GUI_KEY_CODE_LALT then
   'if gui(new).flags AND NOT GUI_FLAG_MENU_ALT then
   GUI_debug_output "Setting Alt flag"
   gui(new).flags = (gui(new).flags OR GUI_FLAG_MENU_ALT) OR GUI_FLAG_UPDATED
+  gui(new).selected_old = old
   'end if
 elseif (event.key_code >= asc("a") and event.key_code <= asc("z")) or (event.key_code >= asc("A") and event.key_code <= asc("Z")) then
   k$ = ucase$(chr$(event.key_code))
   if gui(new).flags AND GUI_FLAG_MENU_OPEN then
     memtmp = gui(new).menu
     offset = len(mtmp) * (gui(new).selected - 1)
-    tempm = _MEMGET(gui(new).menu, gui(new).menu.OFFSET + GUI_SIZEOF_MENU_ITEM * (gui(new).selected - 1), GUI_menu_item)
+    MEM_MEMCPY _OFFSET(tempm), gui(new).menu + GUI_SIZEOF_MENU_ITEM * (gui(new).selected - 1), GUI_SIZEOF_MENU_ITEM
     do
-      men = _MEMGET(tempm.sub_menu, tempm.sub_menu.OFFSET + GUI_SIZEOF_MENU_ITEM * (tempm.selected - 1), GUI_menu_item)
+      MEM_MEMCPY _OFFSET(men), tempm.sub_menu + GUI_SIZEOF_MENU_ITEM * (tempm.selected - 1), GUI_SIZEOF_MENU_ITEM
       if men.sub_menu_open then
         memtmp = tempm.sub_menu
         offset = GUI_SIZEOF_MENU_ITEM * (tempm.selected - 1)
@@ -1102,25 +1097,23 @@ elseif (event.key_code >= asc("a") and event.key_code <= asc("z")) or (event.key
     loop until not men.sub_menu_open
     GUI_debug_output "Nam= " + MEM_Get_str$(men.nam)
     for x = 1 to tempm.sub_menu_length
-      tmpm = _MEMGET(tempm.sub_menu, tempm.sub_menu.OFFSET + GUI_SIZEOF_MENU_ITEM * (x - 1), GUI_menu_item)
+      MEM_MEMCPY _OFFSET(tmpm), tempm.sub_menu + GUI_SIZEOF_MENU_ITEM * (x - 1), GUI_SIZEOF_MENU_ITEM
       if k$ = ucase$(GUI_menu_char$(MEM_get_str$(tmpm.nam))) then
         if tmpm.has_sub then
           tmpm.sub_menu_open = -1
           tmpm.selected = 1
           GUI_close_sub_menu tmpm
-          _MEMPUT tempm.sub_menu, tempm.sub_menu.OFFSET + GUI_SIZEOF_MENU_ITEM * (x - 1), tmpm
+          MEM_MEMCPY tempm.sub_menu + GUI_SIZEOF_MENU_ITEM * (x - 1), _OFFSET(tmpm), GUI_SIZEOF_MENU_ITEM
           tempm.selected = x
-          _MEMPUT memtmp, memtmp.OFFSET + offset, tempm
+          MEM_MEMCPY memtmp + offset, _OFFSET(tempm), GUI_SIZEOF_MENU_ITEM
           gui(new).flags = (gui(new).flags OR GUI_FLAG_UPDATED)
         else
-          'gui(new).menu_choice = tmpm.ident
-          
           m.k_event = event
           m.mident = tmpm.ident
           m.flags = GUI_EVENT_ELEMENT_MENU_SELECTED
           GUI_init_event g
           g.event_type = GUI_EVENT_ELEMENT_MENU
-          _MEMPUT g.mem,g.mem.OFFSET, m
+          MEM_MEMCPY g.mem, _OFFSET(m), GUI_EVENT_ELEMENT_MENU
           GUI_add_event_to_queue g
           GUI_free_event g
           
@@ -1131,12 +1124,12 @@ elseif (event.key_code >= asc("a") and event.key_code <= asc("z")) or (event.key
     next x
   else
     for x = 1 to gui(new).length
-      men = _MEMGET(gui(new).menu, gui(new).menu.OFFSET + GUI_SIZEOF_MENU_ITEM * (x - 1), GUI_menu_item)
+      MEM_MEMCPY _OFFSET(men), gui(new).menu + GUI_SIZEOF_MENU_ITEM * (x - 1), GUI_SIZEOF_MENU_ITEM
       if k$ = ucase$(GUI_menu_char$(MEM_get_str$(men.nam))) then
         gui(new).selected = x
         gui(new).flags = (gui(new).flags OR GUI_FLAG_MENU_OPEN OR GUI_FLAG_UPDATED)' AND NOT GUI_FLAG_MENU_ALT
         men.selected = 1
-        _MEMPUT gui(new).menu, gui(new).menu.OFFSET + GUI_SIZEOF_MENU_ITEM * (x - 1), men
+        MEM_MEMCPY gui(new).menu + GUI_SIZEOF_MENU_ITEM * (x - 1), _OFFSET(men), GUI_SIZEOF_MENU_ITEM
         if old <> new then GUI_release_focus gui(), gui_num, old: old = new
       end if
     next x
@@ -1555,15 +1548,15 @@ if ch > 0 then
   k.flags = GUI_EVENT_KEY_LEFT_ALT_DOWN OR GUI_EVENT_KEY_RIGHT_ALT_DOWN OR GUI_EVENT_KEY_LEFT_ALT_DOWN OR GUI_EVENT_KEY_RIGHT_ALT_DOWN OR GUI_EVENT_KEY_LEFT_CTL_DOWN OR GUI_EVENT_KEY_RIGHT_CTL_DOWN OR GUI_EVENT_KEY_LEFT_META_DOWN OR GUI_EVENT_KEY_RIGHT_META_DOWN OR GUI_EVENT_KEY_LEFT_SHIFT_DOWN OR GUI_EVENT_KEY_RIGHT_SHIFT_DOWN OR GUI_EVENT_KEY_CAPS_LOCK_DOWN OR GUI_EVENT_KEY_ALT_GR_DOWN 
   if key_release then
     k.flags = k.flags OR GUI_EVENT_KEY_RELEASED
-    _MEMPUT e.mem, e.mem.OFFSET, k
+    MEM_MEMCPY e.mem, _OFFSET(k), GUI_SIZEOF_EVENT_KEY
     GUI_add_event_to_queue e
   elseif NOT key_release then
     k.flags = k.flags OR GUI_EVENT_KEY_PRESSED
-    _MEMPUT e.mem, e.mem.OFFSET, k
+    MEM_MEMCPY e.mem, _OFFSET(k), GUI_SIZEOF_EVENT_KEY
     GUI_add_event_to_queue e
     if ch >= 32 and ch <= ASC("~") then
       k.flags = (k.flags AND NOT GUI_EVENT_KEY_PRESSED) OR GUI_event_keyD
-      _MEMPUT e.mem, e.mem.OFFSET, k
+      MEM_MEMCPY e.mem, _OFFSET(k), GUI_SIZEOF_EVENT_KEY
       GUI_add_event_to_queue e
     end if
   end if
@@ -1831,8 +1824,8 @@ DO WHILE _MOUSEINPUT
         GUI_DRAG_FLAG = 0
       end if
     end if
-    'GUI_debug_output "Writing event"
-    _MEMPUT e.mem, e.mem.OFFSET, m
+    GUI_debug_output "Writing event"
+    MEM_MEMCPY e.mem, _OFFSET(m), GUI_SIZEOF_EVENT_MOUSE
     GUI_add_event_to_queue e
     if (m.flags AND GUI_EVENT_MOUSE_LEFT_UP) AND GUI_MOVEMENT_FLAG = 0 then
       'Click -- Check timer to see if we can add to click count or just start it over
@@ -1843,11 +1836,11 @@ DO WHILE _MOUSEINPUT
       end if
       m.count = GUI_LEFT_CLICK_COUNT
       m.flags = GUI_EVENT_MOUSE_LEFT_CLICK
-      'GUI_debug_output "Writing click event"
-      _MEMPUT e.mem, e.mem.OFFSET, m
-      'GUI_debug_output "Adding click"
+      GUI_debug_output "Writing click event"
+      MEM_MEMCPY e.mem, _OFFSET(m), GUI_SIZEOF_EVENT_MOUSE
+      GUI_debug_output "Adding click"
       GUI_add_event_to_queue e
-      'GUI_debug_output "Done adding click"
+      GUI_debug_output "Done adding click"
       m.count = 0
       GUI_LEFT_CLICK_TIMER = TIMER(.001)
     end if
@@ -1863,7 +1856,6 @@ DO WHILE _MOUSEINPUT
     else
       m.flags = GUI_EVENT_MOUSE_RIGHT_DOWN
       m_down = -1
-       m_down = -1
       if GUI_DRAG_FLAG = 0 then 
         GUI_DRAG_FLAG = GUI_MOUSE_DRAG_RIGHT
         GUI_DRAG_ROW = m_state.mrow
@@ -1872,7 +1864,7 @@ DO WHILE _MOUSEINPUT
         GUI_DRAG_FLAG = 0
       end if
     end if
-    _MEMPUT e.mem, e.mem.OFFSET, m
+    MEM_MEMCPY e.mem, _OFFSET(m), GUI_SIZEOF_EVENT_MOUSE
     GUI_add_event_to_queue e
     if (m.flags AND GUI_EVENT_MOUSE_RIGHT_UP) AND GUI_MOVEMENT_FLAG = 0 then
       'Click -- Check timer to see if we can add to click count or just start it over
@@ -1883,7 +1875,7 @@ DO WHILE _MOUSEINPUT
       end if
       m.count = GUI_RIGHT_CLICK_COUNT
       m.flags = GUI_EVENT_MOUSE_RIGHT_CLICK
-      _MEMPUT e.mem, e.mem.OFFSET, m
+      MEM_MEMCPY e.mem, _OFFSET(m), GUI_SIZEOF_EVENT_MOUSE
       GUI_add_event_to_queue e
       m.count = 0
       GUI_RIGHT_CLICK_TIMER = TIMER(.001)
@@ -1900,7 +1892,6 @@ DO WHILE _MOUSEINPUT
     else
       m.flags = GUI_EVENT_MOUSE_MIDDLE_DOWN
       m_down = -1
-       m_down = -1
       if GUI_DRAG_FLAG = 0 then 
         GUI_DRAG_FLAG = GUI_MOUSE_DRAG_MIDDLE
         GUI_DRAG_ROW = m_state.mrow
@@ -1909,7 +1900,7 @@ DO WHILE _MOUSEINPUT
         GUI_DRAG_FLAG = 0
       end if
     end if
-    _MEMPUT e.mem, e.mem.OFFSET, m
+    MEM_MEMCPY e.mem, _OFFSET(m), GUI_SIZEOF_EVENT_MOUSE
     GUI_add_event_to_queue e
     if (m.flags AND GUI_EVENT_MOUSE_MIDDLE_UP) AND GUI_MOVEMENT_FLAG = 0 then
       'Click -- Check timer to see if we can add to click count or just start it over
@@ -1920,7 +1911,7 @@ DO WHILE _MOUSEINPUT
       end if
       m.count = GUI_MIDDLE_CLICK_COUNT
       m.flags = GUI_EVENT_MOUSE_MIDDLE_CLICK
-      _MEMPUT e.mem, e.mem.OFFSET, m
+      MEM_MEMCPY e.mem, _OFFSET(m), GUI_SIZEOF_EVENT_MOUSE
       GUI_add_event_to_queue e
       m.count = 0
       GUI_MIDDLE_CLICK_TIMER = TIMER(.001)
@@ -1941,7 +1932,7 @@ if GUI_PERSISTANT_MOUSE_STATE.mscroll <> 0 then
   else
     m.flags = GUI_EVENT_MOUSE_SCROLL_DOWN
   end if
-  _MEMPUT e.mem, e.mem.OFFSET, m
+  MEM_MEMCPY e.mem, _OFFSET(m), GUI_SIZEOF_EVENT_MOUSE
   GUI_add_event_to_queue e
   'Reset event
   m.flags = 0
@@ -1951,12 +1942,12 @@ end if
 if old_state.mrow <> GUI_PERSISTANT_MOUSE_STATE.mrow or old_state.mcol <> GUI_PERSISTANT_MOUSE_STATE.mcol then
   'Mouse movement
   m.flags = GUI_EVENT_MOUSE_MOVEMENT
-  _MEMPUT e.mem, e.mem.OFFSET, m
+  MEM_MEMCPY e.mem, _OFFSET(m), GUI_SIZEOF_EVENT_MOUSE
   GUI_add_event_to_queue e
   m.flags = 0
   IF GUI_DRAG_FLAG then
     m.flags = GUI_EVENT_MOUSE_DRAG
-    _MEMPUT e.mem, e.mem.OFFSET, m
+    MEM_MEMCPY e.mem, _OFFSET(m), GUI_SIZEOF_EVENT_MOUSE
     GUI_add_event_to_queue e
   end if
 end if
@@ -2108,6 +2099,7 @@ if GUI_EVENT_STACK_LENGTH > 0 then
   if e.event_type = GUI_EVENT_KEY then
     GUI_process_key_event gui(), gui_num, sel, e
   elseif e.event_type = GUI_EVENT_MOUSE then
+    GUI_debug_output "Sending event to be processed"
     GUI_process_mouse_event gui(), gui_num, sel, e
   end if
 else
@@ -2117,62 +2109,41 @@ END SUB
 
 SUB GUI_add_event_to_queue (e as GUI_event_generic)
 DIM s as GUI_event_stack_link, stmp as GUI_event_stack_link
-DIM mtmp as _MEM
+DIM mtmp as _OFFSET
 GUI_init_event s.g
-_MEMCOPY e.mem, e.mem.OFFSET, e.allocated TO s.g.mem, s.g.mem.OFFSET
+MEM_MEMCPY s.g.mem, e.mem, e.allocated
+
 s.g.allocated = e.allocated
 s.g.event_type = e.event_type
-mtmp = _MEMNEW(GUI_SIZEOF_EVENT_STACK_LINK)
+mtmp = MEM_MALLOC%&(GUI_SIZEOF_EVENT_STACK_LINK)
 if GUI_EVENT_STACK_LENGTH = 0 then
   GUI_EVENT_STACK_START = mtmp
-  's.e_next = GUI_EVENT_STACK_START
 elseif GUI_EVENT_STACK_LENGTH = 1 then
-  'GUI_EVENT_STACK_START.e_next = mtmp
   GUI_EVENT_STACK_END = mtmp
-  _MEMGET GUI_EVENT_STACK_START, GUI_EVENT_STACK_START.OFFSET, stmp
+  MEM_MEMCPY _OFFSET(stmp), GUI_EVENT_STACK_START, GUI_SIZEOF_EVENT_STACK_LINK
   stmp.e_prev = GUI_EVENT_STACK_END
-  _MEMPUT GUI_EVENT_STACK_START, GUI_EVENT_STACK_START.OFFSET, stmp
-  's.e_prev = GUI_EVENT_STACK_START
+  MEM_MEMCPY GUI_EVENT_STACK_START, _OFFSET(stmp), GUI_SIZEOF_EVENT_STACK_LINK
 else
-  _MEMGET GUI_EVENT_STACK_END, GUI_EVENT_STACK_END.OFFSET, stmp
+  MEM_MEMCPY _OFFSET(stmp), GUI_EVENT_STACK_END, GUI_SIZEOF_EVENT_STACK_LINK
   stmp.e_prev = mtmp
-  _MEMPUT GUI_EVENT_STACK_END, GUI_EVENT_STACK_END.OFFSET, stmp
-  
-  's.e_prev = GUI_EVENT_STACK_START
-  'GUI_EVENT_STACK_END.e_next = mtmp
+  MEM_MEMCPY GUI_EVENT_STACK_END, _OFFSET(stmp), GUI_SIZEOF_EVENT_STACK_LINK
   GUI_EVENT_STACK_END = mtmp
 end if
-  
-_MEMPUT mtmp, mtmp.OFFSET, s
+
+MEM_MEMCPY mtmp, _OFFSET(s), GUI_SIZEOF_EVENT_STACK_LINK
 GUI_EVENT_STACK_LENGTH = GUI_EVENT_STACK_LENGTH + 1
-'GUI_debug_output "Done adding to stack"
 END SUB
 
 SUB GUI_get_event_from_queue (e as GUI_event_generic)
-DIM s as GUI_event_stack_link, mempty as _MEM
-'GUI_debug_output "Taking from stack"
-'IF GUI_EVENT_STACK_LENGTH = 1 then
-  _MEMGET GUI_EVENT_STACK_START, GUI_EVENT_STACK_START.OFFSET, s
-  _MEMFREE GUI_EVENT_STACK_START
+DIM s as GUI_event_stack_link
+MEM_MEMCPY _OFFSET(s), GUI_EVENT_STACK_START, GUI_SIZEOF_EVENT_STACK_LINK
+
+MEM_FREE GUI_EVENT_STACK_START
   
 if GUI_EVENT_STACK_LENGTH > 1 then
   GUI_EVENT_STACK_START = s.e_prev
 end if
-'elseif GUI_EVENT_STACK_LENGTH = 2 then
-'  _MEMGET GUI_EVENT_STACK_START, GUI_EVENT_STACK_START.OFFSET, s
-'  _MEMFREE GUI_EVENT_STACK_START
- 
-'else
-'  _MEMGET GUI_EVENT_STACK_END, GUI_EVENT_STACK_END.OFFSET, s
-'  _MEMFREE GUI_EVENT_STACK_END
-'  GUI_EVENT_STACK_END = s.e_prev
-  
-'end if
-'_MEMGET GUI_EVENT_STACK_START, GUI_EVENT_STACK_START.OFFSET, s
-'_MEMFREE GUI_EVENT_STACK_START
-
-'GUI_EVENT_STACK_START = s.e_next
-_MEMCOPY s.g.mem, s.g.mem.OFFSET, s.g.allocated TO e.mem, e.mem.OFFSET
+MEM_MEMCPY e.mem, s.g.mem, s.g.allocated
 e.event_type = s.g.event_type
 GUI_free_event s.g
 
@@ -2182,34 +2153,34 @@ END SUB
 
 'Allocates a generic events memory
 SUB GUI_init_event (e as GUI_event_generic)
-e.mem = _MEMNEW(60) 'Size of the biggest event
+e.mem = MEM_MALLOC%&(60) 'Size of the biggest event
 e.allocated = 60
 END SUB
 
 'Frees a generic events memory
 SUB GUI_free_event (e as GUI_event_generic)
-_MEMFREE e.mem
+MEM_FREE e.mem
 e.allocated = 0
 END SUB
 
 SUB GUI_get_key_event (e as GUI_event_generic, e2 as GUI_event_key)
-_MEMGET e.mem, e.mem.OFFSET, e2
+MEM_MEMCPY _OFFSET(e2), e.mem, GUI_SIZEOF_EVENT_KEY
 END SUB
 
 SUB GUI_get_mouse_event (e as GUI_event_generic, e2 as GUI_event_mouse)
-_MEMGET e.mem, e.mem.OFFSET, e2
+MEM_MEMCPY _OFFSET(e2), e.mem, GUI_SIZEOF_EVENT_MOUSE
 END SUB
 
 SUB GUI_get_element_basic_event (e as GUI_event_generic, e2 as GUI_event_element_basic)
-_MEMGET e.mem, e.mem.OFFSET, e2
+MEM_MEMCPY _OFFSET(e2), e.mem, GUI_SIZEOF_EVENT_ELEMENT_BASIC
 END SUB
 
 SUB GUI_get_element_menu_event (e as GUI_event_generic, e2 as GUI_event_element_menu)
-_MEMGET e.mem, e.mem.OFFSET, e2
+MEM_MEMCPY _OFFSET(e2), e.mem, GUI_SIZEOF_EVENT_ELEMENT_MENU
 END SUB
 
 SUB GUI_get_element_radio_b_g_event (e as GUI_event_generic, e2 as GUI_event_element_radio_button_group)
-_MEMGET e.mem, e.mem.OFFSET, e2
+MEM_MEMCPY _OFFSET(e2), e.mem, GUI_SIZEOF_EVENT_ELEMENT_R_B_G
 END SUB
 
 '###############################################################################
@@ -2318,12 +2289,22 @@ FUNCTION GUI_menu_should_handle_event (e as GUI_element, event as GUI_event_mous
 GUI_menu_should_handle_event = -130
 if event.flags AND GUI_EVENT_MOUSE_LEFT_CLICK or event.flags AND GUI_EVENT_MOUSE_RIGHT_CLICK _
  OR event.flags AND GUI_EVENT_MOUSE_RIGHT_DOWN or event.flags AND GUI_EVENT_MOUSE_LEFT_DOWN _
- OR event.flags AND GUI_EVENT_MOUSE_RIGHT_UP or event.flags AND GUI_EVENT_MOUSE_LEFT_UP then
+ OR event.flags AND GUI_EVENT_MOUSE_RIGHT_UP or event.flags AND GUI_EVENT_MOUSE_LEFT_UP _
+ OR event.flags AND GUI_EVENT_MOUSE_DRAG then
   
   if GUI_menu_clicked_on(e, event.m.mcol, event.m.mrow, depth, selection) then
     GUI_debug_output "Inside menu handle event"
     e.menu_depth = depth
     e.menu_sel = selection
+    if event.flags AND GUI_EVENT_MOUSE_RIGHT_DOWN or event.flags AND GUI_EVENT_MOUSE_LEFT_DOWN then
+      e.flags = e.flags OR GUI_FLAG_PRESSED
+    elseif event.flags AND GUI_EVENT_MOUSE_RIGHT_UP or event.flags AND GUI_EVENT_MOUSE_LEFT_UP then
+      e.flags = e.flags AND NOT GUI_FLAG_PRESSED
+    end if
+    GUI_menu_should_handle_event = 128
+  elseif e.flags AND GUI_FLAG_PRESSED then
+    e.menu_depth = 0
+    e.menu_sel = 0
     GUI_menu_should_handle_event = 128
   end if
 end if
@@ -2501,7 +2482,7 @@ if flag then
   bas.m_event = event
   bas.gui_element = new
   if c_flag then bas.flags = bas.flags OR GUI_EVENT_ELEMENT_LIST_BOX_CLICKED
-  _MEMPUT g.mem, g.mem.OFFSET, bas
+  MEM_MEMCPY g.mem, _OFFSET(bas), GUI_SIZEOF_EVENT_ELEMENT_BASIC
   GUI_add_event_to_queue g
   GUI_free_event g
 end if
@@ -2558,7 +2539,7 @@ if m_flag or p_flag then
   b.m_event = event
   GUI_init_event g
   g.event_type = GUI_EVENT_ELEMENT_BASIC
-  _MEMPUT g.mem, g.mem.OFFSET, b
+  MEM_MEMCPY g.mem, _OFFSET(b), GUI_SIZEOF_EVENT_ELEMENT_BASIC
   GUI_add_event_to_queue g
   GUI_free_event g
 end if
@@ -2580,7 +2561,7 @@ IF event.flags AND GUI_EVENT_MOUSE_LEFT_CLICK OR event.flags AND GUI_EVENT_MOUSE
     '  b.flags = GUI_EVENT_ELEMENT_CHECKBOX_UNCHECKED OR GUI_EVENT_ELEMENT_CHECKBOX_CHECKED
     'end if
     b.gui_element = new
-    _MEMPUT g.mem, g.mem.OFFSET, b
+    MEM_MEMCPY g.mem, _OFFSET(b), GUI_SIZEOF_EVENT_ELEMENT_BASIC
     GUI_add_event_to_queue g
     GUI_free_event g
   end if
@@ -2592,61 +2573,77 @@ SUB GUI_menu_process_mouse_event (gui() as GUI_element, gui_num, old, new, event
 DIM mevent as GUI_event_element_menu, g as GUI_event_generic
 
 DIM men as GUI_menu_item, mtmp as GUI_menu_item, mnext as GUI_menu_item
-DIM memtmp AS _MEM, offset as _OFFSET
+'DIM opt as GUI_menu_item
+DIM memtmp AS _OFFSET, offset as _OFFSET
 
+GUI_debug_output "Here!"
 IF event.flags AND GUI_EVENT_MOUSE_LEFT_CLICK OR event.flags AND GUI_EVENT_MOUSE_RIGHT_CLICK _
- OR event.flags AND GUI_EVENT_MOUSE_RIGHT_DOWN or event.flags AND GUI_EVENT_MOUSE_LEFT_DOWN then
+ OR event.flags AND GUI_EVENT_MOUSE_LEFT_DOWN OR event.flags AND GUI_EVENT_MOUSE_RIGHT_DOWN _
+ OR event.flags AND GUI_EVENT_MOUSE_LEFT_UP OR event.flags AND GUI_EVENT_MOUSE_RIGHT_UP _
+ OR event.flags AND GUI_EVENT_MOUSE_DRAG then
  
   GUI_debug_output "Debth: " + str$(gui(new).menu_depth)
   GUI_debug_output "Selection: " + str$(gui(new).menu_sel)
-  if old <> new then gui(new).selected = 0: gui(new).flags = gui(new).flags AND NOT GUI_FLAG_MENU_OPEN
+  if old <> new then 
+    gui(new).selected_old = old
+    gui(new).selected = 0
+    gui(new).flags = gui(new).flags AND NOT GUI_FLAG_MENU_OPEN
+  end if
   gui(new).flags = gui(new).flags OR GUI_FLAG_UPDATED
   if gui(new).menu_depth = 0 then
     if gui(new).menu_sel > 0 then
       GUI_debug_output "Got here as well!"
       gui(new).flags = gui(new).flags OR GUI_FLAG_MENU_OPEN
       gui(new).selected = gui(new).menu_sel
-      men = _MEMGET(gui(new).menu, gui(new).menu.OFFSET + GUI_SIZEOF_MENU_ITEM * (gui(new).selected - 1), GUI_menu_item)
+      MEM_MEMCPY _OFFSET(men), gui(new).menu + GUI_SIZEOF_MENU_ITEM * (gui(new).selected - 1), GUI_SIZEOF_MENU_ITEM
       if men.has_sub then
         men.sub_menu_open = -1
         GUI_close_sub_menu men
       end if
       men.selected = 1
-      _MEMPUT gui(new).menu, gui(new).menu.OFFSET + GUI_SIZEOF_MENU_ITEM * (gui(new).selected - 1), men
+      
+      MEM_MEMCPY  gui(new).menu + GUI_SIZEOF_MENU_ITEM * (gui(new).selected - 1), _OFFSET(men), GUI_SIZEOF_MENU_ITEM
       m_flag = -1
     else
-      gui(new).selected = 0
-      gui(new).flags = gui(new).flags AND NOT GUI_FLAG_MENU_OPEN
+      'gui(new).selected = 0
+      'gui(new).flags = gui(new).flags AND NOT GUI_FLAG_MENU_OPEN
     end if
-  else
+  elseif gui(new).menu_sel > 0 then
     memtmp = gui(new).menu
     offset = len(mtmp) * (gui(new).selected - 1)
-    mtmp = _MEMGET(gui(new).menu, gui(new).menu.OFFSET + GUI_SIZEOF_MENU_ITEM * (gui(new).selected - 1), GUI_menu_item)
+    MEM_MEMCPY _OFFSET(mtmp), gui(new).menu + GUI_SIZEOF_MENU_ITEM * (gui(new).selected - 1), GUI_SIZEOF_MENU_ITEM
     FOR d = 1 to gui(new).menu_depth - 1
-      men = _MEMGET(mtmp.sub_menu, mtmp.sub_menu.OFFSET + GUI_SIZEOF_MENU_ITEM * (mtmp.selected - 1), GUI_menu_item)
+      MEM_MEMCPY _OFFSET(men), mtmp.sub_menu+ GUI_SIZEOF_MENU_ITEM * (mtmp.selected - 1), GUI_SIZEOF_MENU_ITEM
       if d < gui(new).menu_depth then
         memtmp = mtmp.sub_menu
         offset = GUI_SIZEOF_MENU_ITEM * (mtmp.selected - 1)
         mtmp = men
       end if
     NEXT d
-    mtmp.selected = gui(new).menu_sel
-    _MEMPUT memtmp, memtmp.OFFSET + offset, mtmp
-    men = _MEMGET(mtmp.sub_menu, mtmp.sub_menu.OFFSET + GUI_SIZEOF_MENU_ITEM * (mtmp.selected - 1), GUI_menu_item)
     
-    if men.has_sub then
-      GUI_close_sub_menu mtmp
-      men.sub_menu_open = -1
-      men.selected = 1
-      
-      _MEMPUT mtmp.sub_menu, mtmp.sub_menu.OFFSET + GUI_SIZEOF_MENU_ITEM * (mtmp.selected - 1), men
-      m_flag = -1
+    mtmp.selected = gui(new).menu_sel
+    MEM_MEMCPY memtmp + offset, _OFFSET(mtmp), GUI_SIZEOF_MENU_ITEM
+    MEM_MEMCPY _OFFSET(men), mtmp.sub_menu + GUI_SIZEOF_MENU_ITEM * (mtmp.selected - 1), GUI_SIZEOF_MENU_ITEM
+    GUI_close_sub_menu mtmp
+    if MEM_get_str$(men.nam) <> "-" then
+      if men.has_sub then
+        'GUI_close_sub_menu mtmp
+        men.sub_menu_open = -1
+        men.selected = 1
+       
+        MEM_MEMCPY mtmp.sub_menu + GUI_SIZEOF_MENU_ITEM * (mtmp.selected - 1), _OFFSET(men), GUI_SIZEOF_MENU_ITEM
+        m_flag = -1
+      elseif (event.flags AND GUI_EVENT_MOUSE_LEFT_DOWN OR event.flags AND GUI_EVENT_MOUSE_RIGHT_DOWN OR event.flags AND GUI_EVENT_MOUSE_DRAG) = 0 then
+        'gui(new).menu_choice = men.ident
+        gui(new).selected = 0
+        gui(new).flags = (gui(new).flags OR GUI_FLAG_UPDATED) AND NOT GUI_FLAG_MENU_OPEN
+        p_flag = -1
+        mevent.mident = men.ident
+      end if
     else
-      'gui(new).menu_choice = men.ident
-      gui(new).selected = 0
-      gui(new).flags = (gui(new).flags OR GUI_FLAG_UPDATED) AND NOT GUI_FLAG_MENU_OPEN
-      p_flag = -1
-      mevent.mident = men.ident
+      mtmp.selected = 0
+      GUI_close_sub_menu mtmp
+      MEM_MEMCPY memtmp + offset, _OFFSET(mtmp), GUI_SIZEOF_MENU_ITEM
     end if
   end if
 'elseif  then
@@ -2668,7 +2665,8 @@ if p_flag or m_flag then
   mevent.depth = gui(new).menu_depth
   GUI_init_event g
   g.event_type = GUI_EVENT_ELEMENT_MENU
-  _MEMPUT g.mem, g.mem.OFFSET, mevent
+  GUI_debug_output "Allocating click event"
+  MEM_MEMCPY g.mem, _OFFSET(mevent), GUI_SIZEOF_EVENT_ELEMENT_MENU
   GUI_add_event_to_queue g
   GUI_free_event g
 end if
@@ -2686,7 +2684,7 @@ IF (event.flags AND GUI_EVENT_MOUSE_LEFT_CLICK OR event.flags AND GUI_EVENT_MOUS
   b.m_event = event
   b.flags = GUI_EVENT_ELEMENT_BUTTON_CLICKED OR GUI_EVENT_ELEMENT_BUTTON_PRESSED
   b.gui_element = new
-  _MEMPUT e.mem, e.mem.OFFSET, b
+  MEM_MEMCPY e.mem, _OFFSET(b), GUI_SIZEOF_EVENT_ELEMENT_BASIC
   GUI_add_event_to_queue e
   GUI_free_event e
   gui(new).flags = (gui(new).flags AND NOT GUI_FLAG_PRESSED) OR GUI_FLAG_UPDATED
@@ -2711,7 +2709,7 @@ IF event.flags AND GUI_EVENT_MOUSE_LEFT_CLICK OR event.flags AND GUI_EVENT_MOUSE
     rad.group = gui(new).group
     rad.flags = GUI_EVENT_ELEMENT_RADIO_B_G_CHANGED OR GUI_EVENT_ELEMENT_RADIO_B_G_CLICKED
     rad.m_event = event
-    _MEMPUT g.mem, g.mem.OFFSET, rad
+    MEM_MEMCPY g.mem, _OFFSET(rad), GUI_SIZEOF_EVENT_ELEMENT_R_B_G
     GUI_add_event_to_queue g
     GUI_free_event g
     FOR x = 1 to gui_num
@@ -2743,7 +2741,7 @@ IF event.flags AND GUI_EVENT_MOUSE_LEFT_CLICK OR event.flags AND GUI_EVENT_MOUSE
   l.m_event = event
   l.flags = GUI_EVENT_ELEMENT_LABEL_CLICKED OR GUI_EVENT_ELEMENT_LABEL_PRESSED
   l.gui_element = new
-  _MEMPUT e.mem, e.mem.OFFSET, l
+  MEM_MEMCPY e.mem, _OFFSET(l), GUI_SIZEOF_EVENT_ELEMENT_BASIC
   GUI_add_event_to_queue e
   GUI_free_event e
 'elseif event.flags AND GUI_EVENT_MOUSE_LEFT_DOWN OR event.flags AND GUI_EVENT_MOUSE_RIGHT_DOWN THEN
@@ -2787,7 +2785,7 @@ END SUB
 
 SUB GUI_menu_process_focus_release (gui() as GUI_element, gui_num, sel)
 DIM men as GUI_menu_item
-gui(sel).flags = ((gui(sel).flags AND NOT GUI_FLAG_MENU_ALT) AND NOT GUI_FLAG_MENU_OPEN) OR GUI_FLAG_UPDATED
+gui(sel).flags = (((gui(sel).flags AND NOT GUI_FLAG_MENU_ALT) AND NOT GUI_FLAG_MENU_OPEN) AND NOT GUI_FLAG_PRESSED) OR GUI_FLAG_UPDATED
 gui(sel).selected = 0
 GUI_debug_output "Closing menu"
 GUI_debug_output "Sel:" + str$(sel)
@@ -2795,11 +2793,11 @@ GUI_debug_output "Type:" + str$(gui(sel).element_type)
 GUI_debug_output "Flag:" + str$(gui(sel).flags AND GUI_FLAG_MENU_OPEN)
 FOR x = 0 to gui(sel).length - 1
   GUI_debug_output "X=" + str$(x)
-  _MEMGET gui(sel).menu, gui(sel).menu.OFFSET + (x) * GUI_SIZEOF_MENU_ITEM, men
+  MEM_MEMCPY _OFFSET(men), gui(sel).menu + x * GUI_SIZEOF_MENU_ITEM, GUI_SIZEOF_MENU_ITEM
   GUI_debug_output "Sub:" + str$(men.sub_menu_open)
   GUI_close_sub_menu men
   men.sub_menu_open = 0
-  _MEMPUT gui(sel).menu, gui(sel).menu.OFFSET + (x) * GUI_SIZEOF_MENU_ITEM, men
+  MEM_MEMCPY gui(sel).menu + (x) * GUI_SIZEOF_MENU_ITEM, _OFFSET(men), GUI_SIZEOF_MENU_ITEM
 next x
 GUI_debug_output "Closing done!"
 END SUB
@@ -2967,7 +2965,7 @@ if event.flags AND GUI_EVENT_KEY_PRESSED then
     end if
     GUI_init_event g
     g.event_type = GUI_EVENT_ELEMENT_BASIC
-    _MEMPUT g.mem, g.mem.OFFSET, b
+    MEM_MEMCPY g.mem, _OFFSET(b), GUI_SIZEOF_EVENT_ELEMENT_BASIC
     GUI_add_event_to_queue g
     GUI_free_event g
   end if
@@ -3007,7 +3005,7 @@ if event.flags AND GUI_EVENT_KEY_PRESSED then
     end if
     GUI_init_event g
     g.event_type = GUI_EVENT_ELEMENT_BASIC
-    _MEMPUT g.mem, g.mem.OFFSET, b
+    MEM_MEMCPY g.mem, _OFFSET(b), GUI_SIZEOF_EVENT_ELEMENT_BASIC
     GUI_add_event_to_queue g
     GUI_free_event g
   end if
@@ -3029,7 +3027,7 @@ if event.flags AND GUI_EVENT_KEY_PRESSED THEN
     b.k_event = event
     GUI_init_event g
     g.event_type = GUI_EVENT_ELEMENT_BASIC
-    _MEMPUT g.mem, g.mem.OFFSET, b
+    MEM_MEMCPY g.mem, _OFFSET(b), GUI_SIZEOF_EVENT_ELEMENT_BASIC
     GUI_add_event_to_queue g
     GUI_free_event g
   end if
@@ -3056,7 +3054,7 @@ if event.flags AND GUI_EVENT_KEY_PRESSED THEN
     b.k_event = event
     GUI_init_event g
     g.event_type = GUI_EVENT_ELEMENT_BASIC
-    _MEMPUT g.mem, g.mem.OFFSET, b
+    MEM_MEMCPY g.mem, _OFFSET(b), GUI_SIZEOF_EVENT_ELEMENT_BASIC
     GUI_add_event_to_queue g
     GUI_free_event g
   end if
@@ -3075,7 +3073,7 @@ if event.flags AND GUI_EVENT_KEY_PRESSED then
     rad.group = gui(sel).group
     rad.flags = GUI_EVENT_ELEMENT_RADIO_B_G_CHANGED OR GUI_EVENT_ELEMENT_RADIO_B_G_KEY_DOWN
     rad.k_event = event
-    _MEMPUT g.mem, g.mem.OFFSET, rad
+    MEM_MEMCPY g.mem, _OFFSET(rad), GUI_SIZEOF_EVENT_ELEMENT_R_B_G
     GUI_add_event_to_queue g
     GUI_free_event g
     FOR x = 1 to gui_num
@@ -3207,7 +3205,7 @@ END SUB
 '###############################################################################
 '###############################################################################
 
-SUB GUI_input_box_perform_cutcopypaste (b as GUI_element, flag as INTEGER)
+SUB GUI_input_box_perform_cutcopypaste (b as GUI_element, flag as INTEGER, s$)
 SELECT CASE flags
   CASE GUI_CUT
     t$ = MEM_get_str$(b.text)
@@ -3223,7 +3221,7 @@ SELECT CASE flags
 END SELECT
 END SUB
 
-SUB GUI_text_box_perform_cutcopypaste (b as GUI_element, flag as INTEGER)
+SUB GUI_text_box_perform_cutcopypaste (b as GUI_element, flag as INTEGER, s$)
 'SELECT CASE flags
 '  CASE GUI_CUT
 '  
@@ -3233,3 +3231,7 @@ SUB GUI_text_box_perform_cutcopypaste (b as GUI_element, flag as INTEGER)
 '  
 'END SELECT
 END SUB 
+
+SUB GUI_menu_perform_cutcopypaste (b as GUI_element, flag as INTEGER, s$)
+
+END SUB

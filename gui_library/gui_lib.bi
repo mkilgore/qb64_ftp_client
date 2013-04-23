@@ -122,9 +122,11 @@ CONST GUI_FLAG_PRESSED            = &H00002000
 CONST GUI_FLAG_MENU_LAST_ON_RIGHT = &H00004000
 CONST GUI_FLAG_CATCH_ALT          = &H00008000
 
-CONST GUI_CUT   = 1
-CONST GUI_COPY  = 2
-CONST GUI_PASTE = 3
+CONST GUI_CUT   = &H00000001
+CONST GUI_COPY  = &H00000002
+CONST GUI_PASTE = &H00000004
+CONST GUI_CLIPBOARD = &H00000008
+CONST GUI_RETURN_STR = &H00000010
 
 'Byte 1
 CONST GUI_EVENT_MOUSE             = 1
@@ -217,7 +219,7 @@ CONST GUI_MOUSE_DRAG_LEFT   = 1
 CONST GUI_MOUSE_DRAG_RIGHT  = 2
 CONST GUI_MOUSE_DRAG_MIDDLE = 3
 
-CONST GUI_SIZEOF_MENU_ITEM = MEM_SIZEOF_MEM_STRING + 5 + 1 + MEM_SIZEOF_MEM _
+CONST GUI_SIZEOF_MENU_ITEM = MEM_SIZEOF_MEM_STRING + 5 + 1 + MEM_SIZEOF_OFFSET _
                              + 2 + 1 + MEM_SIZEOF_MEM_STRING + 2
 TYPE GUI_menu_item
   nam as MEM_string 'Displayed string for MENU choice
@@ -230,7 +232,7 @@ TYPE GUI_menu_item
   'support for modifiers will be added at a later date, sorry.
   'modifier as STRING * 2 'INKEY$ return
   has_sub AS _BYTE 'If -1 then sub_menu is set
-  sub_menu as _MEM 'Points to an array of GUI_menu_item_type
+  sub_menu as _OFFSET' _MEM 'Points to an array of GUI_menu_item_type
   sub_menu_length AS INTEGER
   sub_menu_open as _BYTE
   key_combo as MEM_string
@@ -243,50 +245,52 @@ TYPE GUI_color 'Holds color info -- forground and background
   bk as _UNSIGNED _BYTE
 END TYPE
 
-'TYPE GUI_location
-'  row as _UNSIGNED INTEGER
-'  col as _UNSIGNED INTEGER
-'END TYPE
+TYPE GUI_location
+  row as _UNSIGNED INTEGER
+  col as _UNSIGNED INTEGER
+END TYPE
 
-'TYPE GUI_element_scroll_bar
-'  top_left as GUI_location
-'  bar_length as _UNSIGNED INTEGER
-'  scroll_location as _UNSIGNED INTEGER
-'  
-'  'Number of items to scroll through
-'  'These _MEM's should point to LONG's.
-'  itemsL as _MEM
-'  first_itemL as _MEM 'The current first_item according to the scroll bar
-'  flags as _UNSIGNED INTEGER
-'END TYPE
+TYPE GUI_element_scroll_bar
+  top_left as GUI_location
+  bar_length as _UNSIGNED INTEGER
+  scroll_location as _UNSIGNED INTEGER  
+  'Number of items to scroll through
+  'These _MEM's should point to LONG's.
+  itemsL as _MEM
+  first_itemL as _MEM 'The current first_item according to the scroll bar
+  flags as _UNSIGNED INTEGER
+END TYPE
 
-'TYPE GUI_element_frame
-'  top_left as GUI_location
-'  bottom_right as GUI_location
-'  flags as _UNSIGNED INTEGER
-'  'Points to a MEM_String
-'  titleMS as _MEM 
-'END TYPE
+TYPE GUI_element_frame
+  top_left as GUI_location
+  bottom_right as GUI_location
+  flags as _UNSIGNED INTEGER
+  'Points to a MEM_String
+  titleMS as _MEM 
+END TYPE
 
-
-'TYPE GUI_element_text_area
-'  top_left as GUI_location
-'  bottom_right as GUI_location
-'  
-'  box_nam as MEM_string
-'  
-'  vert_scroll as GUI_element_scroll_bar
-'  hors_scroll as GUI_element_scroll_bar
-'  
-'  cur_row as _UNSIGNED INTEGER
-'  cur_col as _UNSIGNED INTEGER
-'  
-'  line_count as _UNSIGNED INTEGER
-'  
-'  text as MEM_array
-'  max_lines as _UNSIGNED INTEGER
-'  flags as _UNSIGNED LONG
-'END TYPE
+TYPE GUI_element_text_area
+  top_left as GUI_location
+  bottom_right as GUI_location
+  
+  box_nam as MEM_string
+  
+  vert_scroll as GUI_element_scroll_bar
+  hors_scroll as GUI_element_scroll_bar
+  
+  vert_scroll_pos as LONG
+  hors_scroll_pos as LONG
+  
+  cur_row as _UNSIGNED INTEGER
+  cur_col as _UNSIGNED INTEGER
+  
+  line_count as LONG
+  max_width as LONG
+  
+  text as MEM_array
+  max_lines as _UNSIGNED INTEGER
+  flags as _UNSIGNED LONG
+END TYPE
 
 CONST GUI_SIZEOF_ELEMENT_COLORS = GUI_SIZEOF_COLOR * 3
 TYPE GUI_element_colors 'holds colors
@@ -296,8 +300,8 @@ TYPE GUI_element_colors 'holds colors
 END TYPE
 
 CONST GUI_SIZEOF_ELEMENT = MEM_SIZEOF_MEM_STRING + 1 + 2 * 4 + 4 + GUI_SIZEOF_ELEMENT_COLORS _
-                           + 1 + 1 + MEM_SIZEOF_MEM_STRING + 2 * 13 + MEM_SIZEOF_MEM_ARRAY _
-                           + MEM_SIZEOF_MEM + 2 + 5 + 2 * 6
+                           + 1 + MEM_SIZEOF_MEM_STRING + 2 * 13 + MEM_SIZEOF_MEM_ARRAY _
+                           + MEM_SIZEOF_OFFSET + 2 + 5 + 2 * 6
 TYPE GUI_element
   nam AS MEM_string 'name of item
   element_type AS _BYTE
@@ -308,7 +312,6 @@ TYPE GUI_element
   flags AS _UNSIGNED LONG 'Coresponds to the above flags
   c as GUI_element_colors
   layer AS _BYTE
-  old_layer as _BYTE
   text AS MEM_string 'text drawn/edited in a Input-Box
   text_position AS INTEGER 'position of the cursor in the input
   text_sel_row1 AS INTEGER
@@ -326,7 +329,7 @@ TYPE GUI_element
   selected AS INTEGER 'selected line in list-box, drop-down, etc.
   selected_old AS INTEGER
   lines AS MEM_array ' Array to store strings for list-box, drop-down, etc.
-  menu as _MEM ' Points to an actual array of menu_items
+  menu as _OFFSET '_MEM ' Points to an actual array of menu_items
   menu_padding as INTEGER 'Spaces padded before start of menu
   menu_choice AS STRING * 5
   
@@ -351,10 +354,10 @@ TYPE GUI_mouse_state '12
   MSCROLL AS INTEGER
 END TYPE
 
-CONST GUI_SIZEOF_EVENT_GENERIC = 4 + MEM_SIZEOF_MEM + 1
+CONST GUI_SIZEOF_EVENT_GENERIC = 4 + MEM_SIZEOF_OFFSET + 1
 TYPE GUI_event_generic
   event_type as _UNSIGNED LONG
-  mem as _MEM
+  mem as _OFFSET 'MEM
   allocated as _UNSIGNED _BYTE
 END TYPE
 
@@ -407,12 +410,12 @@ TYPE GUI_event_element_radio_button_group
 END TYPE
 
 'For the event stack
-CONST GUI_SIZEOF_EVENT_STACK_LINK = GUI_SIZEOF_EVENT_GENERIC + 1 + MEM_SIZEOF_MEM
+CONST GUI_SIZEOF_EVENT_STACK_LINK = GUI_SIZEOF_EVENT_GENERIC + 1 + MEM_SIZEOF_OFFSET
 TYPE GUI_event_stack_link
   g as GUI_event_generic
   flags as _UNSIGNED _BYTE
   'e_next AS _MEM 'Pointer to next event
-  e_prev as _MEM
+  e_prev as _OFFSET
 END TYPE
 
 'shared variables for mouse, keyboard, and screen type of things
@@ -436,10 +439,8 @@ DIM SHARED GUI_RIGHT_CLICK_COUNT  AS INTEGER, GUI_LEFT_CLICK_COUNT   AS INTEGER,
 DIM SHARED GUI_last_mouse_event   AS GUI_event_mouse
 
 DIM SHARED GUI_SELECTED_GUI AS INTEGER
-
 DIM SHARED GUI_ALT_CAUGHT_SEL     AS _UNSIGNED LONG, GUI_ALT_CAUGHT_OLD AS _UNSIGNED LONG, GUI_ALT_CAUGHT  AS _UNSIGNED _BYTE
-
-DIM SHARED GUI_EVENT_STACK_START  as _MEM, GUI_EVENT_STACK_END          as _MEM, GUI_EVENT_STACK_LENGTH AS LONG
+DIM SHARED GUI_EVENT_STACK_START  as _OFFSET, GUI_EVENT_STACK_END       as _OFFSET, GUI_EVENT_STACK_LENGTH AS LONG
 
 'Delay values for clicking and keypresses
 'When dragging the mouse to select text, if dragging requires scrolling to prevent from scrolling instantly we will only scroll another character after this time in seconds has happened

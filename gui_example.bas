@@ -368,7 +368,7 @@ DO 'Main loop
             else
               MEM_put_str main_gui(labels(4)).text, "Checkbox #" + ltrim$(rtrim$(str$(basic_event.gui_element))) + " was unchecked!"
             end if
-          end if
+          end if  
         end if
 
       CASE GUI_EVENT_ELEMENT_MENU
@@ -460,6 +460,7 @@ LOOP UNTIL exit_flag = -1 or _EXIT
 
 'Free the array of elements
 GUI_free_element_array main_gui()
+'GUI_free_event event
 
 SYSTEM
 
