@@ -256,8 +256,8 @@ TYPE GUI_element_scroll_bar
   scroll_location as _UNSIGNED INTEGER  
   'Number of items to scroll through
   'These _MEM's should point to LONG's.
-  itemsL as _MEM
-  first_itemL as _MEM 'The current first_item according to the scroll bar
+  itemsL as _OFFSET
+  first_itemL as _OFFSET 'The current first_item according to the scroll bar
   flags as _UNSIGNED INTEGER
 END TYPE
 
