@@ -1,0 +1,13 @@
+
+@if not defined __GUI_ELEMENTS_STD_ELEMENTS_BM__
+@define __GUI_ELEMENTS_STD_ELEMENTS_BM__
+
+'$include:'element.bm'
+'$include:'container.bm'
+''$include:'box.bm'
+
+'$include:'button.bm'
+'$include:'frame.bm'
+'$include:'window.bm'
+
+@endif

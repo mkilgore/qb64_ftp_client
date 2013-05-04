@@ -1,0 +1,7 @@
+
+@if not defined __GUI_ELEMENTS_WINDOW_BM__
+@define __GUI_ELEMENTS_WINDOW_BM__
+
+'$include:'container.bm'
+
+@endif

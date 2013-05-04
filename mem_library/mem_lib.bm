@@ -152,3 +152,36 @@ if s.is_allocated then
 end if
 $CHECKING:on
 END SUB
+
+FUNCTION MEM_int_from_off% (o as _OFFSET)
+$checking:off
+DIM i as INTEGER
+MEM_MEMCPY _OFFSET(i), o, LEN(i)
+MEM_int_from_off% = i
+$checking:on
+END FUNCTION
+
+FUNCTION MEM_long_from_off& (o as _OFFSET)
+$checking:off
+DIM l as LONG
+MEM_MEMCPY _OFFSET(l), o, LEN(l)
+MEM_long_from_off& = l
+$checking:on
+END FUNCTION
+
+FUNCTION MEM_byte_from_off%% (o as _OFFSET)
+$checking:off
+DIM b as _byte
+MEM_MEMCPY _OFFSET(b), o, LEN(b)
+MEM_byte_from_off%% = b
+$checking:on
+END FUNCTION
+
+FUNCTION MEM_int64_from_off&& (o as _OFFSET)
+$checking:off
+DIM i as _INTEGER64
+MEM_MEMCPY _OFFSET(i), o, LEN(i)
+MEM_ini64_from_off&& = i
+$checking:on
+END FUNCTION
+

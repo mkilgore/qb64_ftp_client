@@ -1,0 +1,28 @@
+
+@ifnotdef __GUI_ELEMENTS_FRAME_BM__
+@define __GUI_ELEMENTS_FRAME_BM__
+
+'$include:'container.bm'
+
+FUNCTION GUI_element_frame_new%& ()
+DIM this as _OFFSET
+this = MEM_MALLOC%&(LEN(GUI_element_frame, TYPE))
+GUI_element_frame_init this
+GUI_element_frame_new%& = this
+END FUNCTION
+
+SUB GUI_element_frame_init (this as _OFFSET)
+GUI_element_container_init this
+END SUB
+
+SUB GUI_element_frame_delete (this as _OFFSET)
+GUI_element_frame_clear this
+MEM_FREE this
+END SUB
+
+SUB GUI_element_frame_clear (this as _OFFSET)
+GUI_element_container_clear this
+END SUB
+
+
+@endif

@@ -1,0 +1,40 @@
+
+@if not defined __GUI_LIB2_BM__
+  @define __GUI_LIB2_BM__
+
+  @if defined GUI_TEXT
+    SUB GUI_put_image (row AS LONG, col AS LONG, src as LONG, dest AS LONG)
+    $CHECKING:OFF
+    DIM img1 AS _MEM, img2 AS _MEM, x as LONG, wid1 AS LONG, wid2 AS LONG, hei AS LONG
+    img1 = _MEMIMAGE(src)
+    img2 = _MEMIMAGE(dest)
+    wid1 = _WIDTH(src)
+    wid2 = _WIDTH(dest)
+    hei = _HEIGHT(src)
+    FOR x = 0 to hei - 1
+      _MEMCOPY img1, img1.OFFSET + (x * wid1) * 2, wid1 * 2 TO img2, img2.OFFSET + ((x + row - 1) * wid2) * 2 + (col - 1) * 2
+    NEXT x
+    _MEMFREE img1
+    _MEMFREE img2
+    $CHECKING:ON
+    END SUB
+  @else
+    SUB GUI_put_image (x1 AS LONG, y1 AS LONG, src AS long, dest AS LONG)
+    $CHECKING:OFF
+    DIM img1 AS _MEM, img2 AS _MEM, x as LONG, wid1 AS LONG, wid2 AS LONG, hei AS LONG
+    img1 = _MEMIMAGE(src)
+    img2 = _MEMIMAGE(dest)
+    wid1 = _WIDTH(src)
+    wid2 = _WIDTH(dest)
+    hei = _HEIGHT(src)
+    FOR x = 0 to hei - 1
+      _MEMCOPY img1, img1.OFFSET + (x * wid1) * 2, wid1 * 2 TO img2, img2.OFFSET + ((x + y1 - 1) * wid2) * 2 + (x1 - 1) * 2
+    NEXT x
+    _MEMFREE img1
+    _MEMFREE img2
+    $CHECKING:ON
+    end sub
+  @endif
+  
+
+@endif

@@ -1,0 +1,115 @@
+
+@if not defined __GUI_ELEMENTS_ELEMENT_BM__
+  @define __GUI_ELEMENTS_ELEMENT_BM__
+  
+  SUB GUI_element_init (this as _OFFSET)
+  
+  END SUB
+  
+  SUB GUI_element_clear (this as _OFFSET)
+  if @(this, GUI_element.img, LONG) <> 0 then
+    _FREEIMAGE @(this, GUI_element.img, LONG)
+  end if
+  END SUB
+  
+  
+  FUNCTION GUI_element_get_element_type& (this as _OFFSET)
+  GUI_element_get_element_type& = @(this, GUI_element.element_type, LONG)
+  END FUNCTION
+  
+  FUNCTION GUI_element_get_width& (this as _OFFSET)
+  GUI_element_get_width& = @(this, GUI_element.size.wid, LONG)
+  END FUNCTION
+  
+  FUNCTION GUI_element_get_height& (this as _OFFSET)
+  GUI_element_get_height& = @(this, GUI_element.size.hei, LONG)
+  END FUNCTION
+  
+  @if defined GUI_TEXT
+  
+    SUB GUI_element_set_location (this as _OFFSET, row as _UNSIGNED LONG, col AS _UNSIGNED LONG)
+    @(this, GUI_element.size.row) = row
+    @(this, GUI_element.size.col) = col
+    END SUB
+    
+    
+    SUB GUI_element_set_dimension (this AS _OFFSET, row as _UNSIGNED LONG, col as _UNSIGNED LONG, wid AS _UNSIGNED LONG, hei AS _UNSIGNED LONG)
+    PRINT "row:"; row
+    print "col:"; col
+    @(this, GUI_element.size.row) = row
+    @(this, GUI_element.size.col) = col
+    @(this, GUI_element.size.wid) = wid
+    @(this, GUI_element.size.hei) = hei
+    GUI_element_create_image this
+    END SUB
+  
+  @else
+  
+    'Note -- Will probably be ignored if not using a fixed layout
+    SUB GUI_element_set_location (this AS _OFFSET, x AS _UNSIGNED LONG, y AS _UNSIGNED LONG)
+    @(this, GUI_element.size.x) = x
+    @(this, GUI_element.size.y) = y
+    END SUB
+  
+    SUB GUI_element_set_dimension (this AS _OFFSET, x as _UNSIGNED LONG, y as _UNSIGNED LONG, wid AS _UNSIGNED LONG, hei AS _UNSIGNED LONG)
+    @(this, GUI_element.size.x) = x 
+    @(this, GUI_element.size.y) = y
+    @(this, GUI_element.size.wid) = wid
+    @(this, GUI_element.size.hei) = hei
+    GUI_element_create_image this
+    END SUB
+  
+  @endif
+  
+  SUB GUI_element_create_image (this as _OFFSET)
+  if @(this, GUI_element.img, LONG) <> 0 then 
+    _FREEIMAGE @(this, GUI_element.img, LONG)
+  end if
+  @if defined GUI_TEXT
+    '_MEMPUT FAKE_MEM, this + _OFFSET(GUI_element.img, TYPE), _NEWIMAGE(_MEMGET(FAKE_MEM, this + _OFFSET(GUI_element.size.hei, type), LONG), _MEMGET(FAKE_MEM, this + _OFFSET(GUI_element.size.wid, LONG)))
+    i& = _NEWIMAGE(@(this, GUI_element.size.hei, LONG), @(this, GUI_element.size.wid, LONG), 0)
+  @else
+    i& = _NEWIMAGE(@(this, GUI_element.size.hei, LONG), @(this, GUI_element.size.wid, LONG), 32)
+  @endif
+  @(this, GUI_element.img) = i&
+  END SUB
+  
+  FUNCTION GUI_element_get_image& (this as _OFFSET)
+  GUI_element_get_image& = @(this, GUI_element.img, LONG)
+  END FUNCTION
+  
+  SUB GUI_element_set_size (this AS _OFFSET, wid as _UNSIGNED LONG, hei AS _UNSIGNED LONG)
+  @(this, GUI_element.size.wid) = wid
+  @(this, GUI_element.size.hei) = hei
+  GUI_element_create_image this
+  END SUB
+  
+  SUB GUI_element_set_dimension_d (this AS _OFFSET, d as GUI_dimension)
+  @(this, GUI_element.size) = d
+  GUI_element_create_image this
+  END SUB
+  
+  
+  @if defined GUI_TEXT
+  
+    FUNCTION GUI_element_get_row& (this as _OFFSET)
+    GUI_element_get_row& = @(this, GUI_element.size.row, LONG)
+    END FUNCTION
+  
+    FUNCTION GUI_element_get_col& (this as _OFFSET)
+    GUI_element_get_col& = @(this, GUI_element.size.col, LONG)
+    END FUNCTION
+  
+  @else
+  
+    FUNCTION GUI_element_get_x& (this as _OFFSET)
+    GUI_element_get_x& = @(this, GUI_element.size.x, LONG)
+    END FUNCTION
+    
+    FUNCTION GUI_element_get_y& (this as _OFFSET)
+    GUI_element_get_y& = @(this, GUI_element.size.y, LONG)
+    END FUNCTION
+  
+  @endif
+
+@endif

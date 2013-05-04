@@ -1,0 +1,28 @@
+
+@if not defined __GUI_ELEMENTS_CONTAINER_BM__
+@define __GUI_ELEMENTS_CONTAINER_BM__
+
+'$include:'element.bm'
+
+SUB GUI_element_container_init (this as _OFFSET)
+GUI_element_init this
+END SUB
+
+SUB GUI_element_container_clear (this as _OFFSET)
+GUI_element_clear this
+END SUB
+
+SUB GUI_element_container_add (this as _OFFSET, obj as _OFFSET)
+@(this, GUI_container.element) = obj
+@(this, GUI_container.flags) = @(this, GUI_container.flags, LONG) OR GUI_CONTAINER_FLAG_ADDED_ELEMENT AS LONG
+END SUB
+
+SUB GUI_element_container_remove (this as _OFFSET)
+
+END SUB
+
+FUNCTION GUI_element_container_get_contained%& (this as _OFFSET)
+GUI_element_container_get_contained%& = @(this, GUI_container.element, _OFFSET)
+END FUNCTION
+
+@endif

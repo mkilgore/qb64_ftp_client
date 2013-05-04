@@ -102,6 +102,7 @@ CONST GUI_MENU          = 7
 CONST GUI_BUTTON        = 8
 CONST GUI_RADIO_BUTTON  = 9
 CONST GUI_LABEL         = 10
+CONST GUI_FRAME         = 11
 'CONST GUI_COMBO_BOX     = 11
 
 'Flags for GUI_element_type .flags
@@ -201,8 +202,8 @@ CONST GUI_EVENT_ELEMENT_DROP_DOWN_SEL_CHANGED = &H00000008
 
 'Checkbox event flags
 CONST GUI_EVENT_ELEMENT_CHECKBOX_CHANGED  = &H00000001
-CONST GUI_EVENT_ELEMENT_CHECKBOX_CLICKED  = &H00000004
-CONST GUI_EVENT_ELEMENT_CHECKBOX_KEY_DOWN = &H00000008
+CONST GUI_EVENT_ELEMENT_CHECKBOX_CLICKED  = &H00000002
+CONST GUI_EVENT_ELEMENT_CHECKBOX_KEY_DOWN = &H00000004
 
 'Radiobutton Group event flags
 CONST GUI_EVENT_ELEMENT_RADIO_B_G_CHANGED  = &H00000001
@@ -250,23 +251,39 @@ TYPE GUI_location
   col as _UNSIGNED INTEGER
 END TYPE
 
-TYPE GUI_element_scroll_bar
+TYPE GUI_adjustment
+  lower AS LONG
+  upper AS LONG
+  value AS LONG
+  step_increment AS LONG
+  page_increment AS LONG
+  page_size AS LONG
+END TYPE
+
+TYPE GUI_component_scroll_bar
   top_left as GUI_location
   bar_length as _UNSIGNED INTEGER
   scroll_location as _UNSIGNED INTEGER  
   'Number of items to scroll through
   'These _MEM's should point to LONG's.
-  itemsL as _OFFSET
-  first_itemL as _OFFSET 'The current first_item according to the scroll bar
+  adjustGA AS _OFFSET 'Points to a GUI_adjustment
   flags as _UNSIGNED INTEGER
 END TYPE
+
+TYPE GUI_component_frame
+  top_leftGL AS _OFFSET
+  bottom_rightGL as _OFFSET
+  flags AS _UNSIGNED INTEGER
+END TYPE
+
 
 TYPE GUI_element_frame
   top_left as GUI_location
   bottom_right as GUI_location
   flags as _UNSIGNED INTEGER
   'Points to a MEM_String
-  titleMS as _MEM 
+  titleMS as _OFFSET
+  items AS MEM_array
 END TYPE
 
 TYPE GUI_element_text_area
@@ -275,8 +292,8 @@ TYPE GUI_element_text_area
   
   box_nam as MEM_string
   
-  vert_scroll as GUI_element_scroll_bar
-  hors_scroll as GUI_element_scroll_bar
+  vert_scroll as GUI_component_scroll_bar
+  hors_scroll as GUI_component_scroll_bar
   
   vert_scroll_pos as LONG
   hors_scroll_pos as LONG
@@ -298,6 +315,18 @@ TYPE GUI_element_colors 'holds colors
   selcolor as GUI_color
   scroll_color as GUI_color
 END TYPE
+
+TYPE GUI_element_button
+  flags AS _UNSIGNED LONG
+END TYPE
+
+
+TYPE GUI_element_generic
+  element_type AS _UNSIGNED INTEGER
+  flags AS _UNSIGNED LONG
+  ele AS _OFFSET
+END TYPE
+
 
 CONST GUI_SIZEOF_ELEMENT = MEM_SIZEOF_MEM_STRING + 1 + 2 * 4 + 4 + GUI_SIZEOF_ELEMENT_COLORS _
                            + 1 + MEM_SIZEOF_MEM_STRING + 2 * 13 + MEM_SIZEOF_MEM_ARRAY _
