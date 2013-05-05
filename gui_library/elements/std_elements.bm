@@ -4,6 +4,10 @@
 
 '$include:'element.bm'
 '$include:'container.bm'
+'$include:'hbox_layout.bm'
+'$include:'vbox_layout.bm'
+'$include:'fixed_layout.bm'
+'$include:'grid_layout.bm'
 ''$include:'box.bm'
 
 '$include:'button.bm'

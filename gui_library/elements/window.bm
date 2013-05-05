@@ -25,10 +25,11 @@ END FUNCTION
 SUB GUI_element_window_init (this as _OFFSET)
 GUI_element_container_init this
 GUI_element_set_draw_proc this, @SUB(GUI_element_window_draw)
-GUI_Object_set_delete_proc this, @SUB(GUI_element_window_delete)
+GUI_ref_Object_set_delete_proc this, @SUB(GUI_element_window_delete)
 END SUB
 
 SUB GUI_element_window_set_as_screen (this as _OFFSET)
+GUI_element_show this
 SCREEN GUI_element_get_image&(this)
 END SUB
 
@@ -58,7 +59,6 @@ if GUI_ELEMENT_CFLAG_VISIBLE(this) then
   end if
 end if
 END SUB
-
 
 SUB GUI_element_window_delete (this as _OFFSET)
 GUI_element_window_clear this

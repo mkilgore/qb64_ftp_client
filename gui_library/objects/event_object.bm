@@ -1,0 +1,7 @@
+
+@if not defined __GUI_OBJECTS_EVENT_OBJECT_BM__
+@define __GUI_OBJECTS_EVENT_OBJECT_BM__
+
+'$include:'ref_object.bm'
+
+@endif

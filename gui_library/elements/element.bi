@@ -14,7 +14,7 @@
       INTERNAL
     @END_BITFLAGS
     element_type AS _UNSIGNED LONG @set
-    img AS _UNSIGNED LONG 
+    img AS LONG 
     parent AS _OFFSET
     drw AS @PROC
     

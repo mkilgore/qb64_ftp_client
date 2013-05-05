@@ -4,6 +4,10 @@
 
 '$include:'element.bi'
 '$include:'container.bi'
+'$include:'hbox_layout.bi'
+'$include:'vbox_layout.bi'
+'$include:'fixed_layout.bi'
+'$include:'grid_layout.bi'
 ''$include:'box.bi'
 
 '$include:'button.bi'

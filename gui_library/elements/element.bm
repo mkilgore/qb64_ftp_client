@@ -4,10 +4,11 @@
   
   SUB GUI_element_init (this as _OFFSET)
   GUI_Object_init this
+  @(this, GUI_element.img) = -1 AS LONG
   END SUB
   
   SUB GUI_element_clear (this as _OFFSET)
-  if @(this, GUI_element.img, LONG) <> 0 then
+  if @(this, GUI_element.img, LONG) <> -1 then
     _FREEIMAGE @(this, GUI_element.img, LONG)
   end if
   GUI_element_remove_parent this
@@ -32,11 +33,11 @@
   END SUB
   
   SUB GUI_element_hide (this as _OFFSET)
-  GUI_ELEMENT_FLAG_UNSET_VISIBLE(this)
+  GUI_ELEMENT_FLAG_UNSET_VISIBLE this
   END SUB
   
   SUB GUI_element_create_image (this as _OFFSET)
-  if @(this, GUI_element.img, LONG) <> 0 then 
+  if @(this, GUI_element.img, LONG) <> -1 then 
     _FREEIMAGE @(this, GUI_element.img, LONG)
   end if
   @if defined GUI_TEXT
@@ -64,12 +65,12 @@
   END SUB
   
   SUB GUI_element_add_parent (this as _OFFSET, parent AS _OFFSET)
-  @(this, GUI_element.parent) = GUI_Object_get_ref%&(parent) AS _OFFSET
+  @(this, GUI_element.parent) = GUI_ref_Object_get_ref%&(parent) AS _OFFSET
   END SUB
   
   SUB GUI_element_remove_parent (this as _OFFSET)
   if @(this, GUI_element.parent, _OFFSET) <> 0 then
-    GUI_Object_release_ref @(this, GUI_element.parent, _OFFSET)
+    GUI_ref_Object_release_ref @(this, GUI_element.parent, _OFFSET)
     @(this, GUI_element.parent) = 0 AS _OFFSET
   end if
   END SUB

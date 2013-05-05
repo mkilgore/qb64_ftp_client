@@ -1,0 +1,17 @@
+
+@if not defined __GUI_OBJECTS_GUI_OBJECT_BM__
+@define __GUI_OBJECTS_GUI_OBJECT_BM__
+
+'$include:'signal_object.bm'
+
+SUB GUI_Object_init (this as _OFFSET)
+GUI_signal_object_init this
+'@(this, GUI_Object.release_ref) = @SUB(GUI_Object_release_ref)
+'@(this, GUI_Object.clear) = @SUB(GUI_Object_clear)
+END SUB
+
+SUB GUI_Object_clear (this as _OFFSET)
+GUI_signal_object_clear this
+END SUB
+
+@endif

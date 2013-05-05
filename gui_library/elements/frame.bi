@@ -8,9 +8,9 @@
 TYPE GUI_element_frame
   ele as GUI_element_Container
   flags as _UNSIGNED LONG 
+  nam as MEM_String
   @DEFINE_BITFLAGS GUI_element_frame
     SHADOW
-    DIALOG
   @END_BITFLAGS  
 END TYPE
 

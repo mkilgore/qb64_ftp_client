@@ -1,0 +1,33 @@
+
+@if not defined __GUI_OBJECTS_REF_OBJECT_BM__
+@define __GUI_OBJECTS_REF_OBJECT_BM__
+
+SUB GUI_ref_object_init (this as _OFFSET)
+@(this, GUI_ref_object.ref_count) = 0 AS LONG
+END SUB
+
+FUNCTION GUI_ref_Object_get_ref%& (this as _OFFSET)
+@(this, GUI_ref_Object.ref_count) = @(this, GUI_ref_Object.ref_count, LONG) + 1 AS LONG
+GUI_ref_Object_get_ref%& = this
+END FUNCTION
+
+SUB GUI_ref_Object_release_ref (this as _OFFSET)
+@(this, GUI_ref_Object.ref_count) = @(this, GUI_ref_Object.ref_count, LONG) - 1 AS LONG
+if @(this, GUI_ref_Object.ref_count, LONG) = 0 then 
+  @call(_OFFSET) @(this, GUI_ref_Object.delete, @PROC), this
+end if
+END SUB
+
+SUB GUI_ref_Object_set_delete_proc (this as _OFFSET, pro AS @PROC)
+@(this, GUI_ref_Object.delete) = pro
+END SUB
+
+SUB GUI_ref_Object_clear (this as _OFFSET)
+@(this, GUI_ref_Object.ref_count) = 0 AS LONG
+END SUB
+
+SUB GUI_ref_Object_delete (this as _OFFSET)
+@call(_OFFSET) @(this, GUI_ref_Object.delete, @PROC), this
+END SUB
+
+@endif

@@ -20,7 +20,8 @@ SUB GUI_element_button_init (this as _OFFSET)
 GUI_element_container_init this
 GUI_element_set_element_type this, GUI_BUTTON
 GUI_element_set_draw_proc this, @SUB(GUI_element_button_draw)
-GUI_Object_set_delete_proc this, @SUB(GUI_element_button_delete)
+GUI_ref_Object_set_delete_proc this, @SUB(GUI_element_button_delete)
+
 @(this, GUI_element_button.theme.sel.f) = 0 AS LONG
 @(this, GUI_element_button.theme.sel.b) = 7 AS LONG
 END SUB
