@@ -3,13 +3,15 @@
   @define __GUI_ELEMENTS_ELEMENT_BM__
   
   SUB GUI_element_init (this as _OFFSET)
-  
+  GUI_Object_init this
   END SUB
   
   SUB GUI_element_clear (this as _OFFSET)
   if @(this, GUI_element.img, LONG) <> 0 then
     _FREEIMAGE @(this, GUI_element.img, LONG)
   end if
+  GUI_element_remove_parent this
+  GUI_Object_clear this
   END SUB
   
   
@@ -25,41 +27,13 @@
   GUI_element_get_height& = @(this, GUI_element.size.hei, LONG)
   END FUNCTION
   
-  @if defined GUI_TEXT
+  SUB GUI_element_show (this as _OFFSET)
+  GUI_ELEMENT_FLAG_SET_VISIBLE this
+  END SUB
   
-    SUB GUI_element_set_location (this as _OFFSET, row as _UNSIGNED LONG, col AS _UNSIGNED LONG)
-    @(this, GUI_element.size.row) = row
-    @(this, GUI_element.size.col) = col
-    END SUB
-    
-    
-    SUB GUI_element_set_dimension (this AS _OFFSET, row as _UNSIGNED LONG, col as _UNSIGNED LONG, wid AS _UNSIGNED LONG, hei AS _UNSIGNED LONG)
-    PRINT "row:"; row
-    print "col:"; col
-    @(this, GUI_element.size.row) = row
-    @(this, GUI_element.size.col) = col
-    @(this, GUI_element.size.wid) = wid
-    @(this, GUI_element.size.hei) = hei
-    GUI_element_create_image this
-    END SUB
-  
-  @else
-  
-    'Note -- Will probably be ignored if not using a fixed layout
-    SUB GUI_element_set_location (this AS _OFFSET, x AS _UNSIGNED LONG, y AS _UNSIGNED LONG)
-    @(this, GUI_element.size.x) = x
-    @(this, GUI_element.size.y) = y
-    END SUB
-  
-    SUB GUI_element_set_dimension (this AS _OFFSET, x as _UNSIGNED LONG, y as _UNSIGNED LONG, wid AS _UNSIGNED LONG, hei AS _UNSIGNED LONG)
-    @(this, GUI_element.size.x) = x 
-    @(this, GUI_element.size.y) = y
-    @(this, GUI_element.size.wid) = wid
-    @(this, GUI_element.size.hei) = hei
-    GUI_element_create_image this
-    END SUB
-  
-  @endif
+  SUB GUI_element_hide (this as _OFFSET)
+  GUI_ELEMENT_FLAG_UNSET_VISIBLE(this)
+  END SUB
   
   SUB GUI_element_create_image (this as _OFFSET)
   if @(this, GUI_element.img, LONG) <> 0 then 
@@ -89,9 +63,36 @@
   GUI_element_create_image this
   END SUB
   
+  SUB GUI_element_add_parent (this as _OFFSET, parent AS _OFFSET)
+  @(this, GUI_element.parent) = GUI_Object_get_ref%&(parent) AS _OFFSET
+  END SUB
+  
+  SUB GUI_element_remove_parent (this as _OFFSET)
+  if @(this, GUI_element.parent, _OFFSET) <> 0 then
+    GUI_Object_release_ref @(this, GUI_element.parent, _OFFSET)
+    @(this, GUI_element.parent) = 0 AS _OFFSET
+  end if
+  END SUB
+  
+  SUB GUI_element_set_draw_proc (this as _OFFSET, pro as @PROC)
+  @(this, GUI_element.drw) = pro AS @PROC
+  END SUB
   
   @if defined GUI_TEXT
   
+    SUB GUI_element_set_location (this as _OFFSET, row as _UNSIGNED LONG, col AS _UNSIGNED LONG)
+    @(this, GUI_element.size.row) = row
+    @(this, GUI_element.size.col) = col
+    END SUB
+    
+    SUB GUI_element_set_dimension (this AS _OFFSET, row as _UNSIGNED LONG, col as _UNSIGNED LONG, wid AS _UNSIGNED LONG, hei AS _UNSIGNED LONG)
+    @(this, GUI_element.size.row) = row
+    @(this, GUI_element.size.col) = col
+    @(this, GUI_element.size.wid) = wid
+    @(this, GUI_element.size.hei) = hei
+    GUI_element_create_image this
+    END SUB
+      
     FUNCTION GUI_element_get_row& (this as _OFFSET)
     GUI_element_get_row& = @(this, GUI_element.size.row, LONG)
     END FUNCTION
@@ -102,6 +103,20 @@
   
   @else
   
+    'Note -- Will probably be ignored if not using a fixed layout
+    SUB GUI_element_set_location (this AS _OFFSET, x AS _UNSIGNED LONG, y AS _UNSIGNED LONG)
+    @(this, GUI_element.size.x) = x
+    @(this, GUI_element.size.y) = y
+    END SUB
+  
+    SUB GUI_element_set_dimension (this AS _OFFSET, x as _UNSIGNED LONG, y as _UNSIGNED LONG, wid AS _UNSIGNED LONG, hei AS _UNSIGNED LONG)
+    @(this, GUI_element.size.x) = x 
+    @(this, GUI_element.size.y) = y
+    @(this, GUI_element.size.wid) = wid
+    @(this, GUI_element.size.hei) = hei
+    GUI_element_create_image this
+    END SUB
+    
     FUNCTION GUI_element_get_x& (this as _OFFSET)
     GUI_element_get_x& = @(this, GUI_element.size.x, LONG)
     END FUNCTION

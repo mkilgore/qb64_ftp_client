@@ -7,10 +7,12 @@ CONST GUI_FALSE = 0
 
 TYPE GUI_Object
   ref_count AS _UNSIGNED LONG
-  flgas AS _UNSIGNED LONG
-  @DEFINE_BITFLAGS
+  flags AS _UNSIGNED LONG
+  'free AS @SUB (_OFFSET)
+  @DEFINE_BITFLAGS GUI_Object
     FLOATING
-  @END_DEFINE
+  @END_BITFLAGS
+  delete AS @PROC ' SUB(_OFFSET)
 END TYPE
 
 
@@ -39,6 +41,7 @@ TYPE GUI_color
 END TYPE
 
 TYPE GUI_event
+  obj as GUI_Object
   event_type AS _UNSIGNED LONG
   source as _OFFSET 'GUI_element
   modifiers AS _UNSIGNED LONG

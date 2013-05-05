@@ -164,7 +164,7 @@ END FUNCTION
 FUNCTION MEM_long_from_off& (o as _OFFSET)
 $checking:off
 DIM l as LONG
-MEM_MEMCPY _OFFSET(l), o, LEN(l)
+MEM_MEMCPY _OFFSET(l), o, 4 'LEN(l)
 MEM_long_from_off& = l
 $checking:on
 END FUNCTION

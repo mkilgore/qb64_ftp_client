@@ -9,20 +9,23 @@ GUI_element_init this
 END SUB
 
 SUB GUI_element_container_clear (this as _OFFSET)
+if @(this, GUI_element_container.element, _OFFSET) <> 0 then
+  GUI_element_container_remove this
+end if
 GUI_element_clear this
 END SUB
 
 SUB GUI_element_container_add (this as _OFFSET, obj as _OFFSET)
-@(this, GUI_container.element) = obj
-@(this, GUI_container.flags) = @(this, GUI_container.flags, LONG) OR GUI_CONTAINER_FLAG_ADDED_ELEMENT AS LONG
+@(this, GUI_element_container.element) = GUI_Object_get_ref%&(obj) AS _OFFSET
+@(this, GUI_element_container.flags) = @(this, GUI_element_container.flags, LONG) OR GUI_CONTAINER_FLAG_ADDED_ELEMENT AS LONG
 END SUB
 
 SUB GUI_element_container_remove (this as _OFFSET)
-
+GUI_Object_release_ref @(this, GUI_element_container.element, _OFFSET)
 END SUB
 
 FUNCTION GUI_element_container_get_contained%& (this as _OFFSET)
-GUI_element_container_get_contained%& = @(this, GUI_container.element, _OFFSET)
+GUI_element_container_get_contained%& = @(this, GUI_element_container.element, _OFFSET)
 END FUNCTION
 
 @endif

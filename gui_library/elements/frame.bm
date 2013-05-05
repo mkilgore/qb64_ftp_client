@@ -1,5 +1,5 @@
 
-@ifnotdef __GUI_ELEMENTS_FRAME_BM__
+@if not defined __GUI_ELEMENTS_FRAME_BM__
 @define __GUI_ELEMENTS_FRAME_BM__
 
 '$include:'container.bm'
@@ -8,6 +8,7 @@ FUNCTION GUI_element_frame_new%& ()
 DIM this as _OFFSET
 this = MEM_MALLOC%&(LEN(GUI_element_frame, TYPE))
 GUI_element_frame_init this
+GUI_Object_set_delete_proc this, @SUB(GUI_element_frame_delete)
 GUI_element_frame_new%& = this
 END FUNCTION
 

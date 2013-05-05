@@ -4,7 +4,7 @@
 
 '$include:'element.bi'
 
-TYPE GUI_container
+TYPE GUI_element_container
   ele as GUI_element 
   element AS _OFFSET
   flags as _UNSIGNED LONG
