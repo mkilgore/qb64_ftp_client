@@ -4,7 +4,7 @@
 
 '$include:'ref_object.bi'
 
-TYPE GUI_signal
+TYPE GUI_signal_Object
   'ref as GUI_ref_object
   signal_name AS MEM_string
   first_connection AS _OFFSET 'GUI_signal_connection
@@ -19,7 +19,7 @@ TYPE GUI_signal_connection
   next_connection AS _OFFSET 'GUI_signal_connection
 END TYPE
 
-TYPE GUI_signal_object
+TYPE GUI_signal
   ref as GUI_ref_object
   next_id AS _UNSIGNED LONG
   first_signal as _OFFSET 'GUI_signal

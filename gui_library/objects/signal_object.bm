@@ -4,75 +4,75 @@
 
 '$include:'ref_object.bm'
 
-SUB GUI_signal_object_init (this as _OFFSET)
+SUB GUI_signal_init (this as _OFFSET)
 GUI_ref_object_init this
-@(this, GUI_Signal_Object.next_id) = 1 AS LONG
+@(this, GUI_Signal.next_id) = 1 AS LONG
 END SUB
 
-SUB GUI_signal_object_clear (this as _OFFSET)
-GUI_signal_Object_clear_signals this
+SUB GUI_signal_clear (this as _OFFSET)
+GUI_signal_clear_signals this
 GUI_ref_object_clear this
 END SUB
 
-SUB GUI_signal_Object_clear_signals (this as _OFFSET)
+SUB GUI_signal_clear_signals (this as _OFFSET)
 
 END SUB
 
-SUB GUI_signal_Object_disconnect_signal (this as _OFFSET, n$, id as LONG)
+SUB GUI_signal_disconnect (this as _OFFSET, n$, id as LONG)
 
 END SUB
 
-FUNCTION GUI_signal_Object_attach_proc_to_signal& (this as _OFFSET, n$, pro as @PROC, dat as _OFFSET)
+FUNCTION GUI_signal_connect& (this as _OFFSET, n$, pro as @PROC, dat as _OFFSET)
 $CHECKING:OFF
 DIM sig as _OFFSET, con as _OFFSET, m as MEM_string
 DIM new_connect AS _offset
-sig = @(this, GUI_Signal_Object.first_signal, _OFFSET)
+sig = @(this, GUI_Signal.first_signal, _OFFSET)
 DO while sig <> 0
-  m = @(sig, GUI_signal.signal_name, MEM_string)
+  m = @(sig, GUI_signal_Object.signal_name, MEM_string)
   if MEM_get_str$(m) = n$ then
 
     new_connect = MEM_MALLOC%&(LEN(GUI_signal_connection, TYPE))
     @(new_connect, GUI_signal_connection.notify_proc) = pro AS @PROC
-    @(new_connect, GUI_signal_connection.id) = @(this, GUI_Signal_Object.next_id, LONG) AS LONG
+    @(new_connect, GUI_signal_connection.id) = @(this, GUI_Signal.next_id, LONG) AS LONG
     @(new_connect, GUI_signal_connection.dat) = dat
-    @(new_connect, GUI_signal_connection.next_connection) = @(sig, GUI_Signal.first_connection, _OFFSET) AS _OFFSET
-    @(sig, GUI_Signal.first_connection) = new_connect
-    @(this, GUI_Signal_Object.next_id) = @(this, GUI_Signal_Object.next_id, LONG) + 1 AS LONG
-    GUI_Signal_Object_attach_proc_to_signal& = @(new_connect, GUI_signal_connection.id, LONG)
+    @(new_connect, GUI_signal_connection.next_connection) = @(sig, GUI_Signal_Object.first_connection, _OFFSET) AS _OFFSET
+    @(sig, GUI_Signal_Object.first_connection) = new_connect
+    @(this, GUI_Signal.next_id) = @(this, GUI_Signal.next_id, LONG) + 1 AS LONG
+    GUI_Signal_connect_proc& = @(new_connect, GUI_signal_connection.id, LONG)
     exit function
   end if
-  sig = @(sig, GUI_signal.next_signal, _OFFSET)
+  sig = @(sig, GUI_signal_Object.next_signal, _OFFSET)
 loop
 $CHECKING:ON
 END FUNCTION
 
-SUB GUI_signal_Object_add_new_signal (this as _OFFSET, n$)
+SUB GUI_signal_add_new_signal (this as _OFFSET, n$)
 DIM sig as _OFFSET, m as MEM_string, last as _OFFSET
 sig = MEM_MALLOC%&(LEN(GUI_signal, TYPE))
 MEM_put_str m, n$
-@(sig, GUI_signal.signal_name) = m
-@(sig, GUI_signal.first_connection) = 0 AS LONG
-@(sig, GUI_signal.next_signal) = @(this, GUI_Signal_Object.first_signal, _OFFSET) AS _OFFSET
-@(this, GUI_signal_object.first_signal) = sig
+@(sig, GUI_signal_object.signal_name) = m
+@(sig, GUI_signal_Object.first_connection) = 0 AS LONG
+@(sig, GUI_signal_Object.next_signal) = @(this, GUI_Signal.first_signal, _OFFSET) AS _OFFSET
+@(this, GUI_signal.first_signal) = sig
 END SUB
 
-SUB GUI_signal_Object_emit_signal (this as _OFFSET, n$)
+SUB GUI_signal_emit (this as _OFFSET, n$)
 $CHECKING:OFF
 DIM of as _OFFSET, m as MEM_string
 DIM off2 AS _OFFSET, pro as @PROC
-of = @(this, GUI_Signal_Object.first_signal, _OFFSET)
+of = @(this, GUI_Signal.first_signal, _OFFSET)
 DO while of <> 0
-  m = @(of, GUI_signal.signal_name, MEM_String)
+  m = @(of, GUI_signal_Object.signal_name, MEM_String)
   if MEM_get_str$(m) = n$ then
     'Found currect signal, loop through and call all connected functions
-    off2 = @(of, GUI_signal.first_connection, _OFFSET)
+    off2 = @(of, GUI_signal_Object.first_connection, _OFFSET)
     DO WHILE off2 <> 0
       @call(_OFFSET, _OFFSET) @(off2, GUI_signal_connection.notify_proc, @PROC), this, @(off2, GUI_signal_connection.dat, _OFFSET)
       off2 = @(off2, GUI_signal_connection.next_connection, @PROC)
     loop 
     EXIT SUB
   end if
-  of = @(of, GUI_signal.next_signal, _OFFSET)
+  of = @(of, GUI_signal_Object.next_signal, _OFFSET)
 LOOP 
 $CHECKING:ON
 'Signal wasn't found, so just exit SUB

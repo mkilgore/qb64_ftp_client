@@ -16,6 +16,8 @@ END FUNCTION
 FUNCTION GUI_element_window_new_with_size_title%&(row as LONG, col as LONG, title$)
 DIM this as _OFFSET
 this = MEM_MALLOC%&(LEN(GUI_element_window, TYPE))
+MEM_MEMSET this, LEN(GUI_element_window, TYPE), 0
+
 GUI_element_window_init this
 GUI_element_window_set_size this, row, col
 GUI_element_window_set_title this, title$

@@ -11,6 +11,7 @@ END FUNCTION
 FUNCTION GUI_element_button_new_with_text%& (n$)
 DIM this as _OFFSET
 this = MEM_MALLOC%&(LEN(GUI_element_button, TYPE))
+MEM_MEMSET this, LEN(GUI_element_button, TYPE), 0
 GUI_element_button_init this
 GUI_element_button_set_text this, n$
 GUI_element_button_new_with_text%& = this

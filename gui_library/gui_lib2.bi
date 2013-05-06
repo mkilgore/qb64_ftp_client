@@ -2,9 +2,10 @@
 @if not defined __GUI_LIB2_BI__
 @define __GUI_LIB2_BI__
 
-CONST GUI_TRUE = -1
-CONST GUI_FALSE = 0
-CONST GUI_NULL = 0
+CONST GUI_TRUE       = -1
+CONST GUI_FALSE      = 0
+CONST GUI_NULL       = 0
+CONST GUI_IMAGE_NULL = -1
 
 TYPE GUI_dimension
 @if defined GUI_TEXT
@@ -33,7 +34,7 @@ END TYPE
 '$include:'objects/ref_object.bi'
 '$include:'objects/signal_object.bi'
 '$include:'objects/event_object.bi'
-'$include:'objects/gui_object.bi'
+'$include:'objects/gui_element.bi'
 
 '$include:'events/key.bi'
 '$include:'events/mouse.bi'

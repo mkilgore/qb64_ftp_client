@@ -2,8 +2,6 @@
 @if not defined __GUI_ELEMENTS_CONTAINER_BM__
 @define __GUI_ELEMENTS_CONTAINER_BM__
 
-'$include:'element.bm'
-
 SUB GUI_element_container_init (this as _OFFSET)
 GUI_element_init this
 END SUB

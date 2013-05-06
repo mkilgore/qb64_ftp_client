@@ -4,7 +4,7 @@
 '$include:'/mnt/data/git/qb64_ftp_client/gui_library/gui_lib2.bi'
 '$include:'/mnt/data/git/qb64_ftp_client/gui_library/elements/std_elements.bi'
 
-DIM Win AS _OFFSET, button as _OFFSET, ele AS LONG
+DIM Win AS _OFFSET, button as _OFFSET, ele AS LONG, m as MEM_String, of as _OFFSET
 
 Win = GUI_element_window_new_with_size_title%&(25, 80, "Hey!")
 
@@ -15,16 +15,16 @@ GUI_element_container_add Win, button
 GUI_element_show Win
 GUI_element_window_set_as_screen win
 
-GUI_signal_Object_add_new_signal button, "pressed"
+GUI_signal_add_new_signal button, "pressed1"
+GUI_signal_add_new_signal button, "pressed2"
+GUI_signal_add_new_signal button, "pressed3"
 
-handle_id = GUI_signal_Object_attach_proc_to_signal&(button, "pressed", @SUB(Test_signal1), GUI_NULL)
-handle_id = GUI_signal_Object_attach_proc_to_signal&(button, "pressed", @SUB(Test_signal2), GUI_NULL)
-handle_id = GUI_signal_Object_attach_proc_to_signal&(button, "pressed", @SUB(Test_signal3), GUI_NULL)
-handle_id = GUI_signal_Object_attach_proc_to_signal&(button, "pressed", @SUB(Test_signal4), GUI_NULL)
-handle_id = GUI_signal_Object_attach_proc_to_signal&(button, "pressed", @SUB(Test_signal5), GUI_NULL)
-handle_id = GUI_signal_Object_attach_proc_to_signal&(button, "pressed", @SUB(Test_signal6), GUI_NULL)
-handle_id = GUI_signal_Object_attach_proc_to_signal&(button, "pressed", @SUB(Test_signal7), GUI_NULL)
-handle_id = GUI_signal_Object_attach_proc_to_signal&(button, "pressed", @SUB(Test_signal8), GUI_NULL)
+of = _OFFSET(m)
+
+handle_id = GUI_signal_connect&(button, "pressed1", @SUB(Test_signal1), of)
+'handle_id = GUI_signal_connect&(button, "pressed2", @SUB(Test_signal2), off)
+'handle_id = GUI_signal_connect&(button, "pressed2", @SUB(Test_signal1), off)
+'handle_id = GUI_signal_connect&(button, "pressed3", @SUB(Test_signal3), off)
 
 print handle_id
 
@@ -32,94 +32,35 @@ DO
   _LIMIT 60
 
   a$ = inkey$
-  if a$ = " " then 
-    t# = TIMER(.001)
-    for x = 1 to 5000
-      GUI_signal_Object_emit_signal button, "pressed"
-    next x
-    t2# = TIMER(.001)
-    locate 6, 2
-    print using "TIME: ##.######"; t2# - t#
+  if a$ > "" then
+    MEM_put_str m, a$
+    GUI_signal_emit button, "pressed1"
   end if
 LOOP until a$ = chr$(27)
 
 SUB Test_signal1 (this as _OFFSET, dat as _OFFSET)
-STATIC count
-'if count = 0 then count = 1
-'count = count + 1
-'if count mod 100000 = 0 then
-'  LOCATE 2, 2
-'  print count
-'end if
+DIM m as MEM_String
+MEM_MEMCPY _OFFSET(m), dat, LEN(MEM_String, TYPE)
+print MEM_get_str$(m);
 END SUB
 
 SUB Test_signal2 (this as _OFFSET, dat as _OFFSET)
 STATIC count AS _INTEGER64
-'if count = 0 then count = 1
-'count = count * 2
+if count = 0 then count = 1
+count = count + 1
 'if count mod 100000 = 0 then
-'  LOCATE 3, 2
-'  print count
+  LOCATE 3, 2
+  print count
 'end if
 END SUB
 
 SUB Test_signal3 (this as _OFFSET, dat as _OFFSET)
 STATIC count AS _INTEGER64
-'if count = 0 then count = 1
-'count = count + 20
+if count = 0 then count = 1
+count = count + 1
 'if count mod 100000 = 0 then
-'  LOCATE 4, 2
-'  print count
-'end if
-END SUB
-
-SUB Test_signal4 (this as _OFFSET, dat as _OFFSET)
-STATIC count AS _INTEGER64
-'if count = 0 then count = 1
-'count = count + 20
-'if count mod 100000 = 0 then
-'  LOCATE 4, 2
-'  print count
-'end if
-END SUB
-
-SUB Test_signal5 (this as _OFFSET, dat as _OFFSET)
-STATIC count AS _INTEGER64
-'if count = 0 then count = 1
-'count = count + 20
-'if count mod 100000 = 0 then
-'  LOCATE 4, 2
-'  print count
-'end if
-END SUB
-
-SUB Test_signal6 (this as _OFFSET, dat as _OFFSET)
-STATIC count AS _INTEGER64
-'if count = 0 then count = 1
-'count = count + 20
-'if count mod 100000 = 0 then
-'  LOCATE 4, 2
-'  print count
-'end if
-END SUB
-
-SUB Test_signal7 (this as _OFFSET, dat as _OFFSET)
-STATIC count AS _INTEGER64
-'if count = 0 then count = 1
-'count = count + 20
-'if count mod 100000 = 0 then
-'  LOCATE 4, 2
-'  print count
-'end if
-END SUB
-
-SUB Test_signal8 (this as _OFFSET, dat as _OFFSET)
-STATIC count AS _INTEGER64
-'if count = 0 then count = 1
-'count = count + 20
-'if count mod 100000 = 0 then
-'  LOCATE 4, 2
-'  print count
+  LOCATE 4, 2
+  print count
 'end if
 END SUB
 

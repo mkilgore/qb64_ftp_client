@@ -7,6 +7,7 @@
 FUNCTION GUI_element_frame_new%& ()
 DIM this as _OFFSET
 this = MEM_MALLOC%&(LEN(GUI_element_frame, TYPE))
+MEM_MEMSET this, LEN(GUI_element_frame, TYPE), 0
 GUI_element_frame_init this
 GUI_ref_Object_set_delete_proc this, @SUB(GUI_element_frame_delete)
 GUI_element_frame_new%& = this

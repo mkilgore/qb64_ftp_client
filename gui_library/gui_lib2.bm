@@ -6,8 +6,7 @@
 '$include:'objects/ref_object.bm'
 '$include:'objects/signal_object.bm'
 '$include:'objects/event_object.bm'
-'$include:'objects/gui_object.bm'
-
+'$include:'objects/gui_element.bm'
 
 '$include:'events/key.bm'
 '$include:'events/mouse.bm'
