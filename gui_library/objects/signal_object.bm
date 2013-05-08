@@ -1,13 +1,38 @@
 
+'@@
+'@File   signal_object.bm
+'@author DSMan195276
+'@date   May 6th, 2013
+'
+'Functionality for the Signals system.
+'
+'@@
+
+
 @if not defined __GUI_OBJECTS_SIGNAL_OBJECT_BM__
 @define __GUI_OBJECTS_SIGNAL_OBJECT_BM__
 
 '$include:'ref_object.bm'
 
+'@@
+'@Brief Initalizes a GUI_signal Object and assigns starting signal and connection ID numbers
+'
+'@param[in] _OFFSET to the GUI_signal object to initalize 
+'@@
 SUB GUI_signal_init (this as _OFFSET)
 GUI_ref_object_init this
-@(this, GUI_Signal.next_id) = 1 AS LONG
+@(this, GUI_Signal.next_connection_id) = 1 AS LONG
+@(this, GUI_Signal.next_signal_id) = 1 AS LONG
 END SUB
+
+'@@
+'@Brief Clears a GUI_signal object and prepares it to be deleted
+'
+'It calls GUI_signal_clear_signals to detach any signals and connections and then
+'calls GUI_ref_object's clear procedure
+'
+'@param[in] _OFFSET to the GUI_signal object to clear
+'@@
 
 SUB GUI_signal_clear (this as _OFFSET)
 GUI_signal_clear_signals this
@@ -18,27 +43,56 @@ SUB GUI_signal_clear_signals (this as _OFFSET)
 
 END SUB
 
-SUB GUI_signal_disconnect (this as _OFFSET, n$, id as LONG)
+SUB GUI_signal_disconnect (this as _OFFSET, id as _UNSIGNED LONG)
 
 END SUB
 
+SUB GUI_connection_disconnect (this as _OFFSET, id as _UNSIGNED LONG)
+
+END SUB
+
+FUNCTION GUI_get_signal_id& (this as _OFFSET, n$)
+$CHECKING:OFF
+DIM sig as _OFFSET, m as MEM_string
+sig = @(this, GUI_Signal.first_signal, _OFFSET)
+DO WHILE sig <> 0
+  m = @(sig, GUI_Signal_Object.signal_name, MEM_String)
+  if MEM_get_str$(m) = n$ then
+    GUI_get_signal_id& = @(sig, GUI_Signal_Object.id, LONG)
+  end if
+  sig = @(sig, GUI_Signal_Object.next_signal, _OFFSET)
+LOOP
+$CHECKING:ON
+END FUNCTION
+
+'@@
+'
+'@Brief Connects a procedure and data pointer to a signal on this object
+'
+'It loops through the linked-list of signals in the GUI_signal object until it
+'finds the signal with the correct name. From there it calls
+'GUI_signal_attach_to_signal to create the connection to the signal and returns
+'the result of the call to GUI_signal_attach_to_signal --> This is the ID of the
+'connection to the GUI_signal object.
+'
+'@Param[in] Object of type 'GUI_Signal', the object you want to connect to
+'@Param[in] Name of the signal to connect to
+'@Param[in] To procedure to run when signal is emitted
+'@Param[in] _OFFSET to pass when pro is called along with the object who emitted
+'           the signal. Can be GUI_NULL if not used by pro
+'
+'@Return 0 if unable to make a connection (The signal wasn't found) otherwise
+'        returns the ID number of the connection to this object
+'@@
+
 FUNCTION GUI_signal_connect& (this as _OFFSET, n$, pro as @PROC, dat as _OFFSET)
 $CHECKING:OFF
-DIM sig as _OFFSET, con as _OFFSET, m as MEM_string
-DIM new_connect AS _offset
+DIM sig as _OFFSET, m as MEM_string
 sig = @(this, GUI_Signal.first_signal, _OFFSET)
 DO while sig <> 0
   m = @(sig, GUI_signal_Object.signal_name, MEM_string)
   if MEM_get_str$(m) = n$ then
-
-    new_connect = MEM_MALLOC%&(LEN(GUI_signal_connection, TYPE))
-    @(new_connect, GUI_signal_connection.notify_proc) = pro AS @PROC
-    @(new_connect, GUI_signal_connection.id) = @(this, GUI_Signal.next_id, LONG) AS LONG
-    @(new_connect, GUI_signal_connection.dat) = dat
-    @(new_connect, GUI_signal_connection.next_connection) = @(sig, GUI_Signal_Object.first_connection, _OFFSET) AS _OFFSET
-    @(sig, GUI_Signal_Object.first_connection) = new_connect
-    @(this, GUI_Signal.next_id) = @(this, GUI_Signal.next_id, LONG) + 1 AS LONG
-    GUI_Signal_connect_proc& = @(new_connect, GUI_signal_connection.id, LONG)
+    GUI_signal_connect& = GUI_signal_attach_to_signal&(this, sig, pro, dat)
     exit function
   end if
   sig = @(sig, GUI_signal_Object.next_signal, _OFFSET)
@@ -46,7 +100,42 @@ loop
 $CHECKING:ON
 END FUNCTION
 
-SUB GUI_signal_add_new_signal (this as _OFFSET, n$)
+FUNCTION GUI_signal_connect_with_id& (this as _OFFSET, id as _UNSIGNED LONG, pro as @PROC, dat as _OFFSET)
+$CHECKING:OFF
+DIM sig as _OFFSET, m as MEM_string
+sig = @(this, GUI_Signal.first_signal, _OFFSET)
+DO while sig <> 0
+  if @(sig, GUI_signal_Object.id, LONG) = id then
+    GUI_signal_connect_with_id& = GUI_signal_attach_to_signal&(this, sig, pro, dat)
+    exit function
+  end if
+  sig = @(sig, GUI_signal_Object.next_signal, _OFFSET)
+loop
+$CHECKING:ON
+END FUNCTION
+
+'@@
+'@Brief Creates a new GUI_signal_connection, initalizes it, and attaches it to 'sig'
+'
+'Allocates memory for a new GUI_signal_connection and assigns it its @PROC (pro),
+'data _OFFSET (dat), and ID number. It then 
+
+FUNCTION GUI_signal_attach_to_signal& (this as _OFFSET, sig as _OFFSET, pro as @PROC, dat as _OFFSET)
+$CHECKING:OFF
+DIM new_connect AS _OFFSET
+new_connect = MEM_MALLOC%&(LEN(GUI_signal_connection, TYPE))
+@(new_connect, GUI_signal_connection.notify_proc) = pro AS @PROC
+@(new_connect, GUI_signal_connection.id) = @(this, GUI_Signal.next_connection_id, LONG) AS LONG
+@(new_connect, GUI_signal_connection.dat) = dat
+@(new_connect, GUI_signal_connection.next_connection) = @(sig, GUI_Signal_Object.first_connection, _OFFSET) AS _OFFSET
+@(sig, GUI_Signal_Object.first_connection) = new_connect
+@(this, GUI_Signal.next_connection_id) = @(this, GUI_Signal.next_connection_id, LONG) + 1 AS LONG
+GUI_Signal_attach_to_signal& = @(new_connect, GUI_signal_connection.id, LONG)
+$CHECKING:ON
+END FUNCTION
+
+
+FUNCTION GUI_signal_add_new_signal& (this as _OFFSET, n$)
 DIM sig as _OFFSET, m as MEM_string, last as _OFFSET
 sig = MEM_MALLOC%&(LEN(GUI_signal, TYPE))
 MEM_put_str m, n$
@@ -54,7 +143,7 @@ MEM_put_str m, n$
 @(sig, GUI_signal_Object.first_connection) = 0 AS LONG
 @(sig, GUI_signal_Object.next_signal) = @(this, GUI_Signal.first_signal, _OFFSET) AS _OFFSET
 @(this, GUI_signal.first_signal) = sig
-END SUB
+END FUNCTION
 
 SUB GUI_signal_emit (this as _OFFSET, n$)
 $CHECKING:OFF
@@ -64,6 +153,7 @@ of = @(this, GUI_Signal.first_signal, _OFFSET)
 DO while of <> 0
   m = @(of, GUI_signal_Object.signal_name, MEM_String)
   if MEM_get_str$(m) = n$ then
+    @debug_print "Emitting signal" + n$
     'Found currect signal, loop through and call all connected functions
     off2 = @(of, GUI_signal_Object.first_connection, _OFFSET)
     DO WHILE off2 <> 0

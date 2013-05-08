@@ -1,4 +1,9 @@
+
+'Use 'Text-Mode' Screen 0 GUI
 @define GUI_TEXT
+
+'Set debug mode
+@define __DEBUG__
 
 '$include:'/mnt/data/git/qb64_ftp_client/mem_library/mem_lib.bi'
 '$include:'/mnt/data/git/qb64_ftp_client/gui_library/gui_lib2.bi'
@@ -22,9 +27,6 @@ GUI_signal_add_new_signal button, "pressed3"
 of = _OFFSET(m)
 
 handle_id = GUI_signal_connect&(button, "pressed1", @SUB(Test_signal1), of)
-'handle_id = GUI_signal_connect&(button, "pressed2", @SUB(Test_signal2), off)
-'handle_id = GUI_signal_connect&(button, "pressed2", @SUB(Test_signal1), off)
-'handle_id = GUI_signal_connect&(button, "pressed3", @SUB(Test_signal3), off)
 
 print handle_id
 
@@ -42,26 +44,6 @@ SUB Test_signal1 (this as _OFFSET, dat as _OFFSET)
 DIM m as MEM_String
 MEM_MEMCPY _OFFSET(m), dat, LEN(MEM_String, TYPE)
 print MEM_get_str$(m);
-END SUB
-
-SUB Test_signal2 (this as _OFFSET, dat as _OFFSET)
-STATIC count AS _INTEGER64
-if count = 0 then count = 1
-count = count + 1
-'if count mod 100000 = 0 then
-  LOCATE 3, 2
-  print count
-'end if
-END SUB
-
-SUB Test_signal3 (this as _OFFSET, dat as _OFFSET)
-STATIC count AS _INTEGER64
-if count = 0 then count = 1
-count = count + 1
-'if count mod 100000 = 0 then
-  LOCATE 4, 2
-  print count
-'end if
 END SUB
 
 '$include:'/mnt/data/git/qb64_ftp_client/mem_library/mem_lib.bm'

@@ -211,6 +211,11 @@ FOR x = 1 TO next_line
         PRINT "Adding line:"; v$; " AS "; t$
         add_src_line v$ + " AS " + t$, new_length, new_source()
       END IF
+    elseif left$(n$, 12) = "@DEBUG_PRINT" then
+      'print "DEBUG Define:"; find_define("__DEBUG__")
+      if find_define("__DEBUG__") > -1 then
+        add_src_line var_prefix$ + "DEBUG_PRINT " + mid$(ltrim$(source(x)), 13), new_length, new_source()
+      end if
     ELSEIF INSTR(n$, "@(") THEN
       add_src_line "$CHECKING:OFF", new_length, new_source()
       IF LEFT$(n$, 2) = "@(" THEN
@@ -240,6 +245,10 @@ FOR x = 1 TO next_line
   END IF
 NEXT x
 
+if find_define("__DEBUG__") > -1 then
+  print #255, "$CONSOLE"
+end if
+
 PRINT #255, "DIM SHARED " + mem_nam$ + " AS _MEM"
 
 FOR x = 1 TO const_count
@@ -255,6 +264,10 @@ FOR x = 1 TO func_count
 NEXT x
 
 add_pointer_defs
+
+if find_define("__DEBUG__") > -1 then
+  PRINT #255, "SUB " + var_prefix$ + "DEBUG_PRINT (s$): d& = _DEST: _DEST _CONSOLE: PRINT s$: _DEST d&: END SUB"
+end if
 
 CLOSE #255
 
@@ -730,7 +743,7 @@ for x = 1 to sub_count
   'end if
   '
   'print #256, ");";
-  print #256, "void *"; ucase$(sub_names(x)); "_ptr () {";
+  print #256, "inline void *"; ucase$(sub_names(x)); "_ptr () {";
   print #256, "  return (void*)(SUB_"; ucase$(sub_names(x)); ");}"
 next x
 for x = 1 to sub_diff_args
@@ -744,7 +757,7 @@ for x = 1 to sub_diff_args
   LOOP 
   if a$ > "" then print #255, chr$(c) + " AS " + a$;
   print #255, ")" + line_end$;
-  print #256, "void call_"; replace$(diff_arg_list(x), chr$(13), "_"); "( void* func, ";
+  print #256, "inline void call_"; replace$(diff_arg_list(x), chr$(13), "_"); "( void* func, ";
   a$ = diff_arg_list(x)
   c = 65
   DO until instr(a$, chr$(13)) <= 0

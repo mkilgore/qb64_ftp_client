@@ -53,7 +53,7 @@ if GUI_ELEMENT_CFLAG_VISIBLE(this) then
   t$ = MEM_get_str$(m)
   _TITLE t$
   if @(this, GUI_element_container.element, _OFFSET) <> 0 then
-    DIM o as _OFFSET ', img as LONG
+    DIM o as _OFFSET
     o = GUI_element_container_get_contained%&(this)
     @call(_OFFSET) @(o, GUI_element.drw, @PROC), o
     'img = @(this, GUI_element.img, LONG)
