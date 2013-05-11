@@ -1,11 +1,9 @@
 
-@if not defined __GUI_OBJECTS_GUI_ELEMENT_BI__
-@define __GUI_OBJECTS_GUI_ELEMENT_BI__
-
-'$include:'signal_object.bi'
+!!if not defined __GUI_OBJECTS_GUI_ELEMENT_BI__
+!!define __GUI_OBJECTS_GUI_ELEMENT_BI__
 
 TYPE GUI_Element
-  s as GUI_signal
+  s as OBJ_signal
   dimension AS GUI_dimension
   flags AS _UNSIGNED LONG
   @DEFINE_BITFLAGS GUI_element
@@ -18,8 +16,11 @@ TYPE GUI_Element
   element_type AS _UNSIGNED LONG @set
   img AS LONG 
   parent AS _OFFSET
-  drw AS @PROC
-
 END TYPE
 
-@endif
+TYPE GUI_Element_class
+  drw   AS @PROC
+END TYPE
+
+
+!!endif

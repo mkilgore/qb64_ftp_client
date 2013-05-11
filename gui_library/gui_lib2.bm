@@ -1,17 +1,11 @@
 
-@if not defined __GUI_LIB2_BM__
-@define __GUI_LIB2_BM__
+!!if not defined __GUI_LIB2_BM__
+!!define __GUI_LIB2_BM__
 
+''$include:'objects/std_objects.bm'
+'$include:'events/std_events.bm'
 
-'$include:'objects/ref_object.bm'
-'$include:'objects/signal_object.bm'
-'$include:'objects/event_object.bm'
-'$include:'objects/gui_element.bm'
-
-'$include:'events/key.bm'
-'$include:'events/mouse.bm'
-
-@if defined GUI_TEXT
+!!if defined GUI_TEXT
   SUB GUI_put_image (row AS LONG, col AS LONG, src as LONG, dest AS LONG)
   $CHECKING:OFF
   DIM img1 AS _MEM, img2 AS _MEM, x as LONG, wid1 AS LONG, wid2 AS LONG, hei AS LONG
@@ -27,7 +21,7 @@
   _MEMFREE img2
   $CHECKING:ON
   END SUB
-@else
+!!else
   SUB GUI_put_image (x1 AS LONG, y1 AS LONG, src AS long, dest AS LONG)
   $CHECKING:OFF
   DIM img1 AS _MEM, img2 AS _MEM, x as LONG, wid1 AS LONG, wid2 AS LONG, hei AS LONG
@@ -43,6 +37,6 @@
   _MEMFREE img2
   $CHECKING:ON
   end sub
-@endif
+!!endif
   
-@endif
+!!endif

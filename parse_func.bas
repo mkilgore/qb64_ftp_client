@@ -1,4 +1,24 @@
 
+'$include:'mem_library/mem_lib.bi'
+
+'''''NOTE
+'Implement "@(_OFFSET, TYPE)" -- Allow ommision of second parameter
+'Change "!!endif" to "end if" for syntatical constancy
+
+'Stages:
+'
+
+CONST PRO_VERSION$ = ".02"
+
+DECLARE LIBRARY "unistd"
+  SUB getcwd(s as STRING, BYVAL l as LONG) 
+END DECLARE
+
+TYPE define_type
+  value as MEM_string
+  replacement as MEM_string
+END TYPE
+
 $SCREENHIDE
 $CONSOLE
 
@@ -6,27 +26,35 @@ _DEST _CONSOLE
 
 REDIM SHARED source(500) AS STRING 'AS MEM_string, next_line AS LONG
 DIM SHARED next_line AS LONG
+
 REDIM SHARED new_source(500) AS STRING
 DIM SHARED new_length AS LONG
 
 REDIM SHARED new_CONSTS(500) AS STRING, const_count AS LONG
 REDIM SHARED reg_types(100) AS STRING, reg_count(100) AS LONG, reg_total_count AS LONG
 REDIM SHARED flag_functions(500) AS STRING, func_count AS LONG
-REDIM SHARED defines(500) AS STRING, def_val(500) AS STRING, define_count AS LONG
+
+REDIM SHARED defines(500) AS define_type, define_count AS LONG
+
 DIM SHARED line_end$, slash$
 
 REDIM SHARED new_func_vars(500) AS STRING, new_func_types(500) AS STRING, new_func_vars_count AS LONG
-'REDIM SHARED mem_get_line(500) AS STRING
+
 REDIM SHARED sub_names(500) AS STRING, sub_args(500) AS STRING, sub_number(500) AS LONG, sub_count AS LONG
 REDIM SHARED sub_diff_args AS LONG, diff_arg_list(500) AS STRING
-REDIM SHARED function_names(500) AS STRING, func_args(500) AS STRING, func_number(500) AS LONG
+
+REDIM SHARED func_names(500) AS STRING, func_args(500) AS STRING, func_number(500) AS LONG
 REDIM SHARED func_type(500) AS STRING, function_count AS LONG
+REDIM SHARED func_diff_args AS LONG, func_diff_arg_list(500) AS STRING, func_diff_arg_type(500) AS STRING
+
 REDIM SHARED sub_data$, in_sub, in_type, in_declare
-DIM SHARED var_prefix$, mem_nam$
+
+DIM SHARED var_prefix$, mem_nam$, call_prefix$
 DIM SHARED ptrs_file$
 
-var_prefix$ = "GUI__PARSE__"
-mem_nam$ = "GUI__QB64__EMPTY_MEM"
+'var_prefix$ = "PARS__"
+mem_nam$ = "PARS__QB64__EMPTY_MEM"
+call_prefix$ = "c_"
 
 in_type = 0
 in_declare = 0
@@ -39,12 +67,15 @@ line_end$ = CHR$(13) + CHR$(10)
 
 IF INSTR(_OS$, "[WINDOWS]") THEN
   add_define "__OS__", "WINDOWS"
+  add_define "__SLASH__", qq$("\")
   slash$ = "\"
 ELSEIF INSTR(_OS$, "[MACOSX]") THEN
   add_define "__OS__", "MACOSX"
+  add_define "__SLASH__", qq$("/")
   slash$ = "/"
 ELSEIF INSTR(_OS$, "[LINUX]") THEN
   add_define "__OS__", "LINUX"
+  add_define "__SLASH__", qq$("/")
   slash$ = "/"
 END IF
 
@@ -54,9 +85,16 @@ ELSE
   add_define "__BITS__", "64"
 END IF
 
+add_define "__DATE__", qq$(DATE$)
+add_define "__TIME__", qq$(TIME$)
+
+add_define "__PROV__", PRO_VERSION$
+
 
 di$ = get_dir$(COMMAND$)
 fi$ = get_file$(COMMAND$)
+
+add_define "__FILE__", qq$(fi$)
 
 ex$ = MID$(fi$, INSTR(fi$, ".") + 1)
 nam$ = MID$(fi$, 1, INSTR(fi$, ".") - 1)
@@ -68,7 +106,7 @@ CHDIR di$
 
 OPEN nam$ + "_OUTPUT." + ex$ FOR OUTPUT AS #255
 
-load_file fi$, di$
+load_file fi$
 
 
 'print "GOT HERE!"
@@ -76,6 +114,7 @@ load_file fi$, di$
 'INPUT "sleep"; sleep_sleep$
 
 FOR x = 1 TO next_line
+  source(x) = replace_with_case$(source(x), "@PROC", "_OFFSET")
   n$ = strip_line$(UCASE$(source(x))) 'MEM_get_str$(source(x)))
   'PRINT "LOOP"
   'print "X="; n$
@@ -117,125 +156,128 @@ FOR x = 1 TO next_line
     sub_data$ = ""
   END IF
   IF LEFT$(n$, 4) = "TYPE" THEN
-    PRINT "In type!"
+    'PRINT "In type!"
     in_type = -1
     type_nam$ = strip_line$(MID$(n$, 5))
   ELSEIF LEFT$(n$, 8) = "END TYPE" THEN
-    PRINT "Out of type!"
+    'PRINT "Out of type!"
     in_type = 0
   END IF
   IF mod_flag THEN
     add_flag = 0
     'Found a modifier!
     n$ = strip_line$(n$)
-    
-    'n2$ = UCASE$(strip_line$(source(x)))
-    'if instr(n2$, "@SUB") then
-    DO WHILE instr(ucase$(source(x)), "@SUB")
-      print "Old source:"; source(x)
-      l = instr(ucase$(source(x)), "@SUB")
-      sn$ = ucase$(mid$(source(x), l))
-      le = instr(sn$, ")") - 1
-      arg$ = mid$(ucase$(sn$), instr(sn$, "(") + 1)
-      arg$ = mid$(arg$, 1, instr(arg$, ")") - 1)
-      'arg$ = replace$(fix_space$(replace$(arg$, ",", " ")), " ", "_")
-      
-      source(x) = mid$(source(x), 1, l - 1) + arg$ + "_ptr%&" + mid$(source(x), l + le + 1)
-      print "New source:"; source(x)
-      add_flag = -1
-    LOOP
-    n$ = strip_line$(ucase$(source(x)))
-    
-    if left$(n$, 5) = "@CALL" then
-      args$ = mid$(n$, instr(n$, "(") + 1)
-      args$ = mid$(args$, 1, instr(args$, ")") - 1)
-      if instr(args$, ",") then
-        print "replace space:"; replace$(args$, ",", " ")
-        print "Fix space:"; fix_space$(replace$(args$, ",", " "))
-        args$ = replace$(fix_space$(replace$(args$, ",", " ")), " ", "_")
-      end if
-      print "ARGS:"; args$
-      source(x) = "call_" + args$ + " " + mid$(source(x), instr(source(x), ")") + 1)
-      n$ = strip_line$(ucase$(source(x)))
-      add_flag = -1
-    end if
-    
+    DO
+      changed_flag = 0
+      DO WHILE instr(ucase$(source(x)), "@SUB")
+        'print "Old source:"; source(x)
+        l = instr(ucase$(source(x)), "@SUB")
+        sn$ = ucase$(mid$(source(x), l))
+        le = instr(sn$, ")") - 1
+        arg$ = mid$(ucase$(sn$), instr(sn$, "(") + 1)
+        arg$ = mid$(arg$, 1, instr(arg$, ")") - 1)
 
-    'end if
-    
-    IF MID$(n$, 2, LEN("REGISTER")) = "REGISTER" THEN
-      add_Reg n$
-    ELSEIF MID$(n$, 2, LEN("DEFINE_BITFLAGS")) = "DEFINE_BITFLAGS" THEN
-      nam$ = MID$(n$, INSTR(n$, " ") + 1)
-      value& = 1
-      DO
-        x = x + 1
-        n$ = strip_line$(UCASE$(source(x)))
-        un$ = UCASE$(n$)
-        getter = 0
-        setter = 0
-        IF INSTR(un$, "@GET") OR INSTR(un$, "@SET") THEN
-          IF INSTR(un$, "@GET") THEN getter = -1
-          IF INSTR(un$, "@SET") THEN setter = -1
-          n$ = MID$(n$, 1, INSTR(n$, " ") - 1)
-        END IF
-        IF n$ <> "@END_BITFLAGS" THEN
-          add_const nam$ + "_FLAG_" + n$, LTRIM$(RTRIM$(STR$(value&)))
-          if getter then add_func "FUNCTION " + ucase$(nam$) + "_CFLAG_" + n$ + "(this as _OFFSET): " + ucase$(nam$) _
-            + "_CFLAG_" + n$ + " = MEM_long_from_off&(this + _OFFSET(" + nam$ + ".flags, TYPE)) AND " + LTRIM$(RTRIM$(STR$(value&))) + line_end$ + "END FUNCTION"
-          if setter then add_func "SUB " + ucase$(nam$) + "_FLAG_SET_" + n$ + "(this as _OFFSET)" + line_end$ + "$CHECKING:OFF" + line_end$ _
-            + " _MEMPUT " + mem_nam$ + ", this + _OFFSET(" + nam$ + ".flags, TYPE), MEM_long_from_off&(this + _OFFSET(" + nam$ + ".flags, TYPE)) OR " + LTRIM$(RTRIM$(STR$(value&))) + " AS LONG" + line_end$ + "$CHECKING:ON" + line_end$ + "END SUB"
-          if setter then add_func "SUB " + ucase$(nam$) + "_FLAG_UNSET_" + n$ + "(this as _OFFSET)" + line_end$ + "$CHECKING:OFF" + line_end$ _
-            + " _MEMPUT " + mem_nam$ + ", this + _OFFSET(" + nam$ + ".flags, TYPE), MEM_long_from_off&(this + _OFFSET(" + nam$ + ".flags, TYPE)) AND NOT " + LTRIM$(RTRIM$(STR$(value&))) + " AS LONG" + line_end$ + "$CHECKING:ON" + line_end$ + "END SUB"
-          if setter then add_func "SUB " + ucase$(nam$) + "_FLAG_TOGGLE_" + n$ + "(this as _OFFSET)" + line_end$ + "$CHECKING:OFF" + line_end$ _
-            + " _MEMPUT " + mem_nam$ + ", this + _OFFSET(" + nam$ + ".flags, TYPE), MEM_long_from_off&(this + _OFFSET(" + nam$ + ".flags, TYPE)) XOR " + LTRIM$(RTRIM$(STR$(value&))) + " AS LONG" + line_end$ + "$CHECKING:ON" + line_end$ + "END SUB"
-          
-          value& = value& * 2
-        END IF
-      LOOP WHILE n$ <> "@END_BITFLAGS"
-    ELSEIF INSTR(n$, "@GET") OR INSTR(n$, "@SET") THEN
-      PRINT "Got here:"; n$
-      IF INSTR(n$, "@GET") THEN getter = -1 ELSE getter = 0
-      IF INSTR(n$, "@SET") THEN setter = -1 ELSE setter = 0
-      IF in_type THEN
-        v$ = LEFT$(n$, INSTR(n$, " ") - 1)
-        t$ = MID$(n$, INSTR(n$, "AS") + 3)
-        t$ = RTRIM$(MID$(t$, 1, INSTR(t$, "@") - 1))
-        PRINT "V:"; v$; " T:"; t$
-        if setter then add_func "SUB " + type_nam$ + "_SET_" + v$ + "(this as _OFFSET, a AS " + t$ + ")" _
-          + line_end$ + "$CHECKING:OFF" + line_end$ + "_MEMPUT " + mem_nam$ + ", this + _OFFSET(" + type_nam$ + "." + v$ + ", TYPE), a" _
-          + line_end$ + "$CHECKING:ON" + line_end$ + "END SUB"
-        if getter then add_func "SUB " + type_nam$ + "_GET_" + v$ + "(this as _OFFSET, a AS " + t$ + ")" _
-          + line_end$ + "$CHECKING:OFF" + line_end$ + "_MEMGET " + mem_nam$ + ", this + _OFFSET(" + type_nam$ + "." + v$ + ", TYPE), a" _
-          + line_end$ + "$CHECKING:ON" + line_end$ + "END SUB"
-        PRINT "Adding line:"; v$; " AS "; t$
-        add_src_line v$ + " AS " + t$, new_length, new_source()
-      END IF
-    elseif left$(n$, 12) = "@DEBUG_PRINT" then
-      'print "DEBUG Define:"; find_define("__DEBUG__")
-      if find_define("__DEBUG__") > -1 then
-        add_src_line var_prefix$ + "DEBUG_PRINT " + mid$(ltrim$(source(x)), 13), new_length, new_source()
+        source(x) = mid$(source(x), 1, l - 1) + var_prefix$ + arg$ + "_ptr%&" + mid$(source(x), l + le + 1)
+        'print "New source:"; source(x)
+        add_flag = -1
+        changed_flag =-1
+      LOOP
+      n$ = strip_line$(ucase$(source(x)))
+      
+      if left$(n$, 5) = "@CALL" then
+        args$ = mid$(n$, instr(n$, "(") + 1)
+        args$ = mid$(args$, 1, instr(args$, ")") - 1)
+        if instr(args$, ",") then
+          'print "replace space:"; replace$(args$, ",", " ")
+          'print "Fix space:"; fix_space$(replace$(args$, ",", " "))
+          args$ = replace$(fix_space$(replace$(args$, ",", " ")), " ", "_")
+        end if
+        'print "ARGS:"; args$
+        source(x) = var_prefix$ + call_prefix$ + args$ + " " + mid$(source(x), instr(source(x), ")") + 1)
+        n$ = strip_line$(ucase$(source(x)))
+        add_flag = -1
+        changed_flag = -1
       end if
-    ELSEIF INSTR(n$, "@(") THEN
-      add_src_line "$CHECKING:OFF", new_length, new_source()
-      IF LEFT$(n$, 2) = "@(" THEN
-        lef$ = MID$(n$, 1, INSTR(n$, "=") + 1)
-        rit$ = MID$(n$, INSTR(n$, "=") + 1)
-        
-        lef$ = make_deref_into_sub$(lef$)
-        rit$ = make_deref_into_func$(rit$)
+      
   
-        add_src_line lef$ + rit$, new_length, new_source()
-      ELSE
-        add_src_line make_deref_into_func$(n$), new_length, new_source()
-      END IF
-      add_src_line "$CHECKING:ON", new_length, new_source()
-    elseif add_flag then
+      'end if
+      
+      IF MID$(n$, 2, LEN("REGISTER")) = "REGISTER" THEN
+        add_Reg n$
+      ELSEIF MID$(n$, 2, LEN("DEFINE_BITFLAGS")) = "DEFINE_BITFLAGS" THEN
+        nam$ = MID$(n$, INSTR(n$, " ") + 1)
+        value& = 1
+        DO
+          x = x + 1
+          n$ = strip_line$(UCASE$(source(x)))
+          un$ = UCASE$(n$)
+          getter = 0
+          setter = 0
+          IF INSTR(un$, "@GET") OR INSTR(un$, "@SET") THEN
+            IF INSTR(un$, "@GET") THEN getter = -1
+            IF INSTR(un$, "@SET") THEN setter = -1
+            n$ = MID$(n$, 1, INSTR(n$, " ") - 1)
+          END IF
+          IF n$ <> "@END_BITFLAGS" THEN
+            add_const nam$ + "_FLAG_" + n$, LTRIM$(RTRIM$(STR$(value&)))
+            if getter then add_func "FUNCTION " + ucase$(nam$) + "_CFLAG_" + n$ + "(this as _OFFSET): " + ucase$(nam$) _
+              + "_CFLAG_" + n$ + " = MEM_long_from_off&(this + _OFFSET(" + nam$ + ".flags, TYPE)) AND " + LTRIM$(RTRIM$(STR$(value&))) + line_end$ + "END FUNCTION"
+            if setter then add_func "SUB " + ucase$(nam$) + "_FLAG_SET_" + n$ + "(this as _OFFSET)" + line_end$ + "$CHECKING:OFF" + line_end$ _
+              + " _MEMPUT " + mem_nam$ + ", this + _OFFSET(" + nam$ + ".flags, TYPE), MEM_long_from_off&(this + _OFFSET(" + nam$ + ".flags, TYPE)) OR " + LTRIM$(RTRIM$(STR$(value&))) + " AS LONG" + line_end$ + "$CHECKING:ON" + line_end$ + "END SUB"
+            if setter then add_func "SUB " + ucase$(nam$) + "_FLAG_UNSET_" + n$ + "(this as _OFFSET)" + line_end$ + "$CHECKING:OFF" + line_end$ _
+              + " _MEMPUT " + mem_nam$ + ", this + _OFFSET(" + nam$ + ".flags, TYPE), MEM_long_from_off&(this + _OFFSET(" + nam$ + ".flags, TYPE)) AND NOT " + LTRIM$(RTRIM$(STR$(value&))) + " AS LONG" + line_end$ + "$CHECKING:ON" + line_end$ + "END SUB"
+            if setter then add_func "SUB " + ucase$(nam$) + "_FLAG_TOGGLE_" + n$ + "(this as _OFFSET)" + line_end$ + "$CHECKING:OFF" + line_end$ _
+              + " _MEMPUT " + mem_nam$ + ", this + _OFFSET(" + nam$ + ".flags, TYPE), MEM_long_from_off&(this + _OFFSET(" + nam$ + ".flags, TYPE)) XOR " + LTRIM$(RTRIM$(STR$(value&))) + " AS LONG" + line_end$ + "$CHECKING:ON" + line_end$ + "END SUB"
+            
+            value& = value& * 2
+          END IF
+        LOOP WHILE n$ <> "@END_BITFLAGS"
+      ELSEIF INSTR(n$, "@GET") OR INSTR(n$, "@SET") THEN
+        'PRINT "Got here:"; n$
+        IF INSTR(n$, "@GET") THEN getter = -1 ELSE getter = 0
+        IF INSTR(n$, "@SET") THEN setter = -1 ELSE setter = 0
+        IF in_type THEN
+          v$ = LEFT$(n$, INSTR(n$, " ") - 1)
+          t$ = MID$(n$, INSTR(n$, "AS") + 3)
+          t$ = RTRIM$(MID$(t$, 1, INSTR(t$, "@") - 1))
+          'PRINT "V:"; v$; " T:"; t$
+          if setter then add_func "SUB " + type_nam$ + "_SET_" + v$ + "(this as _OFFSET, a AS " + t$ + ")" _
+            + line_end$ + "$CHECKING:OFF" + line_end$ + "_MEMPUT " + mem_nam$ + ", this + _OFFSET(" + type_nam$ + "." + v$ + ", TYPE), a" _
+            + line_end$ + "$CHECKING:ON" + line_end$ + "END SUB"
+          if getter then add_func "SUB " + type_nam$ + "_GET_" + v$ + "(this as _OFFSET, a AS " + t$ + ")" _
+            + line_end$ + "$CHECKING:OFF" + line_end$ + "_MEMGET " + mem_nam$ + ", this + _OFFSET(" + type_nam$ + "." + v$ + ", TYPE), a" _
+            + line_end$ + "$CHECKING:ON" + line_end$ + "END SUB"
+          'PRINT "Adding line:"; v$; " AS "; t$
+          add_src_line v$ + " AS " + t$, new_length, new_source()
+        END IF
+      elseif left$(n$, 12) = "@DEBUG_PRINT" then
+        'print "DEBUG Define:"; find_define("__DEBUG__")
+        if find_define("__DEBUG__") > -1 then
+          add_src_line var_prefix$ + "DEBUG_PRINT " + mid$(ltrim$(source(x)), 13), new_length, new_source()
+        end if
+      ELSEIF INSTR(n$, "@(") THEN
+        add_src_line "$CHECKING:OFF", new_length, new_source()
+        IF LEFT$(n$, 2) = "@(" THEN
+          lef$ = MID$(n$, 1, INSTR(n$, "=") + 1)
+          rit$ = MID$(n$, INSTR(n$, "=") + 1)
+          
+          lef$ = make_deref_into_sub$(lef$)
+          rit$ = make_deref_into_func$(rit$)
+    
+          add_src_line lef$ + rit$, new_length, new_source()
+        ELSE
+          add_src_line make_deref_into_func$(n$), new_length, new_source()
+        END IF
+        add_src_line "$CHECKING:ON", new_length, new_source()
+      end if
+    LOOP until changed_flag = 0
+    if add_flag then
       add_src_line source(x), new_length, new_source()
     END IF
   ELSE
     add_src_line source(x), new_length, new_source()
   END IF
+  
     
   IF (LEFT$(n$, 4) = "SUB " OR LEFT$(n$, 9) = "FUNCTION ") AND NOT in_declare THEN
     clear_func_vars
@@ -296,18 +338,18 @@ SUB add_define (d$, v$)
 define_count = define_count + 1
 
 IF define_count >= UBOUND(defines) THEN
-  REDIM _PRESERVE defines(define_count + 100) AS STRING
-  REDIM _PRESERVE def_val(define_count + 100) AS STRING
+  REDIM _PRESERVE defines(define_count + 100) AS define_type
+  'REDIM _PRESERVE def_val(define_count + 100) AS STRING
 END IF
-defines(define_count) = d$
-def_val(define_count) = v$
-PRINT "Define:"; defines(define_count); " = "; v$
+MEM_put_str defines(define_count).value,  d$
+MEM_put_str defines(define_count).replacement, v$
+PRINT "Define:"; MEM_get_str$(defines(define_count).value); " = "; v$
 END SUB
 
 FUNCTION find_define (d$)
 ud$ = UCASE$(d$)
 FOR x = 1 TO define_count
-  IF defines(x) = ud$ THEN
+  IF MEM_get_str$(defines(x).value) = ud$ THEN
     find_define = x: EXIT FUNCTION
   END IF
 NEXT x
@@ -358,7 +400,7 @@ FUNCTION strip_line$ (l$)
 strip_line$ = LTRIM$(RTRIM$(l$))
 END FUNCTION
 
-SUB load_file (file$, old_dir$)
+SUB load_file (file$)
 DIM fnum AS LONG
 fnum = FREEFILE
 'print "F="; fnum
@@ -373,67 +415,100 @@ last_if = 0
 
 DO
   LINE INPUT #fnum, l$
-  l$ = replace_with_case$(strip_comment$(l$), "@PROC", "_OFFSET")
+  l$ = strip_comment$(l$)
   ls$ = strip_line$(l$)
   uls$ = UCASE$(ls$)
-  
-  
-  
-  IF LEFT$(uls$, 3) = "@IF" THEN if_count = if_count + 1
-  
-  IF LEFT$(uls$, 3) = "@IF" AND process_line OR LEFT$(uls$, 7) = "@ELSEIF" AND if_count = last_if THEN
-    last_if = if_count
-    uls$ = MID$(uls$, INSTR(uls$, " ") + 1)
-    s$ = MID$(uls$, 1, INSTR(uls$, " ") - 1)
-    not_flag = 0
-    'PRINT "IF statement:"
-    IF s$ = "NOT" THEN
-      'PRINT "Not flag found!"
-      not_flag = -1
-      uls$ = MID$(uls$, INSTR(uls$, " ") + 1)
-      s$ = MID$(uls$, 1, INSTR(uls$, " ") - 1)
-      'PRINT "S="; s$
+  include_flag = 0
+  IF LEFT$(LCASE$(ls$), LEN("'$include:'")) = "'$include:'" THEN
+    fil$ = MID$(ls$, 12)
+    fil$ = LEFT$(fil$, LEN(fil$) - 1)
+    'print "fil:"; fil$
+    new_file$ = get_file$(fil$)
+    new_dir$ = get_dir$(fil$)
+    'PRINT "NEW FILE:"; new_file$
+    'PRINT "NEW DIR:"; new_dir$
+    'print "File:"; fil$
+    'di$ = get_cur_dir$
+    old_dir$ = space$(1024)
+    getcwd old_dir$, LEN(old_dir$)
+    print "new_dir:"; new_dir$
+    IF new_dir$ > "" THEN
+      CHDIR new_dir$
+    END If
+    load_file new_file$ ', new_dir$
+    IF new_dir$ > "" THEN
+      'print "old_dir:"; old_dir$
+      CHDIR old_dir$
     END IF
-    IF s$ = "DEFINED" THEN
-      'PRINT "Checking IF Defined"
-      d2$ = MID$(uls$, INSTR(uls$, " ") + 1)
-      c = find_define(d2$)
-      'PRINT "C="; c
-      IF c > 0 THEN process_line = NOT not_flag
-      IF c = -1 THEN process_line = not_flag
-    ELSEIF INSTR(uls$, "=") THEN
-      'd$ = mid$(uls$, instr(uls$, " ") + 1)
-      d$ = s$ 'strip_line$(mid$(d$, 1, instr(d$, "=") - 1))
-      de = find_define(d$)
-      d2$ = strip_line$(MID$(uls$, INSTR(uls$, "=") + 1))
-      de2 = find_define(d2$)
-      IF de > 0 THEN
-        v$ = def_val(de)
-      ELSE
-        v$ = strip_quote$(d$)
+    include_flag = -1
+  end if
+  
+  if left$(uls$, 2) = "!!" then
+    cmd$ = strip_line$(mid$(uls$, 3))
+    cmd_flag = -1
+  else 
+    cmd$ = ""
+    cmd_flag = 0
+  end if
+  if cmd_flag then
+    'print "Found command: "; cmd$
+    IF LEFT$(cmd$, 3) = "IF " THEN if_count = if_count + 1
+    
+    IF LEFT$(cmd$, 3) = "IF " AND process_line OR (LEFT$(cmd$, 7) = "ELSEIF " AND if_count = last_if) THEN
+      last_if = if_count
+      cmd2$ = MID$(cmd$, INSTR(cmd$, " ") + 1)
+      s$ = MID$(cmd2$, 1, INSTR(cmd2$, " ") - 1)
+      not_flag = 0
+      'print "IF :"; cmd2$
+      'PRINT "IF statement:"
+      IF s$ = "NOT" THEN
+        'PRINT "Not flag found!"
+        not_flag = -1
+        cmd2$ = MID$(cmd2$, INSTR(cmd2$, " ") + 1)
+        s$ = MID$(cmd2$, 1, INSTR(cmd2$, " ") - 1)
+        'PRINT "S="; s$
       END IF
-      IF de2 > 0 THEN
-        v2$ = def_val(de2)
-      ELSE
-        v2$ = strip_quote$(d2$)
+      IF s$ = "DEFINED" THEN
+        'PRINT "Checking IF Defined"
+        d2$ = MID$(cmd2$, INSTR(cmd2$, " ") + 1)
+        c = find_define(d2$)
+        'PRINT "C="; c
+        'print "Defined:"; d2$
+        'print "C="; c
+        IF c > 0 THEN process_line = NOT not_flag
+        IF c = -1 THEN process_line = not_flag
+      ELSEIF INSTR(cmd2$, "=") THEN
+        'd$ = mid$(uls$, instr(uls$, " ") + 1)
+        d$ = s$ 'strip_line$(mid$(d$, 1, instr(d$, "=") - 1))
+        de = find_define(d$)
+        d2$ = strip_line$(MID$(cmd2$, INSTR(cmd2$, "=") + 1))
+        de2 = find_define(d2$)
+        IF de > 0 THEN
+          v$ = MEM_Get_str$(defines(de).replacement)
+        ELSE
+          v$ = strip_quote$(d$)
+        END IF
+        IF de2 > 0 THEN
+          v2$ = MEM_Get_str$(defines(de2).replacement)
+        ELSE
+          v2$ = strip_quote$(d2$)
+        END IF
+        'PRINT "D1:"; d$
+        'PRINT "D2:"; d2$
+        'PRINT "V1:"; v$
+        'PRINT "V2:"; v2$
+        IF v$ = v2$ THEN
+          process_line = NOT not_flag
+        ELSE
+          process_line = not_flag
+        END IF
       END IF
-      'PRINT "D1:"; d$
-      'PRINT "D2:"; d2$
-      'PRINT "V1:"; v$
-      'PRINT "V2:"; v2$
-      IF v$ = v2$ THEN
-        process_line = NOT not_flag
-      ELSE
-        process_line = not_flag
-      END IF
-    END IF
-  ELSEIF LEFT$(uls$, 5) = "@ELSE" AND process_line THEN
-    process_line = NOT process_line
-  ELSEIF LEFT$(uls$, 6) = "@ENDIF" AND last_if = if_count THEN
-    process_line = -1
-  ELSEIF process_line AND LEFT$(uls$, 6) <> "@ENDIF" AND LEFT$(uls$, 5) <> "@ELSE" THEN
-    IF LEFT$(uls$, 8) = "@DEFINE " THEN
-      d2$ = MID$(uls$, INSTR(uls$, " ") + 1)
+    ELSEIF LEFT$(cmd$, 4) = "ELSE" AND last_if = if_count THEN
+      process_line = NOT process_line
+    ELSEIF LEFT$(cmd$, 5) = "ENDIF" AND last_if = if_count THEN
+      process_line = -1
+    ELSEIF LEFT$(cmd$, 7) = "DEFINE " and process_line then
+      d2$ = MID$(cmd$, INSTR(cmd$, " ") + 1)
       IF INSTR(d2$, " ") THEN
         d$ = MID$(d2$, 1, INSTR(d2$, " ") - 1)
         v$ = MID$(d2$, INSTR(d2$, " ") + 1)
@@ -442,33 +517,41 @@ DO
         v$ = ""
       END IF
       add_define d$, v$
-    ELSEIF LEFT$(LCASE$(ls$), LEN("'$include:'")) = "'$include:'" THEN
-      fil$ = MID$(ls$, 12)
-      fil$ = LEFT$(fil$, LEN(fil$) - 1)
-      new_file$ = get_file$(fil$)
-      new_dir$ = get_dir$(fil$)
-      'PRINT "NEW FILE:"; new_file$
-      'PRINT "NEW DIR:"; new_dir$
-      'print "File:"; fil$
-      'di$ = get_cur_dir$
-      IF new_dir$ > "" THEN
-        CHDIR new_dir$
-      END IF
-      load_file new_file$, new_dir$
-      IF new_dir$ > "" THEN
-        CHDIR old_dir$
-      END IF
-    ELSE
+    end if
+    if left$(cmd$, 5) = "ENDIF" then if_count = if_count - 1
+  end if
+  IF process_line and not cmd_flag and not include_flag then ' AND LEFT$(cmd$, 6) <> "ENDIF " AND LEFT$(cmd$, 5) <> "ELSE " THEN
+    'IF LEFT$(cmd$, 7) = "DEFINE " THEN
+      
+    'ELSE
       if left$(uls$, 4) = "SUB " then
-        nam$ = mid$(uls$, instr(uls$, " ") + 1)
-        nam$ = mid$(nam$, 1, instr(nam$, " ") - 1)
-        args$ = mid$(uls$, instr(uls$, "("))
+        ls$ = replace_with_case$(ls$, "@PROC", "_OFFSET")
+        nam$ = mid$(ls$, instr(ls$, " ") + 1)
+        if instr(nam$, " ") then
+          nam$ = mid$(nam$, 1, instr(nam$, " ") - 1)
+        end if
+        if instr(nam$, "(") then
+          nam$ = rtrim$(mid$(nam$, 1, instr(nam$, "(") - 1))
+        end if
+        args$ = mid$(ls$, instr(ls$, "("))
         reg_sub nam$, args$
+      elseif left$(uls$, 9) = "FUNCTION " then
+        ls$ = replace_with_case$(ls$, "@PROC", "_OFFSET")
+        nam$ = mid$(ls$, instr(ls$, " ") + 1)
+        if instr(nam$, " ") then
+          nam$ = mid$(nam$, 1, instr(nam$, " ") - 1)
+        end if
+        if instr(nam$, "(") then
+          nam$ = rtrim$(mid$(nam$, 1, instr(nam$, "(") - 1))
+        end if
+        typ$ = get_type_name$(nam$)
+        args$ = mid$(ls$, instr(ls$, "("))
+        print "FUNCTION:"; nam$; "  "; args$; "  "; typ$
+        reg_func remove_suffix$(nam$), args$, typ$
       end if
       add_src_line l$, next_line, source()
-    end if
+    'end if
   end if
-  if left$(uls$, 6) = "@ENDIF" then if_count = if_count - 1
 LOOP UNTIL EOF(fnum)
 CLOSE #fnum
 'PRINT "Closed file!"
@@ -655,6 +738,16 @@ diff_arg_list(sub_diff_args) = args$
 'print "Adding args:"; replace$(args$, chr$(13), "_")
 END SUB
 
+SUB func_reg_arg (args$, typ$)
+func_diff_args = func_diff_args + 1
+if func_diff_Args > ubound(func_diff_arg_list) then
+  REDIM _PRESERVE func_diff_arg_list(ubound(func_diff_arg_list) + 100) AS STRING
+  REDIM _PRESERVE func_diff_arg_type(ubound(func_diff_arg_type) + 100) AS STRING
+end if
+func_diff_arg_list(func_diff_args) = args$
+func_diff_arg_type(func_diff_args) = typ$
+END SUB
+
 FUNCTION parse_args$(arg$)
 print "Parsing"
 arg2$ = ucase$(strip_line$(arg$))
@@ -697,16 +790,31 @@ parse_args$ = arg4$
 END FUNCTION
 
 SUB reg_func (nam$, args$, ret$)
-
+function_count = function_count + 1
+if function_count >= UBOUND(func_names) then
+  REDIM _PRESERVE func_names(UBOUND(func_names) + 100) AS STRING
+  REDIM _PRESERVE func_names(UBOUND(func_args) + 100) AS STRING
+  REDIM _PRESERVE func_number(ubound(func_number) + 100) AS LONG
+  REDIM _PRESERVE func_type(ubound(func_type) + 100) AS STRING
+end if
+func_names(function_count) = nam$
+func_args(function_count) = parse_args$(args$)
+func_type(function_count) = ret$
+find_high = 0
+flag = 0
+FOR x = 1 to function_count - 1
+  if func_args(x) = func_args(function_count) and find_high < func_number(x) and func_type(x) = func_type(function_count) then
+    find_high = func_number(x)
+    flag = -1
+    exit for
+  end if
+NEXT x
+func_number(function_count) = find_high + 1
+if flag = 0 then func_reg_arg func_args(function_count), func_type(function_count)
+'PRINT "Adding sub:"; sub_names(sub_count)
+'print "Args:"; sub_args(sub_count)
+'print "Count:"; sub_number(sub_count)
 END SUB
-
-'FUNCTION find_sub (nam$)
-
-'END FUNCTION
-
-'FUNCTION find_func (nam$)
-
-'END FUNCTION
 
 FUNCTION strip_comment$(s$)
 in_quote = 0
@@ -726,12 +834,20 @@ strip_comment$ = s$
 'print "STRIP:"; s$
 END FUNCTION
 
+FUNCTION remove_suffix$(s$)
+suff$ = "!#$%&`~"
+FOR x = 1 to len(s$)
+  if instr(suff$, mid$(s$, x, 1)) > 0 then remove_suffix$ = mid$(s$, 1, x - 1): exit function
+next x
+remove_suffix$ = s$
+END FUNCTION
+
 SUB add_pointer_defs
 print #255, "DECLARE CUSTOMTYPE LIBRARY " + qq$(ptrs_file$) + line_end$;
 
 PRINT "Adding pointers"
 for x = 1 to sub_count
-  print #255, "  FUNCTION "; ucase$(sub_names(x)); "_ptr%& ()"
+  print #255, "  FUNCTION "; var_prefix$; ucase$(sub_names(x)); "_ptr%& ()"
   'print #256, "extern void SUB_"; ucase$(sub_names(x)); "(";
   'a$ = sub_args(x)
   'DO until instr(a$, chr$(13)) <= 0
@@ -743,11 +859,17 @@ for x = 1 to sub_count
   'end if
   '
   'print #256, ");";
-  print #256, "inline void *"; ucase$(sub_names(x)); "_ptr () {";
+  print #256, "void *"; var_prefix$; ucase$(sub_names(x)); "_ptr () {";
   print #256, "  return (void*)(SUB_"; ucase$(sub_names(x)); ");}"
 next x
+for x = 1 to function_count
+  print #255, "  FUNCTION "; var_prefix$; ucase$(func_names(x)); "_ptr%& ()"
+  
+  print #256, "void *"; var_prefix$; ucase$(func_names(x)); "_ptr () {";
+  print #256, "  return (void*)(FUNC_"; ucase$(func_names(x)); ");}"
+next x
 for x = 1 to sub_diff_args
-  print #255, "  SUB call_"; replace$(diff_arg_list(x), chr$(13), "_"); "( BYVAL va AS _OFFSET, ";
+  print #255, "  SUB " + var_prefix$ + call_prefix$; replace$(diff_arg_list(x), chr$(13), "_"); "( BYVAL va AS _OFFSET, ";
   a$ = diff_arg_list(x)
   c = 65
   DO until instr(a$, chr$(13)) <= 0
@@ -757,7 +879,7 @@ for x = 1 to sub_diff_args
   LOOP 
   if a$ > "" then print #255, chr$(c) + " AS " + a$;
   print #255, ")" + line_end$;
-  print #256, "inline void call_"; replace$(diff_arg_list(x), chr$(13), "_"); "( void* func, ";
+  print #256, "void "; var_prefix$; call_prefix$; replace$(diff_arg_list(x), chr$(13), "_"); "( void* func, ";
   a$ = diff_arg_list(x)
   c = 65
   DO until instr(a$, chr$(13)) <= 0
@@ -766,7 +888,7 @@ for x = 1 to sub_diff_args
     c = c + 1
   LOOP 
   if a$ > "" then print #256, get_c_type_ptr_from_qb_type$(a$); " "; chr$(c);
-  print #256, ") {"; line_end$;
+  print #256, ") {"; 
   print #256, "((void(*)(";
   arg_ls$ = ""
   a$ = diff_arg_list(x)
@@ -782,54 +904,45 @@ for x = 1 to sub_diff_args
   print #256, "))(func))("; arg_ls$; ");}"
 next x
 
+
+for x = 1 to func_diff_args
+  print #255, "  FUNCTION " + var_prefix$ + call_prefix$; func_diff_arg_type(x); "_"; replace$(func_diff_arg_list(x), chr$(13), "_"); get_suffix_from_type$(func_type(x)); "( BYVAL va AS _OFFSET, ";
+  a$ = func_diff_arg_list(x)
+  c = 65
+  DO until instr(a$, chr$(13)) <= 0
+    print #255, chr$(c) + " AS " + mid$(a$, 1, instr(a$, chr$(13)) - 1) + ", ";
+    a$ = mid$(a$, instr(a$, chr$(13)) + 1)
+    c = c + 1
+  LOOP 
+  if a$ > "" then print #255, chr$(c) + " AS " + a$;
+  print #255, ")" + line_end$;
+  print #256, get_c_type_from_qb_type$(func_type(x)); " "; var_prefix$; call_prefix$; func_diff_arg_type(x); "_"; replace$(func_diff_arg_list(x), chr$(13), "_"); "( void* func, ";
+  a$ = func_diff_arg_list(x)
+  c = 65
+  DO until instr(a$, chr$(13)) <= 0
+    print #256, get_c_type_from_qb_type$(mid$(a$, 1, instr(a$, chr$(13)) - 1)); " "; chr$(c); ", ";
+    a$ = mid$(a$, instr(a$, chr$(13)) + 1)
+    c = c + 1
+  LOOP 
+  if a$ > "" then print #256, get_c_type_from_qb_type$(a$); " "; chr$(c);
+  print #256, ") {";
+  print #256, "return (("; get_c_type_from_qb_type$(func_type(x)); "(*)(";
+  arg_ls$ = ""
+  a$ = func_diff_arg_list(x)
+  c = 65
+  DO until instr(a$, chr$(13)) <= 0
+    print #256, get_c_type_from_qb_type$(mid$(a$, 1, instr(a$, chr$(13)) - 1)); ", ";
+    a$ = mid$(a$, instr(a$, chr$(13)) + 1)
+    if arg_ls$ > "" then arg_ls$ = arg_ls$ + ","
+    arg_ls$ = arg_ls$ + chr$(c)
+    c = c + 1
+  LOOP 
+  if a$ > "" then print #256, get_c_type_from_qb_type$(a$);: if arg_ls$ > "" then arg_ls$ = arg_ls$ + "," + chr$(c) else arg_ls$ = chr$(c)
+  print #256, "))(func))("; arg_ls$; ");}"
+next x
+
 print #255, "END DECLARE"; line_end$;
 END SUB
-
-
-SUB add_sub_pointer_defs
-PRINT "Adding pointers"
-DIM sub_list$(sub_diff_args), sub_new_arg$(sub_diff_args)
-DIM list_count(sub_diff_args) AS LONG
-for x = 1 to sub_count
-  found = 0
-  for y = 1 to sub_diff_args
-    if sub_new_arg$(y) = "" then
-      sub_list$(y) = "SUB " + var_prefix$ + replace$(sub_args(x), chr$(13), "_") + "(va AS LONG, "
-      a$ = sub_args(x)
-      c = 65
-      DO until instr(a$, chr$(13)) <= 0
-        sub_list$(y) = sub_list$(y) + chr$(c) + " AS " + mid$(a$, 1, instr(a$, chr$(13)) - 1) + ", "
-        a$ = mid$(a$, instr(a$, chr$(13)) + 1)
-        c = c + 1
-      LOOP 
-      sub_list$(y) = sub_list$(y) + chr$(c) + " AS " + a$ + ")" + line_end$ + "SELECT CASE va" + line_end$
-      sub_new_arg$(y) = sub_args(x)
-      found = -1
-    end if
-    if sub_new_arg$(y) = sub_args(x) then
-      sub_list$(y) = sub_list$(y) + "  CASE " + str$(sub_number(x)) + line_end$
-      sub_list$(y) = sub_list$(y) + "    " + sub_names(x) + " "
-      a$ = sub_args(x)
-      c = 65
-      DO until instr(a$, chr$(13)) <= 0
-        sub_list$(y) = sub_list$(y) + chr$(c) + "," '+ " AS " + mid$(a$, 1, instr(a$, chr$(13)) - 1) + ", "
-        a$ = mid$(a$, instr(a$, chr$(13)) + 1)
-        c = c + 1
-      LOOP
-      sub_list$(y) = sub_list$(y) + chr$(c) + line_end$ '+ " AS " + a$ + line_end$
-      found = -1
-    end if
-    if found then exit for
-  next y
-next x
-
-for x = 1 to sub_diff_args - 1
-  sub_list$(x) = sub_list$(x) + line_end$ + "END SELECT" + line_end$ + "END SUB" + line_end$
-  'print "SUB:"; sub_list$(x)
-  print #255, sub_list$(x)
-next x
-
-end sub
 
 FUNCTION get_type_name$ (s$)
 alph$ = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
@@ -861,6 +974,7 @@ if s2$ = "%%" then get_type_from_suffix$ = "_BYTE" : exit function
 if s2$ = "##" then get_type_from_suffix$ = "_FLOAT" : exit function 
 if s2$ = "%&" then get_type_from_suffix$ = "_OFFSET" : exit function
 if s2$ = "$"  then get_type_from_suffix$ = "STRING" : exit function
+get_type_from_suffix$ = "SINGLE"
 END FUNCTION
 
 FUNCTION get_suffix_from_type$ (s$)
@@ -893,6 +1007,21 @@ if s2$ = "STRING"  then get_c_type_ptr_from_qb_type$ = "char*"  : exit function
 get_c_type_ptr_from_qb_type$ = "float*"
 END FUNCTION
 
+FUNCTION get_c_type_from_qb_type$ (s$)
+if instr(s$, "_UNSIGNED") then s2$ = mid$(s$, instr(s$, "_UNSIGNED") + len("_UNSIGNED")) else s2$ = s$
+if s2$ = "INTEGER" then get_c_type_from_qb_type$ = "short" : exit function 
+if s2$ = "LONG"    then get_c_type_from_qb_type$ = "int" : exit function 
+if s2$ = "SINGLE"  then get_c_type_from_qb_type$ = "float" : exit function 
+if s2$ = "DOUBLE"  then get_c_type_from_qb_type$ = "double" : exit function 
+if s2$ = "_INTEGER64" then get_c_type_from_qb_type$ = "long long" : exit function 
+if s2$ = "_BIT"    then get_c_type_from_qb_type$ = "char" : exit function 
+if s2$ = "_BYTE"   then get_c_type_from_qb_type$ = "char" : exit function 
+if s2$ = "_FLOAT"  then get_c_type_from_qb_type$ = "long double" : exit function 
+if s2$ = "_OFFSET" then get_c_type_from_qb_type$ = "void*" : exit function 
+if s2$ = "STRING"  then get_c_type_from_qb_type$ = "char*"  : exit function 
+get_c_type_from_qb_type$ = "float"
+END FUNCTION
+
 FUNCTION qq$(s$)
 qq$ = chr$(34) + s$ + chr$(34)
 END FUNCTION
@@ -909,3 +1038,5 @@ else
   replace_with_case$ = s$
 end if
 END FUNCTION
+
+'$include:'mem_library/mem_lib.bm'

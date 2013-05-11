@@ -1,0 +1,9 @@
+
+!!if not defined __GUI_EVENTS_STD_EVENT_BM__
+!!define __GUI_EVENTS_STD_EVENT_BM__
+
+'$include:'event_object.bm'
+'$include:'key.bm'
+'$include:'mouse.bm'
+
+!!endif

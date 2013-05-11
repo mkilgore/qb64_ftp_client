@@ -1,8 +1,8 @@
 
-@if not defined __GUI_EVENTS_MOUSE_BM__
-@define __GUI_EVENTS_MOUSE_BM__
+!!if not defined __GUI_EVENTS_MOUSE_BM__
+!!define __GUI_EVENTS_MOUSE_BM__
 
 
 
-@endif
+!!endif
 

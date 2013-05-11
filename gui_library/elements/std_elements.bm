@@ -1,6 +1,6 @@
 
-@if not defined __GUI_ELEMENTS_STD_ELEMENTS_BM__
-@define __GUI_ELEMENTS_STD_ELEMENTS_BM__
+!!if not defined __GUI_ELEMENTS_STD_ELEMENTS_BM__
+!!define __GUI_ELEMENTS_STD_ELEMENTS_BM__
 
 '$include:'container.bm'
 '$include:'hbox_layout.bm'
@@ -13,4 +13,4 @@
 '$include:'frame.bm'
 '$include:'window.bm'
 
-@endif
+!!endif

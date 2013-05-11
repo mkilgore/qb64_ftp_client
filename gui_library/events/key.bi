@@ -1,6 +1,6 @@
 
-@if not defined __GUI_EVENTS_KEY_BI__
-@define __GUI_EVENTS_KEY_BI__
+!!if not defined __GUI_EVENTS_KEY_BI__
+!!define __GUI_EVENTS_KEY_BI__
 
 
 @REGISTER GUI_EVENT GUI_EVENT_KEY
@@ -11,5 +11,5 @@ TYPE GUI_event_key '6
   flags AS _UNSIGNED INTEGER
 END TYPE
 
-@endif
+!!endif
 

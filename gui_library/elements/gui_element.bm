@@ -1,22 +1,37 @@
 
-@if not defined __GUI_OBJECTS_GUI_ELEMENT_BM__
-@define __GUI_OBJECTS_GUI_ELEMENT_BM__
+!!if not defined __GUI_OBJECTS_GUI_ELEMENT_BM__
+!!define __GUI_OBJECTS_GUI_ELEMENT_BM__
 
-'$include:'signal_object.bm'
+FUNCTION GUI_element_get_type& ()
+STATIC added
+DIM t as OBJ_type_info
+if added = 0 then
+  t.class_size = LEN(GUI_element_class, TYPE)
+  t.base_size = LEN(GUI_element, TYPE)
+  t.init = @SUB(GUI_element_init)
+  t.destroy = @SUB(GUI_element_destroy)
+  t.super = OBJ_ref_Object_get_type&
+  added = OBJ_type_register_type&(t)
+end if
+GUI_element_get_type& = added
+END FUNCTION
 
 SUB GUI_element_init (this as _OFFSET)
-GUI_signal_init this
-@(this, GUI_element.img) = GUI_IMAGE_NULL AS LONG
-@(this, GUI_element.parent) = GUI_NULL AS _OFFSET
-@(this, GUI_element.drw) = GUI_NULL AS @PROC
+DIM class AS _OFFSET
+class = OBJ_Object_get_class%&(this)
+
+@(this, GUI_element.img) =    GUI_IMAGE_NULL AS LONG
+@(this, GUI_element.parent) = OBJ_NULL AS _OFFSET
+
+@(class, GUI_element_class.drw) = OBJ_NULL AS @PROC
+
 END SUB
 
-SUB GUI_element_clear (this as _OFFSET)
+SUB GUI_element_destroy (this as _OFFSET)
 if @(this, GUI_element.img, LONG) <> -1 then
   _FREEIMAGE @(this, GUI_element.img, LONG)
 end if
 GUI_element_remove_parent this
-GUI_signal_clear this
 END SUB
 
 FUNCTION GUI_element_get_element_type& (this as _OFFSET)
@@ -43,12 +58,12 @@ SUB GUI_element_create_image (this as _OFFSET)
 if @(this, GUI_element.img, LONG) <> -1 then 
   _FREEIMAGE @(this, GUI_element.img, LONG)
 end if
-@if defined GUI_TEXT
+!!if defined GUI_TEXT
   '_MEMPUT FAKE_MEM, this + _OFFSET(GUI_element.img, TYPE), _NEWIMAGE(_MEMGET(FAKE_MEM, this + _OFFSET(GUI_element.size.hei, type), LONG), _MEMGET(FAKE_MEM, this + _OFFSET(GUI_element.size.wid, LONG)))
   i& = _NEWIMAGE(@(this, GUI_element.dimension.hei, LONG), @(this, GUI_element.dimension.wid, LONG), 0)
-@else
+!!else
   i& = _NEWIMAGE(@(this, GUI_element.dimension.hei, LONG), @(this, GUI_element.dimension.wid, LONG), 32)
-@endif
+!!endif
 @(this, GUI_element.img) = i&
 END SUB
 
@@ -68,21 +83,23 @@ GUI_element_create_image this
 END SUB
 
 SUB GUI_element_add_parent (this as _OFFSET, parent AS _OFFSET)
-@(this, GUI_element.parent) = GUI_ref_Object_get_ref%&(parent) AS _OFFSET
+@(this, GUI_element.parent) = OBJ_ref_Object_get_ref%&(parent) AS _OFFSET
 END SUB
 
 SUB GUI_element_remove_parent (this as _OFFSET)
 if @(this, GUI_element.parent, _OFFSET) <> 0 then
-  GUI_ref_Object_release_ref @(this, GUI_element.parent, _OFFSET)
+  OBJ_ref_Object_release_ref @(this, GUI_element.parent, _OFFSET)
   @(this, GUI_element.parent) = 0 AS _OFFSET
 end if
 END SUB
 
 SUB GUI_element_set_draw_proc (this as _OFFSET, pro as @PROC)
-@(this, GUI_element.drw) = pro AS @PROC
+DIM class as _OFFSET
+class = OBJ_Object_get_class%&(this)
+@(class, GUI_element_class.drw) = pro AS @PROC
 END SUB
 
-@if defined GUI_TEXT
+!!if defined GUI_TEXT
 
   SUB GUI_element_set_location (this as _OFFSET, row as _UNSIGNED LONG, col AS _UNSIGNED LONG)
   @(this, GUI_element.dimension.row) = row
@@ -105,7 +122,7 @@ END SUB
   GUI_element_get_col& = @(this, GUI_element.dimension.col, LONG)
   END FUNCTION
 
-@else
+!!else
 
   'Note -- Will probably be ignored if not using a fixed layout
   SUB GUI_element_set_location (this AS _OFFSET, x AS _UNSIGNED LONG, y AS _UNSIGNED LONG)
@@ -129,6 +146,6 @@ END SUB
   GUI_element_get_y& = @(this, GUI_element.dimension.y, LONG)
   END FUNCTION
 
-@endif
+!!endif
 
-@endif
+!!endif

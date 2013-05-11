@@ -185,3 +185,10 @@ MEM_ini64_from_off&& = i
 $checking:on
 END FUNCTION
 
+FUNCTION MEM_MALLOC0%& (bytes as LONG)
+$CHECKING:OFF
+DIM o as _OFFSET
+o = MEM_MALLOC%&(bytes)
+MEM_MEMSET o, 0, bytes
+$CHECKING:ON
+END FUNCTION

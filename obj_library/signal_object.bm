@@ -1,0 +1,189 @@
+
+'@@
+'@File   signal_object.bm
+'@author DSMan195276
+'@date   May 6th, 2013
+'
+'Functionality for the Signals system.
+'
+'@@
+
+
+!!if not defined __OBJ_OBJECTS_SIGNAL_OBJECT_BM__
+!!define __OBJ_OBJECTS_SIGNAL_OBJECT_BM__
+
+'$include:'ref_object.bm'
+
+FUNCTION OBJ_signal_get_type& ()
+STATIC added
+DIM t as OBJ_type_info
+IF added = 0 then
+  t.class_size = LEN(OBJ_signal_class, TYPE)
+  t.base_size = LEN(OBJ_signal, TYPE)
+  t.init = @SUB(OBJ_signal_init)
+  t.destroy = @SUB(OBJ_signal_destroy)
+  t.super = OBJ_ref_object_get_type&
+  added = OBJ_type_register_type&(t)
+end if
+OBJ_signal_get_type& = added
+END FUNCTION
+
+'@@
+'@Brief Initalizes a OBJ_signal Object and assigns starting signal and connection ID numbers
+'
+'@param[in] _OFFSET to the OBJ_signal object to initalize 
+'@@
+SUB OBJ_signal_init (this as _OFFSET)
+@(this, OBJ_Signal.next_connection_id) = 1 AS LONG
+@(this, OBJ_Signal.next_signal_id) = 1 AS LONG
+END SUB
+
+'@@
+'@Brief Clears a OBJ_signal object and prepares it to be deleted
+'
+'It calls OBJ_signal_clear_signals to detach any signals and connections and then
+'calls OBJ_ref_object's clear procedure
+'
+'@param[in] _OFFSET to the OBJ_signal object to clear
+'@@
+
+SUB OBJ_signal_clear (this as _OFFSET)
+OBJ_signal_clear_signals this
+END SUB
+
+SUB OBJ_signal_clear_signals (this as _OFFSET)
+
+END SUB
+
+SUB OBJ_signal_disconnect (this as _OFFSET, id as _UNSIGNED LONG)
+
+END SUB
+
+SUB OBJ_connection_disconnect (this as _OFFSET, id as _UNSIGNED LONG)
+
+END SUB
+
+FUNCTION OBJ_get_signal_id& (this as _OFFSET, n$)
+$CHECKING:OFF
+DIM sig as _OFFSET, m as MEM_string
+sig = @(this, OBJ_Signal.first_signal, _OFFSET)
+DO WHILE sig <> 0
+  m = @(sig, OBJ_Signal_node.signal_name, MEM_String)
+  if MEM_get_str$(m) = n$ then
+    OBJ_get_signal_id& = @(sig, OBJ_Signal_node.id, LONG)
+    exit function
+  end if
+  sig = @(sig, OBJ_Signal_node.next_signal, _OFFSET)
+LOOP
+$CHECKING:ON
+END FUNCTION
+
+'@@
+'
+'@Brief Connects a procedure and data pointer to a signal on this object
+'
+'It loops through the linked-list of signals in the OBJ_signal object until it
+'finds the signal with the correct name. From there it calls
+'OBJ_signal_attach_to_signal to create the connection to the signal and returns
+'the result of the call to OBJ_signal_attach_to_signal --> This is the ID of the
+'connection to the OBJ_signal object.
+'
+'@Param[in] Object of type 'OBJ_Signal', the object you want to connect to
+'@Param[in] Name of the signal to connect to
+'@Param[in] To procedure to run when signal is emitted
+'@Param[in] _OFFSET to pass when pro is called along with the object who emitted
+'           the signal. Can be OBJ_NULL if not used by pro
+'
+'@Return 0 if unable to make a connection (The signal wasn't found) otherwise
+'        returns the ID number of the connection to this object
+'@@
+
+FUNCTION OBJ_signal_connect& (this as _OFFSET, n$, pro as @PROC, dat as _OFFSET)
+$CHECKING:OFF
+DIM sig as _OFFSET, m as MEM_string
+sig = @(this, OBJ_Signal.first_signal, _OFFSET)
+DO while sig <> 0
+  m = @(sig, OBJ_signal_node.signal_name, MEM_string)
+  if MEM_get_str$(m) = n$ then
+    OBJ_signal_connect& = OBJ_signal_attach_to_signal&(this, sig, pro, dat)
+    exit function
+  end if
+  sig = @(sig, OBJ_signal_node.next_signal, _OFFSET)
+loop
+$CHECKING:ON
+END FUNCTION
+
+FUNCTION OBJ_signal_connect_with_id& (this as _OFFSET, id as _UNSIGNED LONG, pro as @PROC, dat as _OFFSET)
+$CHECKING:OFF
+DIM sig as _OFFSET, m as MEM_string
+sig = @(this, OBJ_Signal.first_signal, _OFFSET)
+DO while sig <> 0
+  if @(sig, OBJ_signal_node.id, LONG) = id then
+    OBJ_signal_connect_with_id& = OBJ_signal_attach_to_signal&(this, sig, pro, dat)
+    exit function
+  end if
+  sig = @(sig, OBJ_signal_node.next_signal, _OFFSET)
+loop
+$CHECKING:ON
+END FUNCTION
+
+'@@
+'@Brief Creates a new OBJ_signal_connection_node, initalizes it, and attaches it to 'sig'
+'
+'Allocates memory for a new OBJ_signal_connection_node and assigns it its @PROC (pro),
+'data _OFFSET (dat), and ID number. It then 
+'
+'@@
+
+FUNCTION OBJ_signal_attach_to_signal& (this as _OFFSET, sig as _OFFSET, pro as @PROC, dat as _OFFSET)
+$CHECKING:OFF
+DIM new_connect AS _OFFSET
+new_connect = MEM_MALLOC%&(LEN(OBJ_signal_connection_node, TYPE))
+@(new_connect, OBJ_signal_connection_node.notify_proc) = pro AS @PROC
+@(new_connect, OBJ_signal_connection_node.id) = @(this, OBJ_Signal.next_connection_id, LONG) AS LONG
+@(new_connect, OBJ_signal_connection_node.dat) = dat
+@(new_connect, OBJ_signal_connection_node.next_connection) = @(sig, OBJ_signal_node.first_connection, _OFFSET) AS _OFFSET
+@(sig, OBJ_signal_node.first_connection) = new_connect
+@(this, OBJ_Signal.next_connection_id) = @(this, OBJ_Signal.next_connection_id, LONG) + 1 AS LONG
+OBJ_Signal_attach_to_signal& = @(new_connect, OBJ_signal_connection_node.id, LONG)
+$CHECKING:ON
+END FUNCTION
+
+
+FUNCTION OBJ_signal_add_new_signal& (this as _OFFSET, n$)
+DIM sig as _OFFSET, m as MEM_string, last as _OFFSET
+sig = MEM_MALLOC%&(LEN(OBJ_signal, TYPE))
+MEM_put_str m, n$
+@(sig, OBJ_signal_node.signal_name) = m
+@(sig, OBJ_signal_node.first_connection) = 0 AS LONG
+@(this, OBJ_Signal.next_signal_id) = @(this, OBJ_Signal.next_signal_id, LONG) + 1 AS LONG
+@(sig, OBJ_signal_node.id) = @(this, OBJ_Signal.next_signal_id, LONG) AS LONG
+@(sig, OBJ_signal_node.next_signal) = @(this, OBJ_Signal.first_signal, _OFFSET) AS _OFFSET
+@(this, OBJ_signal.first_signal) = sig
+OBJ_signal_add_new_signal& = @(sig, OBJ_signal_node.id, LONG)
+END FUNCTION
+
+SUB OBJ_signal_emit (this as _OFFSET, n$)
+$CHECKING:OFF
+DIM of as _OFFSET, m as MEM_string
+DIM off2 AS _OFFSET, pro as @PROC
+of = @(this, OBJ_Signal.first_signal, _OFFSET)
+DO while of <> 0
+  m = @(of, OBJ_signal_node.signal_name, MEM_String)
+  if MEM_get_str$(m) = n$ then
+    @debug_print "Emitting signal" + n$
+    'Found currect signal, loop through and call all connected functions
+    off2 = @(of, OBJ_signal_node.first_connection, _OFFSET)
+    DO WHILE off2 <> 0
+      @call(_OFFSET, _OFFSET) @(off2, OBJ_signal_connection_node.notify_proc, @PROC), this, @(off2, OBJ_signal_connection_node.dat, _OFFSET)
+      off2 = @(off2, OBJ_signal_connection_node.next_connection, @PROC)
+    loop 
+    EXIT SUB
+  end if
+  of = @(of, OBJ_signal_node.next_signal, _OFFSET)
+LOOP 
+$CHECKING:ON
+'Signal wasn't found, so just exit SUB
+END SUB
+
+!!endif

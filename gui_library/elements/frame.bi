@@ -1,6 +1,6 @@
 
-@if not defined __GUI_ELEMENTS_FRAME_BI__
-@define __GUI_ELEMENTS_FRAME_BI__
+!!if not defined __GUI_ELEMENTS_FRAME_BI__
+!!define __GUI_ELEMENTS_FRAME_BI__
 
 '$include:'container.bi'
 
@@ -14,4 +14,4 @@ TYPE GUI_element_frame
   @END_BITFLAGS  
 END TYPE
 
-@endif
+!!endif

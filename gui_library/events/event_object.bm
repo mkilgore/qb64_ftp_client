@@ -1,0 +1,18 @@
+
+!!if not defined __GUI_OBJECTS_EVENT_OBJECT_BM__
+!!define __GUI_OBJECTS_EVENT_OBJECT_BM__
+
+FUNCTION GUI_event_get_type& ()
+
+END FUNCTION
+
+SUB GUI_event_init (this as _OFFSET)
+
+END SUB
+
+SUB GUI_event_destroy (this as _OFFSET)
+
+END SUB
+
+
+!!endif

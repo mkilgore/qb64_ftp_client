@@ -1,31 +1,46 @@
 
-@if not defined __GUI_ELEMENTS_CONTAINER_BM__
-@define __GUI_ELEMENTS_CONTAINER_BM__
+!!if not defined __GUI_ELEMENTS_CONTAINER_BM__
+!!define __GUI_ELEMENTS_CONTAINER_BM__
+
+'$include:'gui_element.bm'
+
+FUNCTION GUI_element_container_get_type& ()
+STATIC added
+DIM t as OBJ_type_info
+if added = 0 then
+  t.class_size = LEN(GUI_element_container_class, TYPE)
+  t.base_size = LEN(GUI_element_container, TYPE)
+  t.init = @SUB(GUI_element_container_init)
+  t.destroy = @SUB(GUI_element_container_destroy)
+  t.super = GUI_element_Object_get_type&
+  added = OBJ_type_register_type&(t)
+end if
+GUI_element_container_get_type& = added
+END FUNCTION
 
 SUB GUI_element_container_init (this as _OFFSET)
-GUI_element_init this
+
 END SUB
 
-SUB GUI_element_container_clear (this as _OFFSET)
+SUB GUI_element_container_destroy (this as _OFFSET)
 if @(this, GUI_element_container.element, _OFFSET) <> 0 then
   GUI_element_container_remove this
 end if
-GUI_element_clear this
 END SUB
 
 SUB GUI_element_container_add (this as _OFFSET, obj as _OFFSET)
-@(this, GUI_element_container.element) = GUI_ref_Object_get_ref%&(obj) AS _OFFSET
+@(this, GUI_element_container.element) = OBJ_ref_Object_get_ref%&(obj) AS _OFFSET
 @(this, GUI_element_container.flags) = @(this, GUI_element_container.flags, LONG) OR GUI_CONTAINER_FLAG_ADDED_ELEMENT AS LONG
 END SUB
 
 SUB GUI_element_container_remove (this as _OFFSET)
-GUI_ref_Object_release_ref @(this, GUI_element_container.element, _OFFSET)
+OBJ_ref_Object_release_ref @(this, GUI_element_container.element, _OFFSET)
 @(this, GUI_element_container.element) = 0 AS _OFFSET
 @(this, GUI_element_container.flags) = @(this, GUI_element_container.flags, LONG) AND NOT GUI_CONTAINER_FLAG_ADDED_ELEMENT AS LONG
 END SUB
 
-FUNCTION GUI_element_container_get_contained%& (this as _OFFSET)
-GUI_element_container_get_contained%& = @(this, GUI_element_container.element, _OFFSET)
+FUNCTION GUI_element_container_get_ele%& (this as _OFFSET)
+GUI_element_container_get_ele%& = @(this, GUI_element_container.element, _OFFSET)
 END FUNCTION
 
-@endif
+!!endif

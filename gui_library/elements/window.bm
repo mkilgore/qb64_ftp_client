@@ -1,36 +1,34 @@
 
-@if not defined __GUI_ELEMENTS_WINDOW_BM__
-@define __GUI_ELEMENTS_WINDOW_BM__
+!!if not defined __GUI_ELEMENTS_WINDOW_BM__
+!!define __GUI_ELEMENTS_WINDOW_BM__
 
 '$include:'container.bm'
 
 FUNCTION GUI_element_window_new%&()
-GUI_element_window_new%& = GUI_element_window_new_with_size_title%&(25, 80, "")
+GUI_element_window_new%& = GUI_element_window_new_s_title%&(25, 80, "")
 END FUNCTION
 
 
-FUNCTION GUI_element_window_new_with_size%&(row as LONG, col AS LONG)
-GUI_element_window_new_with_size%& = GUI_element_window_new_with_size_title%&(row, col, "")
+FUNCTION GUI_element_window_new_size%&(row as LONG, col AS LONG)
+GUI_element_window_new_size%& = GUI_element_window_new_with_size_title%&(row, col, "")
 END FUNCTION
 
-FUNCTION GUI_element_window_new_with_size_title%&(row as LONG, col as LONG, title$)
+FUNCTION GUI_element_window_new_s_title%&(row as LONG, col as LONG, title$)
 DIM this as _OFFSET
 this = MEM_MALLOC%&(LEN(GUI_element_window, TYPE))
-MEM_MEMSET this, LEN(GUI_element_window, TYPE), 0
-
+MEM_MEMSET this, 0, LEN(GUI_element_window, TYPE)
 GUI_element_window_init this
 GUI_element_window_set_size this, row, col
 GUI_element_window_set_title this, title$
-GUI_element_window_new_with_size_title%& = this
+GUI_element_window_new_s_title%& = this
 END FUNCTION
 
 SUB GUI_element_window_init (this as _OFFSET)
-GUI_element_container_init this
 GUI_element_set_draw_proc this, @SUB(GUI_element_window_draw)
 GUI_ref_Object_set_delete_proc this, @SUB(GUI_element_window_delete)
 END SUB
 
-SUB GUI_element_window_set_as_screen (this as _OFFSET)
+SUB GUI_element_window_screen (this as _OFFSET)
 GUI_element_show this
 SCREEN GUI_element_get_image&(this)
 END SUB
@@ -68,7 +66,7 @@ MEM_FREE this
 END SUB
 
 SUB GUI_element_window_clear (this as _OFFSET)
-GUI_element_container_clear this
+
 END SUB
 
-@endif
+!!endif

@@ -1,6 +1,6 @@
 
-@if not defined __GUI_LIB2_BI__
-@define __GUI_LIB2_BI__
+!!if not defined __GUI_LIB2_BI__
+!!define __GUI_LIB2_BI__
 
 'Setup library wide constants
 
@@ -95,35 +95,30 @@ CONST GUI_KEY_CODE_ENTER            = 13
 CONST GUI_KEY_CODE_SPACE            = 32
 
 TYPE GUI_dimension
-@if defined GUI_TEXT
+!!if defined GUI_TEXT
   row AS _UNSIGNED LONG 
   col as _UNSIGNED LONG
-@else
+!!else
   x AS _UNSIGNED LONG
   y AS _UNSIGNED LONG
-@endif
+!!endif
   wid AS _UNSIGNED LONG
   hei AS _UNSIGNED LONG
 END TYPE
 
 TYPE GUI_color
-@if defined GUI_TEXT
+!!if defined GUI_TEXT
   f as _unsigned _byte
   b as _unsigned _byte
-@else
+!!else
   a AS _UNSIGNED _BYTE
   r AS _UNSIGNED _BYTE
   g AS _UNSIGNED _BYTE
   b AS _UNSIGNED _BYTE
-@endif
+!!endif
 END TYPE
 
-'$include:'objects/ref_object.bi'
-'$include:'objects/signal_object.bi'
-'$include:'objects/event_object.bi'
-'$include:'objects/gui_element.bi'
+''$include:'objects/std_objects.bi'
+'$include:'events/std_events.bi'
 
-'$include:'events/key.bi'
-'$include:'events/mouse.bi'
-
-@endif
+!!endif

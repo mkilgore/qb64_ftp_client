@@ -1,36 +1,47 @@
 
-SUB sort_dir_listing (f() AS filedir_type, file_num)
+SUB FILE_get_files (di$, fil() as FILE_filedir, count as long)
+DIM flags AS LONG, file_size AS LONG
+IF FILE_load_dir&(di$) then
+  count = 0
+  DO
+    length = FILE_has_next_entry
+    if length > -1 then
+      nam$ = space$(length)
+      FILE_get_next_entry nam$, flags, file_size
+      count = count + 1
+      fil(count).flags = flags
+      fil(count).size = file_size
+      MEM_put_str fil(count).nam, nam$
+    end if
+  LOOP until length = -1
+  FILE_close_dir
+end if
+END SUB
+
+SUB FILE_sort_dir_listing (f() AS FILE_filedir, file_num)
 'quicksort type of thing. First, move all of the DIR's to the top
 nex = 0
-DO: nex = nex + 1: loop until nex = file_num or MEM_get_Str$(f(nex).nam) = ".."
-if MEM_Get_str$(f(nex).nam) = ".." then swap f(nix), f(1)
-nex = 0
-DO: nex = nex + 1: LOOP UNTIL NOT f(nex).flag_cwd OR nex = file_num 'loop until f(nex) is not a directory
+DO: nex = nex + 1: LOOP UNTIL ((f(nex).flags AND FILE_IS_DIR) = 0) OR nex = file_num 'loop until f(nex) is not a directory
 m = nex + 1
 IF m < file_num THEN
   FOR x = m TO file_num 'loop through files
-    IF f(x).flag_cwd THEN 'found a directory
+    IF f(x).flags AND FILE_IS_DIR THEN 'found a directory
       SWAP f(nex), f(x) 'swap the directory we found with the first entry that's not a directory, so we move the directory to the top
-      DO: nex = nex + 1: LOOP UNTIL NOT f(nex).flag_cwd OR nex > file_num 'find the next non-directory
+      DO: nex = nex + 1: LOOP UNTIL ((f(nex).flags AND FILE_IS_DIR)= 0) OR nex > file_num 'find the next non-directory
       x = nex + 1
     END IF
   NEXT x
 END IF
 'nex now equals the very last DIRectory
-'_AUTODISPLAY
-'cls
-'print "NEX="; nex
-'print "X  ="; x
-'sleep
 IF nex > 4 AND nex < file_num - 1 THEN
-  quick_sort_filedir_type f(), 2, nex - 1
+  FILE_quick_sort_filedir_type f(), 2, nex - 1
 END IF
 IF nex < file_num - 1 THEN
-  quick_sort_filedir_type f(), nex, file_num
+  FILE_quick_sort_filedir_type f(), nex, file_num
 END IF
 END SUB
 
-SUB quick_sort_filedir_type (f() AS filedir_type, low, high)
+SUB FILE_quick_sort_filedir_type (f() AS FILE_filedir, low, high)
 IF low < high THEN
   IF high - low = 1 THEN
     IF LCASE$(MEM_get_str$(f(low).nam)) > LCASE$(MEM_get_str$(f(high).nam)) THEN
@@ -54,25 +65,14 @@ IF low < high THEN
       END IF
     LOOP WHILE l < h
     SWAP f(l), f(high)
-    quick_sort_filedir_type f(), low, l - 1
-    quick_sort_filedir_type f(), l + 1, high
+    FILE_quick_sort_filedir_type f(), low, l - 1
+    FILE_quick_sort_filedir_type f(), l + 1, high
   END IF
 END IF
 END SUB
 
-
-SUB get_new_dir () 'Uses SHELL to get the current dir
-IF opper$ = "NIX" THEN
-  SHELL _HIDE "pwd > /tmp/dirtmp.tmp"
-  OPEN "/tmp/dirtmp.tmp" FOR INPUT AS #1
-  LINE INPUT #1, Local_dir$
-  CLOSE #1
-  KILL "/tmp/dirtmp.tmp"
-ELSEIF opper$ = "WIN" THEN
-  SHELL _HIDE "cd > " + temp_dir$ + sep$ + "cdtemp.tmp"
-  OPEN temp_dir$ + sep$ + "cdtemp.tmp" FOR INPUT AS #1
-  LINE INPUT #1, Local_dir$
-  CLOSE #1
-  KILL temp_dir$ + sep$ + "cdtemp.tmp"
-END IF
-END SUB
+FUNCTION get_new_dir$ () 'Uses SHELL to get the current dir
+s$ = SPACE$(1024)
+FILE_getcwd s$, len(s$)
+get_new_dir$ = s$
+END FUNCTION

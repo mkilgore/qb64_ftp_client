@@ -1,6 +1,6 @@
 
-@if not defined __GUI_ELEMENTS_FRAME_BM__
-@define __GUI_ELEMENTS_FRAME_BM__
+!!if not defined __GUI_ELEMENTS_FRAME_BM__
+!!define __GUI_ELEMENTS_FRAME_BM__
 
 '$include:'container.bm'
 
@@ -30,4 +30,4 @@ GUI_element_container_clear this
 END SUB
 
 
-@endif
+!!endif

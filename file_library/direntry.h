@@ -37,7 +37,6 @@ void get_next_entry (char * nam, int * flags, int * file_size) {
   return ;
 }
 
-
 void close_dir () {
   closedir(pdir);
   pdir = NULL;
