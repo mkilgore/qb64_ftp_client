@@ -9,6 +9,7 @@ IF added = 0 then
   t.class_size = LEN(_class, TYPE)
   t.base_size = LEN(, TYPE)
   t.init = @SUB(_init)
+  t.class_init = @SUB(_class_init)
   t.destroy = @SUB(_destroy)
   t.super = _get_type&
   added = OBJ_type_register_type&(t)
@@ -17,13 +18,19 @@ _get_type& = added
 END FUNCTION
 
 SUB _init (this as _OFFSET)
-DIM class AS _OFFSET
-class = OBJ_Object_get_class%&(this)
+
+END SUB
+
+SUB _class_init (class as _OFFSET)
 
 END SUB
 
 SUB _destroy (this as _OFFSET)
 
 END SUB
+
+FUNCTION _IS_ (this as _OFFSET)
+_IS_ = OBJ_is_instance_of&(this, _get_type&)
+END FUNCTION
 
 !!endif

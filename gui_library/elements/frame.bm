@@ -9,7 +9,7 @@ DIM this as _OFFSET
 this = MEM_MALLOC%&(LEN(GUI_element_frame, TYPE))
 MEM_MEMSET this, LEN(GUI_element_frame, TYPE), 0
 GUI_element_frame_init this
-GUI_ref_Object_set_delete_proc this, @SUB(GUI_element_frame_delete)
+'GUI_ref_Object_set_delete_proc this, @SUB(GUI_element_frame_delete)
 GUI_element_frame_new%& = this
 END FUNCTION
 
@@ -26,7 +26,7 @@ SUB GUI_element_frame_clear (this as _OFFSET)
 DIM m as MEM_String
 m = @(this, GUI_element_frame.nam, MEM_String)
 MEM_free_string m
-GUI_element_container_clear this
+'GUI_element_container_clear this
 END SUB
 
 

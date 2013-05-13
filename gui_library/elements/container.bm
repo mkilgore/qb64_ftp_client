@@ -12,7 +12,7 @@ if added = 0 then
   t.base_size = LEN(GUI_element_container, TYPE)
   t.init = @SUB(GUI_element_container_init)
   t.destroy = @SUB(GUI_element_container_destroy)
-  t.super = GUI_element_Object_get_type&
+  t.parent = GUI_element_Object_get_type&
   added = OBJ_type_register_type&(t)
 end if
 GUI_element_container_get_type& = added

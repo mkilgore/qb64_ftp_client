@@ -6,7 +6,7 @@
 !!define __DEBUG__
 
 '!!if defined __DEBUG__
-'!!  define debug_print(x)
+'!!  define debug_print(x) 
 '!!else
 '!!  define debug_print(x)
 '!!end if
@@ -24,7 +24,7 @@ button = GUI_element_button_new_text%&("Hi!")
 GUI_element_set_location button, 20, 15
 
 GUI_element_container_add Win, button
-GUI_element_show Win
+'GUI_element_show Win
 GUI_element_window_screen win
 
 
@@ -41,7 +41,7 @@ handle_id = OBJ_signal_connect&(button, "pressed1", @SUB(Test_signal1), of)
 print handle_id
 sleep
 
-PRINT @call((_OFFSET, LONG, LONG), @proc, (arg1, arg2, arg3) AS TYPE) 
+PRINT @call((_OFFSET, LONG, LONG) AS _OFFSET, test, (arg1, arg2, arg3)) 
 
 DO
   _LIMIT 60

@@ -3,95 +3,129 @@
 !!define __OBJ_OBJECTS_TYPE_SYSTEM_REG_TYPE_BM__
 
 FUNCTION OBJ_is_instance_of& (this as _OFFSET, t as LONG)
-otype = @(this, OBJ_Object.otype, LONG)
-DO
-  if otype = t then OBJ_is_instance_of& = -1: exit function
-  otype = OBJ_type_list(otype).parent
-LOOP until otype = 0
+  otype = @(this, OBJ_Object.otype, LONG)
+  DO
+    if otype = t then OBJ_is_instance_of& = -1: exit function
+    otype = OBJ_type_list(otype).parent
+  LOOP until otype = 0
 END FUNCTION
 
 FUNCTION OBJ_type_register_type& (t as OBJ_type_info)
-OBJ_type_count = OBJ_type_count + 1
-if OBJ_type_count > UBOUND(OBJ_type_list) then
-  REDIM _PRESERVE OBJ_type_list(UBOUND(OBJ_type_list) + 100) AS OBJ_type_info
-end if
-OBJ_type_list(OBJ_type_count) = t
-OBJ_type_register_type& = OBJ_type_count
+  DIM parent_list(OBJ_TYPE_PARENT_MAX) AS LONG, s_count AS LONG
+  OBJ_type_count = OBJ_type_count + 1
+  if OBJ_type_count > UBOUND(OBJ_type_list) then
+    REDIM _PRESERVE OBJ_type_list(UBOUND(OBJ_type_list) + 100) AS OBJ_type_info
+  end if
+  
+  OBJ_type_list(OBJ_type_count) = t
+  OBJ_type_list(OBJ_type_count).class_copy = MEM_MALLOC0%&(t.class_size)
+  tn = OBJ_type_count
+  s_count = 1
+  parent_list(s_count) = tn
+  
+  DO WHILE OBJ_type_list(tn).parent <> 0
+    s_count = s_count + 1
+    parent_list(s_count) = OBJ_type_list(tn).parent 
+    tn = OBJ_type_list(tn).parent 
+  loop
+  
+  FOR x = s_count to 1 STEP -1
+    if OBJ_type_list(tn).class_init <> 0 then 
+      @CALL(_OFFSET) OBJ_type_list(tn).class_init, OBJ_type_list(OBJ_type_count).class_copy
+    end if
+  NEXT x
+  
+  OBJ_type_register_type& = OBJ_type_count
 END FUNCTION
 
 FUNCTION OBJ_type_get_class_size& (t AS LONG)
-OBJ_type_get_class_size& = OBJ_type_list(t).class_size
+  OBJ_type_get_class_size& = OBJ_type_list(t).class_size
 END FUNCTION
 
 FUNCTION OBJ_type_get_base_size& (t AS LONG)
-OBJ_type_get_base_size& = OBJ_type_list(t).base_size
+  OBJ_type_get_base_size& = OBJ_type_list(t).base_size
 END FUNCTION
 
 FUNCTION OBJ_type_get_init%& (t AS LONG)
-OBJ_type_get_base_init%& = OBJ_type_list(t).init
+  OBJ_type_get_base_init%& = OBJ_type_list(t).init
 END FUNCTION
 
 FUNCTION OBJ_type_get_destroy%& (t as LONG)
-OBJ_type_get_destroy%& = OBJ_type_list(t).destroy
+  OBJ_type_get_destroy%& = OBJ_type_list(t).destroy
 END FUNCTION
 
 FUNCTION OBJ_type_get_parent& (t as LONG)
-OBJ_type_get_parent& = OBJ_type_list(t).parent
+  OBJ_type_get_parent& = OBJ_type_list(t).parent
 END FUNCTION
 
 FUNCTION OBJ_type_allocate_new%& (t as LONG)
-DIM parent_list(20) AS LONG, s_count AS LONG
-DIM this AS _OFFSET, class AS _OFFSET
-this = MEM_MALLOC0%&(OBJ_type_list(t).base_size)
-class = MEM_MALLOC0%&(OBJ_type_list(t).class_size)
-MEM_MEMCPY this, class, LEN(_OFFSET, TYPE) 'Put vtable in place
-MEM_MEMCPY this + _OFFSET(OBJ_Object.otype, TYPE), t, LEN(LONG, TYPE) 'Put in otype
-tn = t
-s_count = 1
-parent_list(s_count) = tn
-DO WHILE OBJ_type_list(tn).parent <> 0
-  s_count = s_count + 1
-  parent_list(s_count) = OBJ_type_list(tn).parent 
-  tn = OBJ_type_list(tn).parent 
-loop
-FOR x = s_count to 1 STEP -1
-  if OBJ_type_list(tn).init <> 0 then 
-    @CALL(_OFFSET) OBJ_type_list(tn).init, this
-  end if
-NEXT x
+  DIM parent_list(OBJ_TYPE_PARENT_MAX) AS LONG, s_count AS LONG
+  DIM this AS _OFFSET, class AS _OFFSET
+  this = MEM_MALLOC0%&(OBJ_type_list(t).base_size)
+  class = OBJ_type_list(t).class_copy
+  
+  @(this, OBJ_Object.vtable) = class
+  'MEM_MEMCPY this, class, LEN(_OFFSET, TYPE) 'Put vtable pointer in place
+  'MEM_MEMCPY this + _OFFSET(OBJ_Object.otype, TYPE), t, LEN(LONG, TYPE) 'Put in otype
+  
+  'Copy in our class's vtable into place
+  'MEM_MEMCPY class, OBJ_type_list(t).class_copy, OBJ_type_list(t).class_size
+  
+  'Find and call constructors, starting from base and going up.
+  tn = t
+  s_count = 1
+  parent_list(s_count) = tn
+  DO WHILE OBJ_type_list(tn).parent <> 0
+    s_count = s_count + 1
+    parent_list(s_count) = OBJ_type_list(tn).parent 
+    tn = OBJ_type_list(tn).parent 
+  loop
+  FOR x = s_count to 1 STEP -1
+    if OBJ_type_list(tn).init <> 0 then 
+      @CALL(_OFFSET) OBJ_type_list(tn).init, this
+    end if
+  NEXT x
 END FUNCTION
 
 SUB OBJ_type_destroy (this as _OFFSET)
-DIM class AS _OFFSET
-otype = @(this, OBJ_Object.otype, LONG)
-class = @(this, OBJ_Object.vtable, _OFFSET)
-
-tn = otype
-DO
-  if OBJ_type_list(tn).destroy then
-    @CALL(_OFFSET) OBJ_type_list(tn).destroy, this
-  end if
-  tn = OBJ_type_list(tn).parent 
-LOOP Until tn = 0
-MEM_FREE class
-MEM_FREE this
+  otype = @(this, OBJ_Object.otype, LONG)
+  tn = otype
+  DO
+    if OBJ_type_list(tn).destroy then
+      @CALL(_OFFSET) OBJ_type_list(tn).destroy, this
+    end if
+    tn = OBJ_type_list(tn).parent 
+  LOOP Until tn = 0
+  MEM_FREE this
 END SUB
 
+FUNCTION OBJ_type_get_class%& (t as LONG)
+  OBJ_type_get_class%& = OBJ_type_list(t).class_copy
+END FUNCTION
+
+FUNCTION OBJ_type_get_parent_class%& (t as LONG)
+  OBJ_type_get_parent_class%& = OBJ_type_list(OBJ_type_list(t).parent).class_copy
+END FUNCTION
+
 FUNCTION OBJ_Object_get_type& ()
-STATIC otype AS LONG, t as OBJ_type_info
-if otype = 0 then
-  t.base_size = LEN(OBJ_Object, TYPE)
-  t.class_size = LEN(OBJ_Object_class, TYPE)
-  t.init = 0
-  t.destroy = 0
-  t.parent = 0 'We're just cool like that
-  otype = OBJ_type_register_type&(t)
-end if
-OBJ_Object_get_type& = otype
+  STATIC otype AS LONG, t as OBJ_type_info
+  if otype = 0 then
+    t.base_size = LEN(OBJ_Object, TYPE)
+    t.class_size = LEN(OBJ_Object_class, TYPE)
+    t.init = 0
+    t.destroy = 0
+    t.parent = 0 'We're just cool like that
+    otype = OBJ_type_register_type&(t)
+  end if
+  OBJ_Object_get_type& = otype
 END FUNCTION
 
 FUNCTION OBJ_Object_get_class%& (this as _OFFSET)
-OBJ_Object_get_class%& = @(this, OBJ_Object.vtable, _OFFSET)
+  OBJ_Object_get_class%& = @(this, OBJ_Object.vtable, _OFFSET)
+END FUNCTION
+
+FUNCTION OBJ_Object_get_parent_class%& (this as _OFFSET)
+  OBJ_Object_get_parent_class%& = OBJ_type_list(OBJ_type_list(@(this, OBJ_Object.otype, LONG)).parent).class_copy
 END FUNCTION
 
 !!endif

@@ -3,58 +3,104 @@
 !!define __GUI_OBJECTS_GUI_ELEMENT_BM__
 
 FUNCTION GUI_element_get_type& ()
-STATIC added
-DIM t as OBJ_type_info
-if added = 0 then
-  t.class_size = LEN(GUI_element_class, TYPE)
-  t.base_size = LEN(GUI_element, TYPE)
-  t.init = @SUB(GUI_element_init)
-  t.destroy = @SUB(GUI_element_destroy)
-  t.super = OBJ_ref_Object_get_type&
-  added = OBJ_type_register_type&(t)
-end if
-GUI_element_get_type& = added
+  STATIC added
+  DIM t as OBJ_type_info
+  if added = 0 then
+    t.class_size = LEN(GUI_element_class, TYPE)
+    t.base_size = LEN(GUI_element, TYPE)
+    t.init = @SUB(GUI_element_init)
+    t.class_init = @SUB(GUI_element_class_init)
+    t.destroy = @SUB(GUI_element_destroy)
+    t.parent = OBJ_ref_Object_get_type&
+    added = OBJ_type_register_type&(t)
+  end if
+  GUI_element_get_type& = added
 END FUNCTION
 
 SUB GUI_element_init (this as _OFFSET)
-DIM class AS _OFFSET
-class = OBJ_Object_get_class%&(this)
+  DIM class AS _OFFSET
 
-@(this, GUI_element.img) =    GUI_IMAGE_NULL AS LONG
-@(this, GUI_element.parent) = OBJ_NULL AS _OFFSET
+  @(this, GUI_element.img) =    GUI_IMAGE_NULL AS LONG
+  @(this, GUI_element.parent) = OBJ_NULL AS _OFFSET
 
-@(class, GUI_element_class.drw) = OBJ_NULL AS @PROC
+END SUB
 
+SUB GUI_element_class_init (class as _OFFSET)
+  @(class, GUI_element_class.drw)             = OBJ_NULL AS @PROC
+  @(class, GUI_element_class.set_visible)     = @SUB(GUI_element_private_set_visible) AS @PROC
+  @(class, GUI_element_class.is_visible)      = @SUB(GUI_element_private_is_visible) AS @PROC
+  @(class, GUI_element_class.set_active)      = @SUB(GUI_element_private_set_active) AS @PROC
+  @(class, GUI_element_class.is_active)       = @SUB(GUI_element_private_is_active) AS @PROC
+  @(class, GUI_element_class.set_size)        = @SUB(GUI_element_private_set_size) AS @PROC
+  @(class, GUI_element_class.create_image)    = @SUB(GUI_element_private_create_image) AS @PROC
+  
+  @(class, GUI_element_class.get_image)       = @FUNCTION(GUI_element_private_get_image&) AS @PROC
+  @(class, GUI_element_class.set_location)    = @SUB(GUI_element_private_set_location) AS @PROC
+  @(class, GUI_element_class.set_dimension)   = @SUB(GUI_element_private_set_dimension) AS @PROC
+  @(class, GUI_element_class.set_dimension_d) = @SUB(GUI_element_private_set_dimension_d) AS @PROC
+  @(class, GUI_element_class.get_width)       = @FUNCTION(GUI_element_private_get_width&) AS @PROC
+  @(class, GUI_element_class.get_height)      = @FUNCTION(GUI_element_private_get_height&) AS @PROC
+  @(class, GUI_element_class.set_width)       = @SUB(GUI_element_private_set_widt) AS @PROC
+  @(class, GUI_element_class.set_height)      = @SUB(GUI_element_private_set_height) AS @PROC
+  
+!!if defined GUI_TEXT
+    @(class, GUI_element_class.get_row)       = @FUNCTION(GUI_element_private_get_row&) AS @PROC
+    @(class, GUI_element_class.get_col)       = @FUNCTION(GUI_element_private_get_col&) AS @PROC
+!!else
+    @(class, GUI_element_class.get_x)         = @FUNCTION(GUI_element_private_get_x&) AS @PROC 
+    @(class, GUI_element_class.get_y)         = @FUNCTION(GUI_element_private_get_y&) AS @PROC
+!!endif
 END SUB
 
 SUB GUI_element_destroy (this as _OFFSET)
-if @(this, GUI_element.img, LONG) <> -1 then
-  _FREEIMAGE @(this, GUI_element.img, LONG)
+  if @(this, GUI_element.img, LONG) <> -1 then
+    _FREEIMAGE @(this, GUI_element.img, LONG)
+  end if
+  'GUI_element_remove_parent this
+END SUB
+
+'private implementations for functions
+FUNCTION GUI_element_private_get_width& (this as _OFFSET)
+GUI_element_private_get_width& = @(this, GUI_element.dimension.wid, LONG)
+END FUNCTION
+
+FUNCTION GUI_element_private_get_height& (this as _OFFSET)
+GUI_element_private_get_height& = @(this, GUI_element.dimension.hei, LONG)
+END FUNCTION
+
+SUB GUI_element_private_set_width (this as _OFFSET, wid as LONG)
+@(this, GUI_element.dimension.wid) = wid
+END SUB
+
+SUB GUI_element_private_set_height (this as _OFFSET, hei as LONG)
+@(this, GUI_element.dimension.hei) = hei
+END SUB
+
+SUB GUI_element_private_set_visible (this as _OFFSET, vis AS LONG)
+if vis then
+  @(this, GUI_element.flags) = @(this, GUI_element.flags, LONG) OR GUI_ELEMENT_FLAG_VISIBLE AS LONG
+else
+  @(this, GUI_element.flags) = @(this, GUI_element.flags, LONG) AND NOT GUI_ELEMENT_FLAG_VISIBLE AS LONG
 end if
-GUI_element_remove_parent this
 END SUB
 
-FUNCTION GUI_element_get_element_type& (this as _OFFSET)
-GUI_element_get_element_type& = @(this, GUI_element.element_type, LONG)
+FUNCTION GUI_element_private_is_visible& (this as _OFFSET)
+GUI_element_private_is_visible& = @(this, GUI_element.flags, LONG) AND GUI_ELEMENT_FLAG_VISIBLE
 END FUNCTION
 
-FUNCTION GUI_element_get_width& (this as _OFFSET)
-GUI_element_get_width& = @(this, GUI_element.dimension.wid, LONG)
-END FUNCTION
-
-FUNCTION GUI_element_get_height& (this as _OFFSET)
-GUI_element_get_height& = @(this, GUI_element.dimension.hei, LONG)
-END FUNCTION
-
-SUB GUI_element_show (this as _OFFSET)
-GUI_element_FLAG_SET_VISIBLE this
+SUB GUI_element_private_set_active (this as _OFFSET, vis AS LONG)
+if vis then
+  @(this, GUI_element.flags) = @(this, GUI_element.flags, LONG) OR GUI_ELEMENT_FLAG_ACTIVE AS LONG
+else
+  @(this, GUI_element.flags) = @(this, GUI_element.flags, LONG) AND NOT GUI_ELEMENT_FLAG_ACTIVE AS LONG
+end if
 END SUB
 
-SUB GUI_element_hide (this as _OFFSET)
-GUI_element_FLAG_UNSET_VISIBLE this
-END SUB
+FUNCTION GUI_element_private_is_active& (this as _OFFSET)
+GUI_element_private_is_active& = @(this, GUI_element.flags, LONG) AND GUI_ELEMENT_FLAG_ACTIVE
+END FUNCTION
 
-SUB GUI_element_create_image (this as _OFFSET)
+SUB GUI_element_private_create_image (this as _OFFSET)
 if @(this, GUI_element.img, LONG) <> -1 then 
   _FREEIMAGE @(this, GUI_element.img, LONG)
 end if
@@ -67,46 +113,47 @@ end if
 @(this, GUI_element.img) = i&
 END SUB
 
-FUNCTION GUI_element_get_image& (this as _OFFSET)
-GUI_element_get_image& = @(this, GUI_element.img, LONG)
+FUNCTION GUI_element_private_get_image& (this as _OFFSET)
+GUI_element_private_get_image& = @(this, GUI_element.img, LONG)
 END FUNCTION
 
-SUB GUI_element_set_size (this AS _OFFSET, wid as _UNSIGNED LONG, hei AS _UNSIGNED LONG)
+SUB GUI_element_private_set_size (this AS _OFFSET, wid as _UNSIGNED LONG, hei AS _UNSIGNED LONG)
 @(this, GUI_element.dimension.wid) = wid
 @(this, GUI_element.dimension.hei) = hei
 GUI_element_create_image this
 END SUB
 
-SUB GUI_element_set_dimension_d (this AS _OFFSET, d as GUI_dimension)
+SUB GUI_element_private_set_dimension_d (this AS _OFFSET, d as GUI_dimension)
 @(this, GUI_element.dimension) = d
 GUI_element_create_image this
 END SUB
 
-SUB GUI_element_add_parent (this as _OFFSET, parent AS _OFFSET)
+SUB GUI_element_private_set_parent (this as _OFFSET, parent AS _OFFSET)
+if @(this, GUI_element.parent, _OFFSET) <> 0 then
+  OBJ_ref_Object_release_ref @(this, GUI_element.parent, _OFFSET)
+end if
 @(this, GUI_element.parent) = OBJ_ref_Object_get_ref%&(parent) AS _OFFSET
 END SUB
 
-SUB GUI_element_remove_parent (this as _OFFSET)
+SUB GUI_element_private_remove_parent (this as _OFFSET)
 if @(this, GUI_element.parent, _OFFSET) <> 0 then
   OBJ_ref_Object_release_ref @(this, GUI_element.parent, _OFFSET)
   @(this, GUI_element.parent) = 0 AS _OFFSET
 end if
 END SUB
 
-SUB GUI_element_set_draw_proc (this as _OFFSET, pro as @PROC)
-DIM class as _OFFSET
-class = OBJ_Object_get_class%&(this)
-@(class, GUI_element_class.drw) = pro AS @PROC
-END SUB
+FUNCTION GUI_element_private_get_parent%& (this as _OFFSET)
+GUI_element_private_get_parent%& = @(this, GUI_element.parent, _OFFSET)
+END FUNCTION
 
 !!if defined GUI_TEXT
 
-  SUB GUI_element_set_location (this as _OFFSET, row as _UNSIGNED LONG, col AS _UNSIGNED LONG)
+  SUB GUI_element_private_set_location (this as _OFFSET, row as _UNSIGNED LONG, col AS _UNSIGNED LONG)
   @(this, GUI_element.dimension.row) = row
   @(this, GUI_element.dimension.col) = col
   END SUB
   
-  SUB GUI_element_set_dimension (this AS _OFFSET, row as _UNSIGNED LONG, col as _UNSIGNED LONG, wid AS _UNSIGNED LONG, hei AS _UNSIGNED LONG)
+  SUB GUI_element_private_set_dimension (this AS _OFFSET, row as _UNSIGNED LONG, col as _UNSIGNED LONG, wid AS _UNSIGNED LONG, hei AS _UNSIGNED LONG)
   @(this, GUI_element.dimension.row) = row
   @(this, GUI_element.dimension.col) = col
   @(this, GUI_element.dimension.wid) = wid
@@ -114,23 +161,23 @@ END SUB
   GUI_element_create_image this
   END SUB
     
-  FUNCTION GUI_element_get_row& (this as _OFFSET)
-  GUI_element_get_row& = @(this, GUI_element.dimension.row, LONG)
+  FUNCTION GUI_element_private_get_row& (this as _OFFSET)
+  GUI_element_private_get_row& = @(this, GUI_element.dimension.row, LONG)
   END FUNCTION
 
-  FUNCTION GUI_element_get_col& (this as _OFFSET)
-  GUI_element_get_col& = @(this, GUI_element.dimension.col, LONG)
+  FUNCTION GUI_element_private_get_col& (this as _OFFSET)
+  GUI_element_private_get_col& = @(this, GUI_element.dimension.col, LONG)
   END FUNCTION
 
 !!else
 
   'Note -- Will probably be ignored if not using a fixed layout
-  SUB GUI_element_set_location (this AS _OFFSET, x AS _UNSIGNED LONG, y AS _UNSIGNED LONG)
+  SUB GUI_element_private_set_location (this AS _OFFSET, x AS _UNSIGNED LONG, y AS _UNSIGNED LONG)
   @(this, GUI_element.dimension.x) = x
   @(this, GUI_element.dimension.y) = y
   END SUB
 
-  SUB GUI_element_set_dimension (this AS _OFFSET, x as _UNSIGNED LONG, y as _UNSIGNED LONG, wid AS _UNSIGNED LONG, hei AS _UNSIGNED LONG)
+  SUB GUI_element_private_set_dimension (this AS _OFFSET, x as _UNSIGNED LONG, y as _UNSIGNED LONG, wid AS _UNSIGNED LONG, hei AS _UNSIGNED LONG)
   @(this, GUI_element.dimension.x) = x 
   @(this, GUI_element.dimension.y) = y
   @(this, GUI_element.dimension.wid) = wid
@@ -138,12 +185,12 @@ END SUB
   GUI_element_create_image this
   END SUB
   
-  FUNCTION GUI_element_get_x& (this as _OFFSET)
-  GUI_element_get_x& = @(this, GUI_element.dimension.x, LONG)
+  FUNCTION GUI_element_private_get_x& (this as _OFFSET)
+  GUI_element_private_get_x& = @(this, GUI_element.dimension.x, LONG)
   END FUNCTION
   
-  FUNCTION GUI_element_get_y& (this as _OFFSET)
-  GUI_element_get_y& = @(this, GUI_element.dimension.y, LONG)
+  FUNCTION GUI_element_private_get_y& (this as _OFFSET)
+  GUI_element_private_get_y& = @(this, GUI_element.dimension.y, LONG)
   END FUNCTION
 
 !!endif

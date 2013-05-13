@@ -4,33 +4,43 @@
 
 '$include:'container.bm'
 
+FUNCTION GUI_element_button_get_type& ()
+STATIC added
+DIM t as OBJ_type_info
+if added = 0 then
+  t.base_size = LEN(GUI_element_button, TYPE)
+  t.class_size = LEN(GUI_element_button, TYPE)
+  t.init = @SUB(GUI_element_button_init)
+  t.destroy = @SUB(GUI_element_button_destroy)
+  t.parent = GUI_element_container_get_type&
+  added = OBJ_type_register_type&(t)
+end if
+GUI_element_button_get_type& = added
+END FUNCTION
+
 FUNCTION GUI_element_button_new%& ()
 GUI_element_button_new%& = GUI_element_button_new_text%&("")
 END FUNCTION
 
 FUNCTION GUI_element_button_new_text%& (n$)
 DIM this as _OFFSET
-this = MEM_MALLOC%&(LEN(GUI_element_button, TYPE))
-MEM_MEMSET this, 0, LEN(GUI_element_button, TYPE)
-GUI_element_button_init this
+this = OBJ_type_allocate_new%&(GUI_element_button_get_type&)
 GUI_element_button_set_text this, n$
+
 GUI_element_button_new_text%& = this
 END FUNCTION
 
 SUB GUI_element_button_init (this as _OFFSET)
-GUI_element_set_element_type this, GUI_BUTTON
-GUI_element_set_draw_proc this, @SUB(GUI_element_button_draw)
+DIM class as _OFFSET
 
 @(this, GUI_element_button.theme.sel.f) = 0 AS _BYTE
 @(this, GUI_element_button.theme.sel.b) = 7 AS _BYTE
+
+'class = OBJ_Object_get_class%&(this)
+'@(class, GUI_element_class.drw) = @SUB(GUI_element_button_real_draw) AS @PROC
 END SUB
 
-SUB GUI_element_button_delete (this as _OFFSET)
-GUI_element_button_clear this
-MEM_FREE this
-END SUB
-
-SUB GUI_element_button_clear (this as _OFFSET)
+SUB GUI_element_button_destroy (this as _OFFSET)
 
 END SUB
 
@@ -43,7 +53,7 @@ GUI_element_set_size this, 1, len(t$) + 4
 '@call(_OFFSET) @(this, GUI_element.drw, @PROC), this
 END SUB
 
-SUB GUI_element_button_draw (this as _OFFSET)
+SUB GUI_element_button_real_draw (this as _OFFSET)
 DIM m as MEM_String
 d& = _DEST
 _DEST @(this, GUI_element.img, LONG)

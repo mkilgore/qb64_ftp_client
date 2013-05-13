@@ -22,7 +22,7 @@ IF added = 0 then
   t.base_size = LEN(OBJ_signal, TYPE)
   t.init = @SUB(OBJ_signal_init)
   t.destroy = @SUB(OBJ_signal_destroy)
-  t.super = OBJ_ref_object_get_type&
+  t.parent = OBJ_ref_object_get_type&
   added = OBJ_type_register_type&(t)
 end if
 OBJ_signal_get_type& = added

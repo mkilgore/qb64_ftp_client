@@ -8,7 +8,7 @@
 'Stages:
 '
 
-CONST PRO_VERSION$ = ".02"
+CONST PRO_VERSION$ = ".03"
 
 DECLARE LIBRARY "unistd"
   SUB getcwd(s as STRING, BYVAL l as LONG) 
@@ -47,15 +47,15 @@ REDIM SHARED func_names(500) AS STRING, func_args(500) AS STRING, func_number(50
 REDIM SHARED func_type(500) AS STRING, function_count AS LONG
 REDIM SHARED func_diff_args AS LONG, func_diff_arg_list(500) AS STRING, func_diff_arg_type(500) AS STRING
 
-REDIM SHARED sub_data$, in_sub, in_type, in_declare
+REDIM SHARED sub_data$, in_sub, in_type, in_declare, in_class_declare, class_nam$
 
 DIM SHARED var_prefix$, mem_nam$, call_prefix$
-DIM SHARED ptrs_file$
+DIM SHARED ptrs_file$, call_func_prefix$
 
 'var_prefix$ = "PARS__"
 mem_nam$ = "PARS__QB64__EMPTY_MEM"
 call_prefix$ = "c_"
-
+call_func_prefix$ = "fc_"
 in_type = 0
 in_declare = 0
 in_sub = 0
@@ -159,17 +159,105 @@ FOR x = 1 TO next_line
     'PRINT "In type!"
     in_type = -1
     type_nam$ = strip_line$(MID$(n$, 5))
+    if instr(type_nam$, "@CLASS") then
+      in_class_declare = -1
+      class_nam$ = mid$(type_nam$, 1, instr(type_nam$, "_CLASS") - 1)
+      add_src_line mid$(source(x), 1, instr(source(x), "@") - 1), new_length, new_source()
+    end if
   ELSEIF LEFT$(n$, 8) = "END TYPE" THEN
     'PRINT "Out of type!"
     in_type = 0
+    in_class_declare = 0
   END IF
   IF mod_flag THEN
     add_flag = 0
     'Found a modifier!
     n$ = strip_line$(n$)
+    checking_off = -1
+    
+    if in_class_declare and instr(ucase$(source(x)), "@SUB") then
+      memb$ = strip_line$(mid$(source(x), 1, instr(UCASE$(source(x)), " AS ") - 1))
+      args$ = mid$(ucase$(source(x)), instr(source(x), "(") + 1)
+      args$ = mid$(args$, 1, instr(args$, ")") - 1)
+      func$ = "SUB " + class_nam$ + "_" + memb$ + "("
+      a$ = args$
+      arg_count = 0
+      c = 65
+      DO until instr(a$, ",") <= 0
+        func$ = func$ + chr$(c) + " AS " + mid$(a$, 1, instr(a$, ",") - 1) + ", "
+        a$ = mid$(a$, instr(a$, ",") + 1)
+        c = c + 1
+        arg_count = arg_count + 1
+      LOOP 
+      if a$ > "" then func$ = func$ + chr$(c) + " AS " + a$: arg_count = arg_count + 1
+      func$ = func$ + ")" + line_end$
+      func$ = func$ + "DIM class as _OFFSET, pro AS _OFFSET: class = OBJ_Object_get_class%&(A)" + line_end$
+      func$ = func$ + "$CHECKING:OFF" + line_end$
+      func$ = func$ + "pro = _MEMGET(" + mem_nam$ + ", class + _OFFSET(" + class_nam$ + "_class." + memb$ + ", TYPE), _OFFSET)" + line_end$
+      func$ = func$ + "IF pro <> OBJ_NULL THEN" + line_end$
+      cal$ = replace$(fix_space$(replace$(args$, ",", " ")), " ", "_")
+      func$ = func$ + "  " + var_prefix$ + call_prefix$ + cal$ + " pro,"
+      'func$ = func$ + "  @call(" + args$ + ") _MEMGET(" + mem_nam$ + ", class + _OFFSET(" + class_nam$ + "_class." + memb$ + ", TYPE), "
+      for k = 1 to arg_count
+        func$ = func$ + chr$(64 + k)
+        if k < arg_count then func$ = func$ + ","
+      next k
+      func$ = func$ + line_end$ + "END IF" + line_end$
+      func$ = func$ + "$CHECKING:ON" + line_end$
+      func$ = func$ + "END SUB" + line_end$
+      add_func func$
+      reg_sub class_nam$ + "_" + memb$, args$
+      'print "ARGS:"; args$
+      add_src_line mid$(source(x), 1, instr(source(x), "@") - 1) + " _OFFSET", new_length, new_source()
+    end if
+    
+    if in_class_declare and instr(ucase$(source(x)), "@FUNCTION") then
+      memb$ = strip_line$(mid$(source(x), 1, instr(UCASE$(source(x)), " AS ") - 1))
+      args$ = mid$(ucase$(source(x)), instr(source(x), "(") + 1)
+      args$ = mid$(args$, 1, instr(args$, ")") - 1)
+      ret$ = mid$(source(x), instr(ucase$(source(x)), " AS ") + 4)
+      ret$ = mid$(ret$, instr(ucase$(ret$), " AS ") + 4)
+      func$ = "FUNCTION " + class_nam$ + "_" + memb$ + get_suffix_from_type$(ret$) + "("
+      a$ = args$
+      arg_count = 0
+      c = 65
+      DO until instr(a$, ",") <= 0
+        func$ = func$ + chr$(c) + " AS " + mid$(a$, 1, instr(a$, ",") - 1) + ", "
+        a$ = mid$(a$, instr(a$, ",") + 1)
+        c = c + 1
+        arg_count = arg_count + 1
+      LOOP 
+      if a$ > "" then func$ = func$ + chr$(c) + " AS " + a$: arg_count = arg_count + 1
+      func$ = func$ + ")" + line_end$
+      func$ = func$ + "DIM class as _OFFSET, pro as _OFFSET: class = OBJ_Object_get_class%&(A)" + line_end$
+      func$ = func$ + "$CHECKING:OFF" + line_end$
+      func$ = func$ + "pro = " + "_MEMGET(" + mem_nam$ + ", class + _OFFSET(" + class_nam$ + "_class." + memb$ + ", TYPE), _OFFSET)" + line_end$
+      func$ = func$ + "IF pro <> OBJ_NULL THEN" + line_end$
+      'func$ = func$ + "  @call(" + args$ + ") _MEMGET(" + mem_nam$ + ", class + _OFFSET(" + class_nam$ + "_class." + memb$ + ", TYPE), "
+      cal$ = replace$(fix_space$(replace$(args$, ",", " ")), " ", "_")
+      func$ = func$ + class_nam$ + "_" + memb$ + get_suffix_from_type$(ret$) + " = " + var_prefix$ + call_func_prefix$ + ret$ + "_" + cal$ + " (pro,"
+      for k = 1 to arg_count
+        func$ = func$ + chr$(64 + k)
+        if k < arg_count then func$ = func$ + ","
+      next k
+      func$ = func$ + ")"
+      func$ = func$ + line_end$ + "END IF" + line_end$
+      func$ = func$ + "$CHECKING:ON" + line_end$
+      func$ = func$ + "END SUB" + line_end$
+      add_func func$
+      reg_func class_nam$ + "_" + memb$, args$, ret$
+      print "call prefix:"; cal$
+      print "func args:"; args$
+      print "func ret:"; ret$
+      add_src_line mid$(source(x), 1, instr(source(x), "@") - 1) + " _OFFSET", new_length, new_source()
+    end if
+    
+    
+    
+    
     DO
       changed_flag = 0
-      DO WHILE instr(ucase$(source(x)), "@SUB")
+      DO WHILE instr(ucase$(source(x)), "@SUB") AND NOT in_class_declare
         'print "Old source:"; source(x)
         l = instr(ucase$(source(x)), "@SUB")
         sn$ = ucase$(mid$(source(x), l))
@@ -181,6 +269,20 @@ FOR x = 1 TO next_line
         'print "New source:"; source(x)
         add_flag = -1
         changed_flag =-1
+      LOOP
+      n$ = strip_line$(ucase$(source(x)))
+      
+      DO WHILE instr(ucase$(source(x)), "@FUNCTION") AND NOT in_class_declare
+        l = instr(ucase$(source(x)), "@FUNCTION")
+        sn$ = ucase$(mid$(source(x), l))
+        le = instr(sn$, ")") - 1
+        arg$ = mid$(ucase$(sn$), instr(sn$, "(") + 1)
+        arg$ = mid$(arg$, 1, instr(arg$, ")") - 1)
+        
+        source(x) = mid$(source(x), 1, l - 1) + var_prefix$ + remove_suffix$(arg$) + "_ptr%&" + mid$(source(x), l + le + 1)
+        
+        add_flag = -1
+        changed_flag = -1
       LOOP
       n$ = strip_line$(ucase$(source(x)))
       
@@ -198,6 +300,49 @@ FOR x = 1 TO next_line
         add_flag = -1
         changed_flag = -1
       end if
+      
+      DO WHILE instr(n$, "@CALL")
+        lef$ = mid$(n$, 1, instr(n$, "@CALL") - 1)
+        n2$ = mid$(n$, instr(n$, "@CALL") + 5)
+        args$ = mid$(n2$, instr(n2$, "(") + 1)
+        args$ = mid$(args$, instr(args$, "(") + 1)
+        args$ = mid$(args$, 1, instr(args$, ")") - 1)
+        n2$ = mid$(n2$, instr(n2$, "AS ") + 3)
+        ret$ = strip_line$(mid$(n2$, 1, instr(n2$, ",") - 1))
+        n2$ = mid$(n2$, instr(n2$, ",") + 1)
+        paren_count = 0
+        FOR k = 1 to len(n2$)
+          if mid$(n2$, k, 1) = "," and paren_count = 0 then exit for
+          if mid$(n2$, k, 1) = "(" then paren_count = paren_count + 1
+          if mid$(n2$, k, 1) = ")" then paren_count = paren_count - 1
+        next k
+        proc_ptr$ = mid$(n2$, 1, k - 1)
+        n2$ = mid$(n2$, len(proc_ptr$) + 2)
+        paren_count = 0
+        FOR k = 1 to len(n2$)
+          if mid$(n2$, k, 1) = "(" then paren_count = paren_count + 1
+          if mid$(n2$, k, 1) = ")" then paren_count = paren_count - 1: if paren_count = -1 then exit for
+        next k
+        n2$ = strip_line$(n2$)
+        arguments$ = mid$(n2$, 2, k - 4)
+        n2$ = mid$(n2$, k + 1)
+        if instr(args$, ",") then
+          args$ = replace$(fix_space$(replace$(args$, ",", " ")), " ", "_")
+        end if
+        'print "ORIG LINE:"; source(x)
+        source(x) = lef$ + var_prefix$ + call_func_prefix$ + ret$
+        if args$ > "" then
+          source(x)  = source(x) + "_" + args$
+        end if
+        source(x) = source(x) + "(" + proc_ptr$ + "," + arguments$ + ")" + n2$
+        n$ = strip_line$(ucase$(source(x)))
+        'PRINT "FUNC CALL RET:"; ret$
+        'PRINT "FUNC CALL ARG:"; args$
+        'print "FUNC CALL proc:"; proc_ptr$
+        'PRINT "FUNC CALL ARGS:"; arguments$
+        add_flag = -1
+        changed_flag = -1
+      LOOP
       
   
       'end if
@@ -256,23 +401,29 @@ FOR x = 1 TO next_line
           add_src_line var_prefix$ + "DEBUG_PRINT " + mid$(ltrim$(source(x)), 13), new_length, new_source()
         end if
       ELSEIF INSTR(n$, "@(") THEN
-        add_src_line "$CHECKING:OFF", new_length, new_source()
+        checking_off = -1
+        add_flag = -1
+        'add_src_line "$CHECKING:OFF", new_length, new_source()
         IF LEFT$(n$, 2) = "@(" THEN
           lef$ = MID$(n$, 1, INSTR(n$, "=") + 1)
           rit$ = MID$(n$, INSTR(n$, "=") + 1)
           
           lef$ = make_deref_into_sub$(lef$)
           rit$ = make_deref_into_func$(rit$)
-    
-          add_src_line lef$ + rit$, new_length, new_source()
+          
+          source(x) = lef$ + rit$
+          'add_src_line lef$ + rit$, new_length, new_source()
         ELSE
-          add_src_line make_deref_into_func$(n$), new_length, new_source()
+          source(x) = make_deref_into_func$(n$)
+          'add_src_line make_deref_into_func$(n$), new_length, new_source()
         END IF
-        add_src_line "$CHECKING:ON", new_length, new_source()
+        'add_src_line "$CHECKING:ON", new_length, new_source()
       end if
     LOOP until changed_flag = 0
     if add_flag then
+      if checking_off then add_src_line "$CHECKING:OFF", new_length, new_source()
       add_src_line source(x), new_length, new_source()
+      if checking_off then add_src_line "$CHECKING:ON", new_length, new_source()
     END IF
   ELSE
     add_src_line source(x), new_length, new_source()
@@ -322,7 +473,7 @@ IF const_count >= UBOUND(new_consts) THEN
   REDIM _PRESERVE new_CONSTS(UBOUND(new_consts) + 100) AS STRING
 END IF
 new_CONSTS(const_count) = "CONST " + c$ + " = " + v$
-PRINT new_CONSTS(const_count)
+'PRINT new_CONSTS(const_count)
 END SUB
 
 SUB add_func (f$)
@@ -343,7 +494,7 @@ IF define_count >= UBOUND(defines) THEN
 END IF
 MEM_put_str defines(define_count).value,  d$
 MEM_put_str defines(define_count).replacement, v$
-PRINT "Define:"; MEM_get_str$(defines(define_count).value); " = "; v$
+'PRINT "Define:"; MEM_get_str$(defines(define_count).value); " = "; v$
 END SUB
 
 FUNCTION find_define (d$)
@@ -360,8 +511,8 @@ SUB add_Reg (n$)
 k$ = MID$(n$, LEN("REGISTER") + 3)
 t$ = MID$(k$, 1, INSTR(k$, " ") - 1)
 nam$ = MID$(k$, INSTR(k$, " ") + 1)
-PRINT "TYPE:"; t$
-PRINT "NAME:"; nam$
+'PRINT "TYPE:"; t$
+'PRINT "NAME:"; nam$
 flag = 0
 FOR x = 1 TO reg_total_count
   IF t$ = reg_types(x) THEN
@@ -405,7 +556,7 @@ DIM fnum AS LONG
 fnum = FREEFILE
 'print "F="; fnum
 
-PRINT "File:"; file$
+'PRINT "File:"; file$
 OPEN file$ FOR INPUT AS #fnum
 
 process_line = -1
@@ -431,7 +582,7 @@ DO
     'di$ = get_cur_dir$
     old_dir$ = space$(1024)
     getcwd old_dir$, LEN(old_dir$)
-    print "new_dir:"; new_dir$
+    'print "new_dir:"; new_dir$
     IF new_dir$ > "" THEN
       CHDIR new_dir$
     END If
@@ -546,7 +697,7 @@ DO
         end if
         typ$ = get_type_name$(nam$)
         args$ = mid$(ls$, instr(ls$, "("))
-        print "FUNCTION:"; nam$; "  "; args$; "  "; typ$
+        'print "FUNCTION:"; nam$; "  "; args$; "  "; typ$
         reg_func remove_suffix$(nam$), args$, typ$
       end if
       add_src_line l$, next_line, source()
@@ -723,7 +874,7 @@ FOR x = 1 to sub_count - 1
   end if
 NEXT x
 sub_number(sub_count) = find_high + 1
-if flag = 0 then reg_arg(sub_args(sub_count))
+if flag = 0 then reg_arg(sub_args(sub_count))': print "registering sub:"; nam$: print "Args:"; args$
 'PRINT "Adding sub:"; sub_names(sub_count)
 'print "Args:"; sub_args(sub_count)
 'print "Count:"; sub_number(sub_count)
@@ -735,6 +886,7 @@ if sub_diff_args > ubound(diff_arg_list) then
   REDIM _PRESERVE diff_arg_list(ubound(diff_arg_list) + 100) AS STRING
 end if
 diff_arg_list(sub_diff_args) = args$
+'print "func diff args:"; args$
 'print "Adding args:"; replace$(args$, chr$(13), "_")
 END SUB
 
@@ -746,10 +898,10 @@ if func_diff_Args > ubound(func_diff_arg_list) then
 end if
 func_diff_arg_list(func_diff_args) = args$
 func_diff_arg_type(func_diff_args) = typ$
+
 END SUB
 
 FUNCTION parse_args$(arg$)
-print "Parsing"
 arg2$ = ucase$(strip_line$(arg$))
 if left$(arg2$, 1) = "(" then
   arg2$ = mid$(arg2$, 2, len(arg2$) - 2)
@@ -772,8 +924,6 @@ DO WHILE instr(arg2$, ",")
   else 
     arg4$ = arg3$
   end if
-  
-  print "Arg4:"; arg4$
 LOOP
 
 t$ = get_type_name$(arg2$)
@@ -845,7 +995,6 @@ END FUNCTION
 SUB add_pointer_defs
 print #255, "DECLARE CUSTOMTYPE LIBRARY " + qq$(ptrs_file$) + line_end$;
 
-PRINT "Adding pointers"
 for x = 1 to sub_count
   print #255, "  FUNCTION "; var_prefix$; ucase$(sub_names(x)); "_ptr%& ()"
   'print #256, "extern void SUB_"; ucase$(sub_names(x)); "(";
@@ -906,7 +1055,7 @@ next x
 
 
 for x = 1 to func_diff_args
-  print #255, "  FUNCTION " + var_prefix$ + call_prefix$; func_diff_arg_type(x); "_"; replace$(func_diff_arg_list(x), chr$(13), "_"); get_suffix_from_type$(func_type(x)); "( BYVAL va AS _OFFSET, ";
+  print #255, "  FUNCTION " + var_prefix$ + call_func_prefix$; func_diff_arg_type(x); "_"; replace$(func_diff_arg_list(x), chr$(13), "_"); get_suffix_from_type$(func_type(x)); "( BYVAL va AS _OFFSET, ";
   a$ = func_diff_arg_list(x)
   c = 65
   DO until instr(a$, chr$(13)) <= 0
@@ -916,7 +1065,7 @@ for x = 1 to func_diff_args
   LOOP 
   if a$ > "" then print #255, chr$(c) + " AS " + a$;
   print #255, ")" + line_end$;
-  print #256, get_c_type_from_qb_type$(func_type(x)); " "; var_prefix$; call_prefix$; func_diff_arg_type(x); "_"; replace$(func_diff_arg_list(x), chr$(13), "_"); "( void* func, ";
+  print #256, get_c_type_from_qb_type$(func_type(x)); " "; var_prefix$; call_func_prefix$; func_diff_arg_type(x); "_"; replace$(func_diff_arg_list(x), chr$(13), "_"); "( void* func, ";
   a$ = func_diff_arg_list(x)
   c = 65
   DO until instr(a$, chr$(13)) <= 0
@@ -947,8 +1096,8 @@ END SUB
 FUNCTION get_type_name$ (s$)
 alph$ = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
 s2$ = strip_line$(s$)
-if instr(s2$, "AS") then
-  s3$ = mid$(s2$, instr(s2$, "AS") + 3)
+if instr(s2$, " AS ") then
+  s3$ = mid$(s2$, instr(s2$, " AS ") + 4)
   if instr(s3$, "_UNSIGNED") then s4$ = mid$(s3$, instr(s3$, "_UNSIGNED") + len("_UNSIGNED") + 1) else s4$ = s3$
   get_type_name$ = strip_line$(s4$)
   exit function
