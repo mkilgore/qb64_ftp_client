@@ -3,27 +3,27 @@
 !!define __OBJ_OBJECTS_REF_OBJECT_BM__
 
 FUNCTION OBJ_ref_object_get_type& ()
-STATIC added
-DIM t as OBJ_type_info
-if added = 0 then
-  t.class_size = LEN(OBJ_ref_object_class, TYPE)
-  t.base_size = LEN(OBJ_ref_object, TYPE)
-  t.init = @SUB(OBJ_Ref_object_init)
-  t.class_init = @SUB(OBJ_ref_object_class_init)
-  t.destroy = @SUB(OBJ_ref_Object_destroy)
-  t.parent = OBJ_Object_get_type&
-  added = OBJ_type_register_type&(t)
-end if
-OBJ_ref_object_get_type& = added
+  STATIC added
+  DIM t as OBJ_type_info
+  if added = 0 then
+    t.class_size = LEN(OBJ_ref_object_class, TYPE)
+    t.base_size = LEN(OBJ_ref_object, TYPE)
+    t.init = @SUB(OBJ_Ref_object_init)
+    t.class_init = @SUB(OBJ_ref_object_class_init)
+    t.destroy = @SUB(OBJ_ref_Object_destroy)
+    t.parent = OBJ_Object_get_type&
+    added = OBJ_type_register_type&(t)
+  end if
+  OBJ_ref_object_get_type& = added
 END FUNCTION
 
 SUB OBJ_ref_object_init (this as _OFFSET)
-@(this, OBJ_ref_object.ref_count) = 0 AS LONG
+  @(this, OBJ_ref_object.ref_count) = 0 AS LONG
 END SUB
 
 SUB OBJ_ref_object_class_init (class as _OFFSET)
-@(class, OBJ_ref_object_class.get_ref) = @FUNCTION(OBJ_ref_Object_private_get_ref%&) AS @PROC
-@(class, OBJ_ref_object_class.release_ref) = @FUNCTION(OBJ_ref_Object_private_release_ref) AS @PROC
+  @(class, OBJ_ref_object_class.get_ref) = @FUNCTION(OBJ_ref_Object_private_get_ref%&) AS @PROC
+  @(class, OBJ_ref_object_class.release_ref) = @FUNCTION(OBJ_ref_Object_private_release_ref) AS @PROC
 END SUB
 
 'FUNCTION OBJ_ref_Object_get_ref%& (this as _OFFSET): DIM class AS _OFFSET: class = OBJ_Object_get_class%&(this)
@@ -39,15 +39,15 @@ END SUB
 'END SUB
 
 FUNCTION OBJ_ref_Object_private_get_ref%& (this as _OFFSET)
-@(this, OBJ_ref_Object.ref_count) = @(this, OBJ_ref_Object.ref_count, LONG) + 1 AS LONG
-OBJ_ref_Object_private_get_ref%& = this
+  @(this, OBJ_ref_Object.ref_count) = @(this, OBJ_ref_Object.ref_count, LONG) + 1 AS LONG
+  OBJ_ref_Object_private_get_ref%& = this
 END FUNCTION
 
 SUB OBJ_ref_Object_private_release_ref (this as _OFFSET)
-@(this, OBJ_ref_Object.ref_count) = @(this, OBJ_ref_Object.ref_count, LONG) - 1 AS LONG
-if @(this, OBJ_ref_Object.ref_count, LONG) = 0 then 
-  OBJ_type_destroy this
-end if
+  @(this, OBJ_ref_Object.ref_count) = @(this, OBJ_ref_Object.ref_count, LONG) - 1 AS LONG
+  if @(this, OBJ_ref_Object.ref_count, LONG) = 0 then 
+    OBJ_Object_destroy this
+  end if
 END SUB
 
 SUB OBJ_ref_Object_destroy (this as _OFFSET)

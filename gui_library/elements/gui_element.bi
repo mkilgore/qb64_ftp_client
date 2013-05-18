@@ -3,7 +3,8 @@
 !!define __GUI_OBJECTS_GUI_ELEMENT_BI__
 
 TYPE GUI_Element
-  s as OBJ_signal
+  parent_obj as OBJ_signal
+  
   nam       AS MEM_String
   dimension AS GUI_dimension
   flags     AS _UNSIGNED LONG

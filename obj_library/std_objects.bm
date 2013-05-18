@@ -2,6 +2,8 @@
 !!if not defined __OBJ_OBJECTS_STD_OBJECTS_BM__
 !!define __OBJ_OBJECTS_STD_OBJECTS_BM__
 
+'$include:'../mem_library/mem_lib.bm'
+
 '$include:'type_system/reg_type.bm'
 
 '$include:'ref_object.bm'

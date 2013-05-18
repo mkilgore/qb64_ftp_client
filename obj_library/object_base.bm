@@ -3,18 +3,18 @@
 !!define __OBJ_ _BM__
 
 FUNCTION _get_type& ()
-STATIC added
-DIM t as OBJ_type_info
-IF added = 0 then
-  t.class_size = LEN(_class, TYPE)
-  t.base_size = LEN(, TYPE)
-  t.init = @SUB(_init)
-  t.class_init = @SUB(_class_init)
-  t.destroy = @SUB(_destroy)
-  t.super = _get_type&
-  added = OBJ_type_register_type&(t)
-end if
-_get_type& = added
+  STATIC added
+  DIM t as OBJ_type_info
+  IF added = 0 then
+    t.class_size = LEN(_class, TYPE)
+    t.base_size = LEN(, TYPE)
+    t.init = @SUB(_init)
+    t.class_init = @SUB(_class_init)
+    t.destroy = @SUB(_destroy)
+    t.super = _get_type&
+    added = OBJ_type_register_type&(t)
+  end if
+  _get_type& = added
 END FUNCTION
 
 SUB _init (this as _OFFSET)
@@ -30,7 +30,7 @@ SUB _destroy (this as _OFFSET)
 END SUB
 
 FUNCTION _IS_ (this as _OFFSET)
-_IS_ = OBJ_is_instance_of&(this, _get_type&)
+  _IS_ = OBJ_is_instance_of&(this, _get_type&)
 END FUNCTION
 
 !!endif

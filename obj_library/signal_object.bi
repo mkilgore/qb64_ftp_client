@@ -22,6 +22,13 @@ TYPE OBJ_signal_node
   next_signal as _OFFSET
 END TYPE
 
+'@@
+'@Object
+'@Private
+'@Brief Represents a single connection to a signal in a chain of connections
+'
+'@@
+
 TYPE OBJ_signal_connection_node
   notify_proc AS @PROC
   id as _UNSIGNED LONG
@@ -47,8 +54,18 @@ TYPE OBJ_signal
   first_signal as _OFFSET 'GUI_signal_node
 END TYPE
 
-TYPE OBJ_signal_class
+TYPE OBJ_signal_class @class
   parent_class AS OBJ_ref_Object_class
+
+  disconnect_signal         AS @SUB(_OFFSET, LONG)
+  disconnect_connection     AS @SUB(_OFFSET, LONG)
+
+  get_signal_id             AS @FUNCTION(_OFFSET, STRING) AS LONG
+  connect_to_signal         AS @FUNCTION(_OFFSET, STRING, @PROC, _OFFSET) AS LONG
+  connect_to_signal_with_id AS @FUNCTION(_OFFSET, LONG, @PROC, _OFFSET) AS LONG
+  add_new_signal                AS @FUNCTION(_OFFSET, STRING) AS LONG
+
+  emit                      AS @SUB(_OFFSET, STRING)
 END TYPE
 
 !!endif

@@ -1,0 +1,62 @@
+
+!!if not defined __OBJ_OBJECTS_TEXT_BM__
+!!define __OBJ_OBJECTS_TEXT_BM__
+
+FUNCTION OBJ_TEXT_get_type& ()
+  STATIC added
+  if added = 0 then
+    DIM i as OBJ_type_info
+    i.size = LEN(OBJ_TEXT, TYPE)
+    i.class_sze = LEN(OBJ_TEXT_class, TYPE)
+    i.init = @SUB(OBJ_TEXT_init)
+    i.class_init = @SUB(OBJ_TEXT_class_init)
+    i.destroy = @SUB(OBJ_TEXT_destroy)
+    added = OBJ_type_register_type&(i)
+  end if
+  OBJ_TEXT_get_type& = added
+END FUNCTION
+
+FUNCTION OBJ_T%&(n$)
+DIM this as _OFFSET
+this = OBJ_TEXT_new%&()
+OBJ_TEXT_set_T this, n$
+OBJ_T%& = this
+END FUNCTION
+
+FUNCTION OBJ_TEXT_new%& ()
+DIM this as _OFFSET
+this = OBJ_type_allocate_new%&(OBJ_TEXT_get_type&)
+OBJ_TEXT_new%& = this
+END FUNCTION
+
+SUB OBJ_TEXT_init (this as _OFFSET)
+
+END SUB
+
+SUB OBJ_TEXT_class_init (class as _OFFSET)
+
+END SUB
+
+SUB OBJ_TEXT_destroy (this as _OFFSET)
+MEM_FREE @(this, OBJ_TEXT.s, _OFFSET)
+END SUB
+
+SUB OBJ_TEXT_set_T (this as _OFFSET, n$)
+l = LEN(n$)
+@(this, OBJ_TEXT.length) = l
+if @(this, OBJ_TEXT.allocated, LONG) < l then
+  MEM_FREE @(this, OBJ_TEXT.s, _OFFSET)
+  @(this, OBJ_TEXT.s) = MEM_MALLOC0%&(l + 10) AS _OFFSET
+  @(this, OBJ_TEXT.allocated) = l
+end if
+MEM_MEMCPY @(this, OBJ_TEXT.s, _OFFSET), _OFFSET(n$), l
+END SUB
+
+FUNCTION OBJ_get_T$ (this as _OFFSET)
+s$ = SPACE$(@(this, OBJ_TEXT.length, LONG)
+MEM_MEMCPY _OFFSET(s$), @(this, OBJ_TEXT.s, _OFFSET), @(this, OBJ_TEXT.length, LONG)
+OBJ_get_T$ = s$
+END FUNCTION
+
+!!endif
+

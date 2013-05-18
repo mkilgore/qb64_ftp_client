@@ -3,7 +3,11 @@
 !!define __GUI_LIB2_BM__
 
 ''$include:'objects/std_objects.bm'
+
+'$include:'../mem_library/mem_lib.bm'
+'$include:'../obj_library/std_objects.bm'
 '$include:'events/std_events.bm'
+'$include:'elements/std_elements.bm'
 
 !!if defined GUI_TEXT
   SUB GUI_put_image (row AS LONG, col AS LONG, src as LONG, dest AS LONG)

@@ -1,5 +1,34 @@
 
-'$include:'mem_library/mem_lib.bi'
+DECLARE CUSTOMTYPE LIBRARY
+  FUNCTION MEM_MALLOC%& ALIAS malloc (BYVAL bytes as LONG)
+  FUNCTION MEM_REALLOC%& ALIAS realloc (BYVAL src as _OFFSET, BYVAL size as LONG)
+  SUB MEM_FREE ALIAS free (BYVAL off as _OFFSET)
+  SUB MEM_MEMCPY ALIAS memcpy (BYVAL dest as _OFFSET, BYVAL src as _OFFSET, BYVAL bytes as LONG)
+  SUB MEM_MEMSET ALIAS memset (BYVAL dest as _OFFSET, BYVAL value as LONG, BYVAL bytes as LONG)
+  SUB MEM_MEMMOVE ALIAS memmove (BYVAL dest as _OFFSET, BYVAL src AS _OFFSET, BYVAL bytes AS LONG)
+END DECLARE
+
+CONST MEM_SIZEOF_OFFSET = 4
+CONST MEM_SIZEOF_MEM = 28
+
+CONST MEM_SIZEOF_MEM_STRING = MEM_SIZEOF_OFFSET + 4 + 4 + 1
+TYPE MEM_string
+  mem AS _OFFSET
+  length AS LONG
+  allocated AS LONG
+  is_allocated AS _BYTE
+END TYPE
+
+CONST MEM_SIZEOF_MEM_ARRAY = MEM_SIZEOF_OFFSET + 4 + 4 + 1 + 2
+TYPE MEM_array
+  mem AS _OFFSET
+  length AS LONG
+  allocated AS LONG
+  is_allocated AS _BYTE
+  element_size AS INTEGER
+END TYPE
+
+DIM SHARED MEM_FAKEMEM AS _MEM
 
 '''''NOTE
 'Implement "@(_OFFSET, TYPE)" -- Allow ommision of second parameter
@@ -48,6 +77,7 @@ REDIM SHARED func_type(500) AS STRING, function_count AS LONG
 REDIM SHARED func_diff_args AS LONG, func_diff_arg_list(500) AS STRING, func_diff_arg_type(500) AS STRING
 
 REDIM SHARED sub_data$, in_sub, in_type, in_declare, in_class_declare, class_nam$
+REDIM SHARED in_interface_declare
 
 DIM SHARED var_prefix$, mem_nam$, call_prefix$
 DIM SHARED ptrs_file$, call_func_prefix$
@@ -159,15 +189,22 @@ FOR x = 1 TO next_line
     'PRINT "In type!"
     in_type = -1
     type_nam$ = strip_line$(MID$(n$, 5))
+    in_class_declare = 0
+    in_interface_declare = 0
     if instr(type_nam$, "@CLASS") then
       in_class_declare = -1
       class_nam$ = mid$(type_nam$, 1, instr(type_nam$, "_CLASS") - 1)
+      add_src_line mid$(source(x), 1, instr(source(x), "@") - 1), new_length, new_source()
+    elseif instr(type_nam$, "@INTERFACE") then
+      in_interface_declare = -1
+      class_nam$ = strip_line$(mid$(type_nam$, 1, instr(type_nam$, "@") - 1))
       add_src_line mid$(source(x), 1, instr(source(x), "@") - 1), new_length, new_source()
     end if
   ELSEIF LEFT$(n$, 8) = "END TYPE" THEN
     'PRINT "Out of type!"
     in_type = 0
     in_class_declare = 0
+    in_interface_declare = 0
   END IF
   IF mod_flag THEN
     add_flag = 0
@@ -175,7 +212,7 @@ FOR x = 1 TO next_line
     n$ = strip_line$(n$)
     checking_off = -1
     
-    if in_class_declare and instr(ucase$(source(x)), "@SUB") then
+    if (in_class_declare or in_interface_declare) and instr(ucase$(source(x)), "@SUB") then
       memb$ = strip_line$(mid$(source(x), 1, instr(UCASE$(source(x)), " AS ") - 1))
       args$ = mid$(ucase$(source(x)), instr(source(x), "(") + 1)
       args$ = mid$(args$, 1, instr(args$, ")") - 1)
@@ -191,9 +228,17 @@ FOR x = 1 TO next_line
       LOOP 
       if a$ > "" then func$ = func$ + chr$(c) + " AS " + a$: arg_count = arg_count + 1
       func$ = func$ + ")" + line_end$
-      func$ = func$ + "DIM class as _OFFSET, pro AS _OFFSET: class = OBJ_Object_get_class%&(A)" + line_end$
+      if in_class_declare then
+        func$ = func$ + "DIM class as _OFFSET, pro AS _OFFSET: class = OBJ_Object_get_class%&(A)" + line_end$
+      else 
+        func$ = func$ + "DIM iface AS _OFFSET, pro as _OFFSET: iface = OBJ_Object_get_interface%&(A, " + class_nam$ + "_get_type&)" + line_end$
+      end if
       func$ = func$ + "$CHECKING:OFF" + line_end$
-      func$ = func$ + "pro = _MEMGET(" + mem_nam$ + ", class + _OFFSET(" + class_nam$ + "_class." + memb$ + ", TYPE), _OFFSET)" + line_end$
+      if in_class_declare then
+        func$ = func$ + "pro = _MEMGET(" + mem_nam$ + ", class + _OFFSET(" + class_nam$ + "_class." + memb$ + ", TYPE), _OFFSET)" + line_end$
+      else 
+        func$ = func$ + "pro = _MEMGET(" + mem_nam$ + ", iface + _OFFSET(" + class_nam$ + "." + memb$ + ", TYPE), _OFFSET)" + line_end$
+      end if
       func$ = func$ + "IF pro <> OBJ_NULL THEN" + line_end$
       cal$ = replace$(fix_space$(replace$(args$, ",", " ")), " ", "_")
       func$ = func$ + "  " + var_prefix$ + call_prefix$ + cal$ + " pro,"
@@ -211,7 +256,7 @@ FOR x = 1 TO next_line
       add_src_line mid$(source(x), 1, instr(source(x), "@") - 1) + " _OFFSET", new_length, new_source()
     end if
     
-    if in_class_declare and instr(ucase$(source(x)), "@FUNCTION") then
+    if (in_class_declare or in_interface_declare) and instr(ucase$(source(x)), "@FUNCTION") then
       memb$ = strip_line$(mid$(source(x), 1, instr(UCASE$(source(x)), " AS ") - 1))
       args$ = mid$(ucase$(source(x)), instr(source(x), "(") + 1)
       args$ = mid$(args$, 1, instr(args$, ")") - 1)
@@ -229,9 +274,17 @@ FOR x = 1 TO next_line
       LOOP 
       if a$ > "" then func$ = func$ + chr$(c) + " AS " + a$: arg_count = arg_count + 1
       func$ = func$ + ")" + line_end$
-      func$ = func$ + "DIM class as _OFFSET, pro as _OFFSET: class = OBJ_Object_get_class%&(A)" + line_end$
+      if in_class_declare then
+        func$ = func$ + "DIM class as _OFFSET, pro as _OFFSET: class = OBJ_Object_get_class%&(A)" + line_end$
+      else 
+        func$ = func$ + "DIM iface AS _OFFSET, pro as _OFFSET: iface = OBJ_Object_get_interface%&(A, " + class_nam$ + "_get_type&)" + line_end$
+      end if
       func$ = func$ + "$CHECKING:OFF" + line_end$
-      func$ = func$ + "pro = " + "_MEMGET(" + mem_nam$ + ", class + _OFFSET(" + class_nam$ + "_class." + memb$ + ", TYPE), _OFFSET)" + line_end$
+      if in_class_declare then
+        func$ = func$ + "pro = _MEMGET(" + mem_nam$ + ", class + _OFFSET(" + class_nam$ + "_class." + memb$ + ", TYPE), _OFFSET)" + line_end$
+      else 
+        func$ = func$ + "pro = _MEMGET(" + mem_nam$ + ", iface + _OFFSET(" + class_nam$ + "." + memb$ + ", TYPE), _OFFSET)" + line_end$
+      end if
       func$ = func$ + "IF pro <> OBJ_NULL THEN" + line_end$
       'func$ = func$ + "  @call(" + args$ + ") _MEMGET(" + mem_nam$ + ", class + _OFFSET(" + class_nam$ + "_class." + memb$ + ", TYPE), "
       cal$ = replace$(fix_space$(replace$(args$, ",", " ")), " ", "_")
@@ -245,10 +298,13 @@ FOR x = 1 TO next_line
       func$ = func$ + "$CHECKING:ON" + line_end$
       func$ = func$ + "END SUB" + line_end$
       add_func func$
+      'print "FUNC:"; class_nam$ + "_" + memb$
+      'print "ARGS:"; args$
+      'print "RET:"; ret$
       reg_func class_nam$ + "_" + memb$, args$, ret$
-      print "call prefix:"; cal$
-      print "func args:"; args$
-      print "func ret:"; ret$
+      'print "call prefix:"; cal$
+      'print "func args:"; args$
+      'print "func ret:"; ret$
       add_src_line mid$(source(x), 1, instr(source(x), "@") - 1) + " _OFFSET", new_length, new_source()
     end if
     
@@ -257,7 +313,7 @@ FOR x = 1 TO next_line
     
     DO
       changed_flag = 0
-      DO WHILE instr(ucase$(source(x)), "@SUB") AND NOT in_class_declare
+      DO WHILE instr(ucase$(source(x)), "@SUB") AND NOT in_class_declare AND NOT in_interface_declare
         'print "Old source:"; source(x)
         l = instr(ucase$(source(x)), "@SUB")
         sn$ = ucase$(mid$(source(x), l))
@@ -272,7 +328,7 @@ FOR x = 1 TO next_line
       LOOP
       n$ = strip_line$(ucase$(source(x)))
       
-      DO WHILE instr(ucase$(source(x)), "@FUNCTION") AND NOT in_class_declare
+      DO WHILE instr(ucase$(source(x)), "@FUNCTION") AND NOT in_class_declare AND NOT in_interface_declare
         l = instr(ucase$(source(x)), "@FUNCTION")
         sn$ = ucase$(mid$(source(x), l))
         le = instr(sn$, ")") - 1
@@ -948,8 +1004,8 @@ if function_count >= UBOUND(func_names) then
   REDIM _PRESERVE func_type(ubound(func_type) + 100) AS STRING
 end if
 func_names(function_count) = nam$
-func_args(function_count) = parse_args$(args$)
-func_type(function_count) = ret$
+func_args(function_count)  = parse_args$(args$)
+func_type(function_count)  = ret$
 find_high = 0
 flag = 0
 FOR x = 1 to function_count - 1
@@ -1055,7 +1111,10 @@ next x
 
 
 for x = 1 to func_diff_args
-  print #255, "  FUNCTION " + var_prefix$ + call_func_prefix$; func_diff_arg_type(x); "_"; replace$(func_diff_arg_list(x), chr$(13), "_"); get_suffix_from_type$(func_type(x)); "( BYVAL va AS _OFFSET, ";
+  'PRINT "Func:"; func_diff_arg_type(x); "_"; replace$(func_diff_arg_list(x), chr$(13), "_")
+  'print "type:"; func_diff_arg_type(x)
+  'PRINT "Suffix:"; get_suffix_from_type$(func_diff_arg_type(x))
+  print #255, "  FUNCTION " + var_prefix$ + call_func_prefix$; func_diff_arg_type(x); "_"; replace$(func_diff_arg_list(x), chr$(13), "_"); get_suffix_from_type$(func_diff_arg_type(x)); "( BYVAL va AS _OFFSET, ";
   a$ = func_diff_arg_list(x)
   c = 65
   DO until instr(a$, chr$(13)) <= 0
@@ -1188,4 +1247,190 @@ else
 end if
 END FUNCTION
 
-'$include:'mem_library/mem_lib.bm'
+FUNCTION MEM_get_str$ (s AS MEM_string)
+$CHECKING:OFF
+IF s.is_allocated <> 0 AND s.length > 0 THEN
+  get_s$ = space$(s.length)
+  MEM_MEMCPY _OFFSET(get_s$), s.mem, s.length
+  'FOR x = 1 TO s.length
+  '  get_s$ = get_s$ + _MEMGET(MEM_FAKEMEM, s.mem + x - 1, STRING * 1)
+  'NEXT x
+END IF
+MEM_get_str$ = get_s$
+$CHECKING:ON
+END FUNCTION
+
+SUB MEM_put_str (s AS MEM_string, stri$)
+$CHECKING:OFF
+IF NOT s.is_allocated OR s.allocated < LEN(stri$) THEN
+  IF s.is_allocated THEN MEM_FREE s.mem '_MEMFREE s.mem
+  's.mem = _MEMNEW(LEN(stri$) + 10) 'allocate 10 extra bytes
+  s.mem = MEM_MALLOC%&(LEN(stri$) + 10)
+  s.allocated = LEN(stri$) + 10
+  s.is_allocated = -1
+END IF
+'_MEMPUT s.mem, s.mem.OFFSET, stri$
+MEM_MEMCPY s.mem, _OFFSET(stri$), len(stri$)
+s.length = LEN(stri$)
+$CHECKING:ON
+END SUB
+
+FUNCTION MEM_get_str_array$ (a AS MEM_array, array_number)
+DIM s AS MEM_string
+$CHECKING:OFF
+'_MEMGET MEM_FAKEMEM, a.mem + array_number * MEM_SIZEOF_MEM_STRING, s
+MEM_MEMCPY _OFFSET(s), a.mem + array_number * MEM_SIZEOF_MEM_STRING, MEM_SIZEOF_MEM_STRING
+'_MEMCOPY a.mem, a.mem.OFFSET + array_number * LEN(string_type), LEN(string_type) TO m, m.OFFSET
+$CHECKING:ON
+
+MEM_get_str_array$ = MEM_get_str$(s)
+END FUNCTION
+
+SUB MEM_put_str_array (a AS MEM_array, array_number, s$)
+$CHECKING:OFF
+DIM st as MEM_string
+'_MEMGET MEM_FAKEMEM, a.mem + array_number * MEM_SIZEOF_MEM_STRING, st
+MEM_MEMCPY _OFFSET(st), a.mem + array_number * MEM_SIZEOF_MEM_STRING, MEM_SIZEOF_MEM_STRING
+MEM_put_str st, s$
+MEM_MEMCPY a.mem + array_number * MEM_SIZEOF_MEM_STRING, _OFFSET(st), MEM_SIZEOF_MEM_STRING
+'_MEMPUT a.mem, a.mem.OFFSET + array_number * MEM_SIZEOF_MEM_STRING, st
+
+$CHECKING:ON
+END SUB
+
+'SUB get_filedir_type_array (a AS array_type, array_number, f AS filedir_type)
+'DIM m AS _MEM
+''$CHECKING:OFF
+'m = _MEM(f)
+'_MEMCOPY a.mem, a.mem.OFFSET + array_number * LEN(f), LEN(f) TO m, m.OFFSET
+''$CHECKING:ON
+'END SUB
+
+SUB MEM_allocate_array (a AS MEM_array, number_of_elements, element_size)
+$CHECKING:OFF
+IF NOT a.is_allocated THEN
+  'not already allocated
+  a.element_size = element_size
+  a.length = number_of_elements 'add one to make it go from 0 to number_of_elements as BASIC programers would expect
+  a.is_allocated = -1
+  a.allocated = (a.length + 1) * element_size
+  'a.mem = _MEMNEW((a.length + 1) * element_size)
+  a.mem = MEM_MALLOC%&((a.length + 1) * element_size)
+  MEM_MEMSET a.mem, 0, (a.length + 1) * element_size
+  
+  '_MEMFILL a.mem, a.mem.OFFSET, (a.length + 1) * element_size, 0 as _byte
+elseif a.element_size = element_size then
+  MEM_reallocate_array a, number_of_elements
+END IF
+$CHECKING:ON
+
+END SUB
+
+SUB MEM_reallocate_array (a AS MEM_array, number_of_elements)
+
+DIM temp AS _OFFSET
+$CHECKING:OFF
+IF NOT a.is_allocated THEN
+  IF a.element_size > 0 THEN MEM_allocate_array a, number_of_elements, a.element_size ELSE ERROR 255
+ELSE 'reallocate
+  a.length = number_of_elements + 1:
+  IF (number_of_elements + 1) * a.element_size < a.allocated THEN EXIT SUB
+  temp = a.mem
+  'a.mem = _MEMNEW((number_of_elements + 1) * a.element_size)
+  a.mem = MEM_MALLOC%&((number_of_elements + 1) * a.element_size)
+  
+  MEM_MEMSET a.mem, 0, (number_of_elements + 1) * a.element_size
+  '_MEMFILL a.mem, a.mem.OFFSET, (number_of_elements + 1) * a.element_Size, 0 as _BYTE
+  MEM_MEMCPY a.mem, temp, a.allocated
+  '_MEMCOPY temp, temp.OFFSET, a.allocated TO a.mem, a.mem.OFFSET
+  s.allocated = (number_of_elements + 1) * a.element_size
+  MEM_FREE temp
+END IF
+
+$CHECKING:ON
+END SUB
+
+SUB MEM_allocate_string_array (a as MEM_array, number_of_elements)
+'DIM s as MEM_string
+MEM_allocate_array a, number_of_elements, MEM_SIZEOF_MEM_STRING
+END SUB
+
+SUB MEM_free_string_array (a as MEM_array)
+DIM s as MEM_string
+$CHECKING:OFF
+if a.is_allocated then
+  FOR x = 1 to a.length 'Free each individual string
+    's = _MEMGET(a.mem, a.mem.OFFSET + MEM_SIZEOF_MEM_STRING * (x - 1), MEM_string)
+    MEM_MEMCPY _OFFSET(s), a.mem + MEM_SIZEOF_MEM_STRING * (x - 1), MEM_SIZEOF_MEM_STRING
+    MEM_free_string s
+  next x
+  '_MEMFREE a.mem
+  MEM_FREE a.mem
+  a.is_allocated = 0
+  a.allocated = 0
+end if
+$CHECKING:ON
+END SUB
+
+SUB MEM_free_array (a as MEM_array)
+$CHECKING:OFF
+if a.is_allocated then
+  '_MEMFREE a.mem
+  MEM_FREE a.mem
+  a.is_allocated = 0
+  a.allocated = 0
+end if
+$CHECKING:ON
+END SUB
+
+SUB MEM_free_string (s as MEM_string)
+$CHECKING:OFF
+if s.is_allocated then
+  '_memfree s.mem
+  MEM_FREE s.mem
+  s.is_allocated = 0
+  s.allocated = 0
+end if
+$CHECKING:on
+END SUB
+
+FUNCTION MEM_int_from_off% (o as _OFFSET)
+$checking:off
+DIM i as INTEGER
+MEM_MEMCPY _OFFSET(i), o, LEN(i)
+MEM_int_from_off% = i
+$checking:on
+END FUNCTION
+
+FUNCTION MEM_long_from_off& (o as _OFFSET)
+$checking:off
+DIM l as LONG
+MEM_MEMCPY _OFFSET(l), o, 4 'LEN(l)
+MEM_long_from_off& = l
+$checking:on
+END FUNCTION
+
+FUNCTION MEM_byte_from_off%% (o as _OFFSET)
+$checking:off
+DIM b as _byte
+MEM_MEMCPY _OFFSET(b), o, LEN(b)
+MEM_byte_from_off%% = b
+$checking:on
+END FUNCTION
+
+FUNCTION MEM_int64_from_off&& (o as _OFFSET)
+$checking:off
+DIM i as _INTEGER64
+MEM_MEMCPY _OFFSET(i), o, LEN(i)
+MEM_ini64_from_off&& = i
+$checking:on
+END FUNCTION
+
+FUNCTION MEM_MALLOC0%& (bytes as LONG)
+$CHECKING:OFF
+DIM o as _OFFSET
+o = MEM_MALLOC%&(bytes)
+MEM_MEMSET o, 0, bytes
+$CHECKING:ON
+END FUNCTION
+

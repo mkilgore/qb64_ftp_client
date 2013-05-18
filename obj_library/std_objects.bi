@@ -4,6 +4,8 @@
 
 CONST OBJ_NULL = 0
 
+'$include:'../mem_library/mem_lib.bi'
+
 '$include:'type_system/reg_type.bi'
 
 '$include:'ref_object.bi'

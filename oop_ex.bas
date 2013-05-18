@@ -11,10 +11,7 @@
 '!!  define debug_print(x)
 '!!end if
 
-'$include:'mem_library/mem_lib.bi'
-'$include:'obj_library/std_objects.bi'
 '$include:'gui_library/gui_lib2.bi'
-'$include:'gui_library/elements/std_elements.bi'
 
 DIM Win AS _OFFSET, button as _OFFSET, ele AS LONG, m as MEM_String, of as _OFFSET
 
@@ -36,7 +33,7 @@ id = OBJ_signal_add_new_signal(button, "pressed3")
 
 of = _OFFSET(m)
 
-handle_id = OBJ_signal_connect&(button, "pressed1", @SUB(Test_signal1), of)
+handle_id = OBJ_signal_connect_to_signal&(button, "pressed1", @SUB(Test_signal1), of)
 
 print handle_id
 sleep
@@ -59,7 +56,4 @@ MEM_MEMCPY _OFFSET(m), dat, LEN(MEM_String, TYPE)
 print MEM_get_str$(m);
 END SUB
 
-'$include:'mem_library/mem_lib.bm'
-'$include:'obj_library/std_objects.bm'
 '$include:'gui_library/gui_lib2.bm'
-'$include:'gui_library/elements/std_elements.bm'

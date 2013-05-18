@@ -2,6 +2,10 @@
 !!if not defined __GUI_LIB2_BI__
 !!define __GUI_LIB2_BI__
 
+'$include:'../mem_library/mem_lib.bi'
+'$include:'../obj_library/std_objects.bi'
+
+
 'Setup library wide constants
 
 CONST GUI_VER$ = ".97" 'Current GUI version
@@ -120,5 +124,6 @@ END TYPE
 
 ''$include:'objects/std_objects.bi'
 '$include:'events/std_events.bi'
+'$include:'elements/std_elements.bi'
 
 !!endif

@@ -7,7 +7,7 @@ TYPE
   
 END TYPE
 
-TYPE _class
+TYPE _class @class
   parent_class AS
 END TYPE
 

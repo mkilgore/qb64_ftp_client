@@ -12,6 +12,7 @@ FUNCTION GUI_element_get_type& ()
     t.class_init = @SUB(GUI_element_class_init)
     t.destroy = @SUB(GUI_element_destroy)
     t.parent = OBJ_ref_Object_get_type&
+    t.flags = OBJ_TYPE_INFO_FLAG_ABSTRACT
     added = OBJ_type_register_type&(t)
   end if
   GUI_element_get_type& = added
@@ -33,6 +34,8 @@ SUB GUI_element_class_init (class as _OFFSET)
   @(class, GUI_element_class.is_active)       = @SUB(GUI_element_private_is_active) AS @PROC
   @(class, GUI_element_class.set_size)        = @SUB(GUI_element_private_set_size) AS @PROC
   @(class, GUI_element_class.create_image)    = @SUB(GUI_element_private_create_image) AS @PROC
+  @(class, GUI_element_class.get_name)        = @FUNCTION(GUI_element_private_get_name$) AS @PROC
+  @(class, GUI_element_class.set_name)        = @SUB(GUI_element_private_set_name) AS @PROC
   
   @(class, GUI_element_class.get_image)       = @FUNCTION(GUI_element_private_get_image&) AS @PROC
   @(class, GUI_element_class.set_location)    = @SUB(GUI_element_private_set_location) AS @PROC
@@ -58,6 +61,20 @@ SUB GUI_element_destroy (this as _OFFSET)
   end if
   'GUI_element_remove_parent this
 END SUB
+
+FUNCTION GUI_element_private_get_name$ (this as _OFFSET)
+  DIM m as MEM_String
+  m = @(this, GUI_element.nam, MEM_String)
+  GUI_element_private_get_name$ = MEM_get_str$(m)
+END FUNCTION
+
+SUB GUI_element_private_set_name (this as _OFFSET, s as STRING)
+  DIM m as MEM_String
+  m = @(this, GUI_element.nam, MEM_String)
+  MEM_put_str m, s
+  @(this, GUI_element.nam) = m
+END SUB
+
 
 'private implementations for functions
 FUNCTION GUI_element_private_get_width& (this as _OFFSET)

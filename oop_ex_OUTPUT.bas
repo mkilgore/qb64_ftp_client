@@ -1,5 +1,6 @@
 $CONSOLE
 DIM SHARED PARS__QB64__EMPTY_MEM AS _MEM
+CONST OBJ_TYPE_INFO_FLAG_IS_ABSTRACT = 1
 CONST GUI_EVENT_KEY = 1
 CONST GUI_EVENT_MOUSE = 2
 CONST GUI_ELEMENT_FLAG_UPDATED = 1
@@ -11,6 +12,9 @@ CONST GUI_ELEMENT_BUTTON_FLAG_PRESSED = 1
 CONST GUI_FRAME = 2
 CONST GUI_ELEMENT_FRAME_FLAG_SHADOW = 1
 CONST GUI_WINDOW = 3
+
+
+
 
 
 
@@ -64,7 +68,19 @@ END TYPE
 DIM SHARED MEM_FAKEMEM AS _MEM
 
 
+
 CONST OBJ_NULL = 0
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -77,10 +93,24 @@ TYPE OBJ_type_info
   class_init    AS _OFFSET
   destroy       AS _OFFSET
   parent        AS LONG
-  class_copy    AS _OFFSET
+  flags         AS LONG
+  class_copy      AS _OFFSET
+  interface_count AS LONG 
+  allocated_bytes  AS LONG
+END TYPE
+
+TYPE OBJ_type_interface_node
+  iface        AS LONG 
+  iface_off    AS _OFFSET 
+END TYPE
+
+TYPE OBJ_type_interface
+  size    AS LONG
+  flags   AS LONG
 END TYPE
 
 REDIM SHARED OBJ_TYPE_list(100) AS OBJ_type_info, OBJ_type_count AS LONG
+REDIM SHARED OBJ_type_Interface_list(100) as OBJ_type_interface, OBJ_type_interface_count AS LONG
 
 TYPE OBJ_Object
   vtable AS _OFFSET
@@ -88,7 +118,8 @@ TYPE OBJ_Object
 END TYPE
 
 TYPE OBJ_Object_class
-  filler AS _OFFSET
+  otype       AS LONG
+  iface_off   AS _OFFSET
 END TYPE
 
 
@@ -127,6 +158,13 @@ TYPE OBJ_signal_node
   next_signal as _OFFSET
 END TYPE
 
+
+
+
+
+
+
+
 TYPE OBJ_signal_connection_node
   notify_proc AS _OFFSET
   id as _UNSIGNED LONG
@@ -152,8 +190,18 @@ TYPE OBJ_signal
   first_signal as _OFFSET 
 END TYPE
 
-TYPE OBJ_signal_class
+TYPE OBJ_signal_class 
   parent_class AS OBJ_ref_Object_class
+
+  disconnect_signal         AS  _OFFSET
+  disconnect_connection     AS  _OFFSET
+
+  get_signal_id             AS  _OFFSET
+  connect_to_signal         AS  _OFFSET
+  connect_to_signal_with_id AS  _OFFSET
+  add_new_signal                AS  _OFFSET
+
+  emit                      AS  _OFFSET
 END TYPE
 
 
@@ -270,6 +318,15 @@ END TYPE
 
 
 
+TYPE GUI_event_interface 
+  proc1 AS  _OFFSET
+  proc2 AS  _OFFSET
+  proc3 AS  _OFFSET
+END TYPE
+
+
+
+
 TYPE GUI_event
   obj as OBJ_ref_object
   event_type AS _UNSIGNED LONG
@@ -321,9 +378,9 @@ END TYPE
 
 
 
-
 TYPE GUI_Element
-  s as OBJ_signal
+  parent_obj as OBJ_signal
+  
   nam       AS MEM_String
   dimension AS GUI_dimension
   flags     AS _UNSIGNED LONG
@@ -449,6 +506,7 @@ END TYPE
 
 
 
+
 DIM Win AS _OFFSET, button as _OFFSET, ele AS LONG, m as MEM_String, of as _OFFSET
 
 Win = GUI_element_window_new_s_title%&(25, 80, "Hey!")
@@ -470,7 +528,7 @@ id = OBJ_signal_add_new_signal(button, "pressed3")
 of = _OFFSET(m)
 
 $CHECKING:OFF
-handle_id = OBJ_signal_connect&(button, "pressed1", TEST_SIGNAL1_ptr%&, of)
+handle_id = OBJ_signal_connect_to_signal&(button, "pressed1", TEST_SIGNAL1_ptr%&, of)
 $CHECKING:ON
 
 print handle_id
@@ -496,6 +554,11 @@ MEM_MEMCPY _OFFSET(m), dat, LEN(MEM_String, TYPE)
 print MEM_get_str$(m);
 
 END SUB
+
+
+
+
+
 
 
 
@@ -710,6 +773,16 @@ END FUNCTION
 
 
 
+
+
+
+
+
+
+
+
+
+
 FUNCTION OBJ_is_instance_of& (this as _OFFSET, t as LONG)
 $CHECKING:OFF
 OTYPE = _MEMGET(PARS__QB64__EMPTY_MEM, THIS + _OFFSET(OBJ_OBJECT.OTYPE, TYPE), LONG) 
@@ -721,8 +794,26 @@ $CHECKING:ON
 
 END FUNCTION
 
+FUNCTION OBJ_is_instance_of_interface& (this as _OFFSET, t as LONG)
+  DIM class as _OFFSET, otype AS LONG
+$CHECKING:OFF
+OTYPE = _MEMGET(PARS__QB64__EMPTY_MEM, THIS + _OFFSET(OBJ_OBJECT.OTYPE, TYPE), LONG) 
+$CHECKING:ON
+  if OBJ_type_list(otype).interface_count = 0 then exit function
+  
+$CHECKING:OFF
+CLASS = _MEMGET(PARS__QB64__EMPTY_MEM, THIS + _OFFSET(OBJ_OBJECT.VTABLE, TYPE), _OFFSET)  + OBJ_TYPE_LIST(OTYPE).CLASS_SIZE
+$CHECKING:ON
+  DO
+$CHECKING:OFF
+IF _MEMGET(PARS__QB64__EMPTY_MEM, CLASS + _OFFSET(OBJ_TYPE_INTERFACE_NODE.IFACE, TYPE), LONG)  = T THEN OBJ_IS_INSTANCE_OF_INTERFACE& = -1: EXIT FUNCTION
+$CHECKING:ON
+    class = class + LEN(OBJ_type_interface_node, TYPE)
+  LOOP until otype = 0
+
+END FUNCTION
+
 FUNCTION OBJ_type_register_type& (t as OBJ_type_info)
-  DIM parent_list(OBJ_TYPE_PARENT_MAX) AS LONG, s_count AS LONG
   OBJ_type_count = OBJ_type_count + 1
   if OBJ_type_count > UBOUND(OBJ_type_list) then
     REDIM _PRESERVE OBJ_type_list(UBOUND(OBJ_type_list) + 100) AS OBJ_type_info
@@ -730,25 +821,36 @@ FUNCTION OBJ_type_register_type& (t as OBJ_type_info)
   
   OBJ_type_list(OBJ_type_count) = t
   OBJ_type_list(OBJ_type_count).class_copy = MEM_MALLOC0%&(t.class_size)
-  tn = OBJ_type_count
-  s_count = 1
-  parent_list(s_count) = tn
+  OBJ_type_list(OBJ_type_count).allocated_bytes = t.class_size
   
-  DO WHILE OBJ_type_list(tn).parent <> 0
-    s_count = s_count + 1
-    parent_list(s_count) = OBJ_type_list(tn).parent 
-    tn = OBJ_type_list(tn).parent 
-  loop
+  if t.parent > 0 then
+    MEM_MEMCPY OBJ_type_list(OBJ_type_count).class_copy, OBJ_type_list(t.parent).class_copy, OBJ_type_list(t.parent).class_size
+  end if
   
-  FOR x = s_count to 1 STEP -1
-    if OBJ_type_list(tn).class_init <> 0 then 
 $CHECKING:OFF
-c__OFFSET  OBJ_type_list(tn).class_init, OBJ_type_list(OBJ_type_count).class_copy
+_MEMPUT PARS__QB64__EMPTY_MEM, OBJ_TYPE_LIST(OBJ_TYPE_COUNT).CLASS_COPY+ _OFFSET(OBJ_OBJECT_CLASS.OTYPE, TYPE),  OBJ_TYPE_COUNT
 $CHECKING:ON
-    end if
-  NEXT x
+$CHECKING:OFF
+_MEMPUT PARS__QB64__EMPTY_MEM, OBJ_TYPE_LIST(OBJ_TYPE_COUNT).CLASS_COPY+ _OFFSET(OBJ_OBJECT_CLASS.IFACE_OFF, TYPE),  OBJ_TYPE_LIST(OBJ_TYPE_COUNT).CLASS_COPY + OBJ_TYPE_LIST(OBJ_TYPE_COUNT).CLASS_SIZE AS _OFFSET
+$CHECKING:ON
+  
+$CHECKING:OFF
+c__OFFSET  OBJ_type_list(OBJ_type_count).class_init, OBJ_type_list(OBJ_type_count).class_copy
+$CHECKING:ON
   
   OBJ_type_register_type& = OBJ_type_count
+
+END FUNCTION
+
+FUNCTION OBJ_type_register_interface& (i as OBJ_type_interface)
+  OBJ_type_interface_count = OBJ_type_interface_count + 1
+  if OBJ_type_interface_count > UBOUND(OBJ_type_interface_list) then
+    REDIM _PRESERVE OBJ_type_interface_list(UBOUND(OBJ_type_interface_list) + 100) AS OBJ_type_interface
+  end if
+  
+  OBJ_type_interface_list(OBJ_type_interface_count) = i
+  
+  OBJ_type_register_interface& = OBJ_type_interface_count
 
 END FUNCTION
 
@@ -780,53 +882,101 @@ END FUNCTION
 FUNCTION OBJ_type_allocate_new%& (t as LONG)
   DIM parent_list(OBJ_TYPE_PARENT_MAX) AS LONG, s_count AS LONG
   DIM this AS _OFFSET, class AS _OFFSET
-  this = MEM_MALLOC0%&(OBJ_type_list(t).base_size)
-  class = OBJ_type_list(t).class_copy
-  
+  if (OBJ_type_list(t).flags AND OBJ_TYPE_INFO_FLAG_ABSTRACT) = 0 then
+    this = MEM_MALLOC0%&(OBJ_type_list(t).base_size)
+    class = OBJ_type_list(t).class_copy
+    
 $CHECKING:OFF
 _MEMPUT PARS__QB64__EMPTY_MEM, THIS+ _OFFSET(OBJ_OBJECT.VTABLE, TYPE),  CLASS
 $CHECKING:ON
-  
-  
-  
-  
-  
-  
-  
-  tn = t
-  s_count = 1
-  parent_list(s_count) = tn
-  DO WHILE OBJ_type_list(tn).parent <> 0
-    s_count = s_count + 1
-    parent_list(s_count) = OBJ_type_list(tn).parent 
-    tn = OBJ_type_list(tn).parent 
-  loop
-  FOR x = s_count to 1 STEP -1
-    if OBJ_type_list(tn).init <> 0 then 
+    
+    
+    tn = t
+    s_count = 1
+    parent_list(s_count) = tn
+    DO WHILE OBJ_type_list(tn).parent <> 0
+      s_count = s_count + 1
+      parent_list(s_count) = OBJ_type_list(tn).parent 
+      tn = OBJ_type_list(tn).parent 
+    loop
+    FOR x = s_count to 1 STEP -1
+      if OBJ_type_list(tn).init <> 0 then 
 $CHECKING:OFF
 c__OFFSET  OBJ_type_list(tn).init, this
 $CHECKING:ON
-    end if
-  NEXT x
+      end if
+    NEXT x
+    OBJ_type_allocate_new%& = this
+  else
+DEBUG_PRINT  "Error: Can not instantiate type, abstract"
+    OBJ_type_allocate_new%& = OBJ_NULL
+  end if
 
 END FUNCTION
 
-SUB OBJ_type_destroy (this as _OFFSET)
+FUNCTION OBJ_type_add_interface_to_class%& (class as _OFFSET, t AS LONG)
+  
+  DIM iface as _OFFSET, next_iface AS _OFFSET, otype AS LONG
+  
+  DIM old_size AS LONG, iface_size AS LONG, old AS _OFFSET, dest AS _OFFSET
+  
 $CHECKING:OFF
-OTYPE = _MEMGET(PARS__QB64__EMPTY_MEM, THIS + _OFFSET(OBJ_OBJECT.OTYPE, TYPE), LONG) 
+OTYPE = _MEMGET(PARS__QB64__EMPTY_MEM, CLASS + _OFFSET(OBJ_OBJECT_CLASS.OTYPE, TYPE), LONG) 
 $CHECKING:ON
-  tn = otype
-  DO
-    if OBJ_type_list(tn).destroy then
+  iface = class + OBJ_type_list(otype).class_size 
+  
+  FOR x = 0 to OBJ_type_list(otype).interface_count - 1
+    next_iface = iface + x * LEN(OBJ_type_interface_node, TYPE)
 $CHECKING:OFF
-c__OFFSET  OBJ_type_list(tn).destroy, this
+IF _MEMGET(PARS__QB64__EMPTY_MEM, NEXT_IFACE + _OFFSET(OBJ_TYPE_INTERFACE_NODE.IFACE, TYPE), LONG)  = T THEN
 $CHECKING:ON
+$CHECKING:OFF
+OBJ_TYPE_ADD_INTERFACE_TO_CLASS%& = _MEMGET(PARS__QB64__EMPTY_MEM, NEXT_IFACE + _OFFSET(OBJ_TYPE_INTERFACE_NODE.IFACE_OFF, TYPE), _OFFSET) 
+$CHECKING:ON
+      exit function
     end if
-    tn = OBJ_type_list(tn).parent 
-  LOOP Until tn = 0
-  MEM_FREE this
+  next x
+  
+  OBJ_type_list(otype).interface_count = OBJ_type_list(otype).interface_count + 1
+  old_size = OBJ_type_list(otype).allocated_bytes
+  OBJ_type_list(otype).allocated_bytes = OBJ_type_list(otype).allocated_bytes + LEN(OBJ_type_interface_node, TYPE) + OBJ_type_interface_list(t).size
+  
+  class = MEM_REALLOC%&(class, OBJ_type_list(otype).allocated_bytes)
+  
+  if OBJ_type_list(otype).interface_count > 1 then
+    
+    iface_size = old_size - OBJ_type_list(otype).class_size - (OBJ_type_list(otype).interface_count - 1) * LEN(OBJ_type_interface_node, TYPE)
+    old  = class + old_size
+    dest = old + LEN(OBJ_type_interface_node, TYPE)
+    MEM_MEMMOVE dest, old, iface_size
+  end if
+  
+  
+  for x = 0 to OBJ_type_list(otype).interface_count - 2
+    next_iface = iface + x * LEN(OBJ_type_interface_node, TYPE)
+$CHECKING:OFF
+_MEMPUT PARS__QB64__EMPTY_MEM, NEXT_IFACE+ _OFFSET(OBJ_TYPE_INTERFACE_NODE.IFACE_OFF, TYPE),  _MEMGET(PARS__QB64__EMPTY_MEM, NEXT_IFACE + _OFFSET(OBJ_TYPE_INTERFACE_NODE.IFACE_OFF, TYPE), _OFFSET)  + LEN(OBJ_TYPE_INTERFACE_NODE, TYPE) AS _OFFSET
+$CHECKING:ON
+  next x
+  
+  next_iface = iface + (OBJ_type_list(otype).interface_count - 1) * LEN(OBJ_type_interface_node, TYPE)
+$CHECKING:OFF
+_MEMPUT PARS__QB64__EMPTY_MEM, NEXT_IFACE+ _OFFSET(OBJ_TYPE_INTERFACE_NODE.IFACE, TYPE),  T AS LONG
+$CHECKING:ON
+$CHECKING:OFF
+_MEMPUT PARS__QB64__EMPTY_MEM, NEXT_IFACE+ _OFFSET(OBJ_TYPE_INTERFACE_NODE.IFACE_OFF, TYPE),  CLASS + OBJ_TYPE_LIST(OTYPE).ALLOCATED_BYTES - OBJ_TYPE_INTERFACE_LIST(T).SIZE AS _OFFSET
+$CHECKING:ON
+  
+$CHECKING:OFF
+OBJ_TYPE_ADD_INTERFACE_TO_CLASS%& = _MEMGET(PARS__QB64__EMPTY_MEM, NEXT_IFACE + _OFFSET(OBJ_TYPE_INTERFACE_NODE.IFACE_OFF, TYPE), _OFFSET) 
+$CHECKING:ON
 
-END SUB
+END FUNCTION
+
+FUNCTION OBJ_type_get_interface%& (class as _OFFSET, t as LONG)
+  
+
+END FUNCTION
 
 FUNCTION OBJ_type_get_class%& (t as LONG)
   OBJ_type_get_class%& = OBJ_type_list(t).class_copy
@@ -846,6 +996,7 @@ FUNCTION OBJ_Object_get_type& ()
     t.init = 0
     t.destroy = 0
     t.parent = 0 
+    t.flags = OBJ_TYPE_INFO_FLAG_ABSTRACT
     otype = OBJ_type_register_type&(t)
   end if
   OBJ_Object_get_type& = otype
@@ -859,6 +1010,32 @@ $CHECKING:ON
 
 END FUNCTION
 
+FUNCTION OBJ_Object_get_interface%& (this as _OFFSET, t as LONG)
+  DIM class as _OFFSET, otype AS LONG, iface AS _OFFSET
+$CHECKING:OFF
+OTYPE = _MEMGET(PARS__QB64__EMPTY_MEM, THIS + _OFFSET(OBJ_OBJECT.OTYPE, TYPE), LONG) 
+$CHECKING:ON
+$CHECKING:OFF
+CLASS = _MEMGET(PARS__QB64__EMPTY_MEM, THIS + _OFFSET(OBJ_OBJECT.VTABLE, TYPE), _OFFSET) 
+$CHECKING:ON
+$CHECKING:OFF
+IFACE = _MEMGET(PARS__QB64__EMPTY_MEM, CLASS + _OFFSET(OBJ_OBJECT_CLASS.IFACE_OFF, TYPE), _OFFSET) 
+$CHECKING:ON
+  
+  FOR x = 0 to OBJ_type_list(otype).interface_count - 1
+$CHECKING:OFF
+IF _MEMGET(PARS__QB64__EMPTY_MEM, IFACE + _OFFSET(OBJ_TYPE_INTERFACE_NODE.IFACE, TYPE), LONG)  = T THEN
+$CHECKING:ON
+$CHECKING:OFF
+OBJ_OBJECT_GET_INTERFACE%& = _MEMGET(PARS__QB64__EMPTY_MEM, IFACE + _OFFSET(OBJ_TYPE_INTERFACE_NODE.IFACE_OFF, TYPE), _OFFSET) 
+$CHECKING:ON
+      exit function
+    end if
+    iface = iface + LEN(OBJ_type_interface_node, TYPE)
+  NEXT x
+
+END FUNCTION
+
 FUNCTION OBJ_Object_get_parent_class%& (this as _OFFSET)
 $CHECKING:OFF
 OBJ_OBJECT_GET_PARENT_CLASS%& = OBJ_TYPE_LIST(OBJ_TYPE_LIST(_MEMGET(PARS__QB64__EMPTY_MEM, THIS + _OFFSET(OBJ_OBJECT.OTYPE, TYPE), LONG) ).PARENT).CLASS_COPY
@@ -866,28 +1043,52 @@ $CHECKING:ON
 
 END FUNCTION
 
+FUNCTION OBJ_Class_get_type& (class as _OFFSET)
+$CHECKING:OFF
+OBJ_CLASS_GET_TYPE& = _MEMGET(PARS__QB64__EMPTY_MEM, CLASS + _OFFSET(OBJ_OBJECT_CLASS.OTYPE, TYPE), LONG) 
+$CHECKING:ON
+
+END FUNCTION
+
+SUB OBJ_Object_destroy (this as _OFFSET)
+$CHECKING:OFF
+OTYPE = _MEMGET(PARS__QB64__EMPTY_MEM, THIS + _OFFSET(OBJ_OBJECT.OTYPE, TYPE), LONG) 
+$CHECKING:ON
+  tn = otype
+  DO
+    if OBJ_type_list(tn).destroy then
+$CHECKING:OFF
+c__OFFSET  OBJ_type_list(tn).destroy, this
+$CHECKING:ON
+    end if
+    tn = OBJ_type_list(tn).parent 
+  LOOP Until tn = 0
+  MEM_FREE this
+
+END SUB
+
 
 
 
 FUNCTION OBJ_ref_object_get_type& ()
-STATIC added
-DIM t as OBJ_type_info
-if added = 0 then
-  t.class_size = LEN(OBJ_ref_object_class, TYPE)
-  t.base_size = LEN(OBJ_ref_object, TYPE)
+  STATIC added
+  DIM t as OBJ_type_info
+  if added = 0 then
+    t.class_size = LEN(OBJ_ref_object_class, TYPE)
+    t.base_size = LEN(OBJ_ref_object, TYPE)
 $CHECKING:OFF
-  t.init = OBJ_REF_OBJECT_INIT_ptr%&
+    t.init = OBJ_REF_OBJECT_INIT_ptr%&
 $CHECKING:ON
 $CHECKING:OFF
-  t.class_init = OBJ_REF_OBJECT_CLASS_INIT_ptr%&
+    t.class_init = OBJ_REF_OBJECT_CLASS_INIT_ptr%&
 $CHECKING:ON
 $CHECKING:OFF
-  t.destroy = OBJ_REF_OBJECT_DESTROY_ptr%&
+    t.destroy = OBJ_REF_OBJECT_DESTROY_ptr%&
 $CHECKING:ON
-  t.parent = OBJ_Object_get_type&
-  added = OBJ_type_register_type&(t)
-end if
-OBJ_ref_object_get_type& = added
+    t.parent = OBJ_Object_get_type&
+    added = OBJ_type_register_type&(t)
+  end if
+  OBJ_ref_object_get_type& = added
 
 END FUNCTION
 
@@ -924,7 +1125,7 @@ FUNCTION OBJ_ref_Object_private_get_ref%& (this as _OFFSET)
 $CHECKING:OFF
 _MEMPUT PARS__QB64__EMPTY_MEM, THIS+ _OFFSET(OBJ_REF_OBJECT.REF_COUNT, TYPE),  _MEMGET(PARS__QB64__EMPTY_MEM, THIS + _OFFSET(OBJ_REF_OBJECT.REF_COUNT, TYPE), LONG)  + 1 AS LONG
 $CHECKING:ON
-OBJ_ref_Object_private_get_ref%& = this
+  OBJ_ref_Object_private_get_ref%& = this
 
 END FUNCTION
 
@@ -935,8 +1136,8 @@ $CHECKING:ON
 $CHECKING:OFF
 IF _MEMGET(PARS__QB64__EMPTY_MEM, THIS + _OFFSET(OBJ_REF_OBJECT.REF_COUNT, TYPE), LONG)  = 0 THEN
 $CHECKING:ON
-  OBJ_type_destroy this
-end if
+    OBJ_Object_destroy this
+  end if
 
 END SUB
 
@@ -971,9 +1172,13 @@ $CHECKING:OFF
   t.init = OBJ_SIGNAL_INIT_ptr%&
 $CHECKING:ON
 $CHECKING:OFF
+  t.class_init = OBJ_SIGNAL_INIT_CLASS_ptr%&
+$CHECKING:ON
+$CHECKING:OFF
   t.destroy = OBJ_SIGNAL_DESTROY_ptr%&
 $CHECKING:ON
   t.parent = OBJ_ref_object_get_type&
+  t.flags = OBJ_TYPE_INFO_FLAG_ABSTRACT
   added = OBJ_type_register_type&(t)
 end if
 OBJ_signal_get_type& = added
@@ -986,11 +1191,32 @@ END FUNCTION
 
 
 SUB OBJ_signal_init (this as _OFFSET)
+
+
+
+END SUB
+
+SUB OBJ_signal_init_class (class as _OFFSET)
 $CHECKING:OFF
-_MEMPUT PARS__QB64__EMPTY_MEM, THIS+ _OFFSET(OBJ_SIGNAL.NEXT_CONNECTION_ID, TYPE),  1 AS LONG
+_MEMPUT PARS__QB64__EMPTY_MEM, CLASS+ _OFFSET(OBJ_SIGNAL_CLASS.DISCONNECT_SIGNAL, TYPE),  OBJ_SIGNAL_PRIVATE_DISCONNECT_SIGNAL_PTR%& AS _OFFSET
 $CHECKING:ON
 $CHECKING:OFF
-_MEMPUT PARS__QB64__EMPTY_MEM, THIS+ _OFFSET(OBJ_SIGNAL.NEXT_SIGNAL_ID, TYPE),  1 AS LONG
+_MEMPUT PARS__QB64__EMPTY_MEM, CLASS+ _OFFSET(OBJ_SIGNAL_CLASS.DISCONNECT_CONNECTION, TYPE),  OBJ_SIGNAL_PRIVATE_DISCONNECT_CON_PTR%& AS _OFFSET
+$CHECKING:ON
+$CHECKING:OFF
+_MEMPUT PARS__QB64__EMPTY_MEM, CLASS+ _OFFSET(OBJ_SIGNAL_CLASS.GET_SIGNAL_ID, TYPE),  OBJ_SIGNAL_PRIVATE_GET_SIGNAL_ID_PTR%& AS _OFFSET
+$CHECKING:ON
+$CHECKING:OFF
+_MEMPUT PARS__QB64__EMPTY_MEM, CLASS+ _OFFSET(OBJ_SIGNAL_CLASS.CONNECT_TO_SIGNAL, TYPE),  OBJ_SIGNAL_PRIVATE_CONNECT_TO_SIGNAL_PTR%& AS _OFFSET
+$CHECKING:ON
+$CHECKING:OFF
+_MEMPUT PARS__QB64__EMPTY_MEM, CLASS+ _OFFSET(OBJ_SIGNAL_CLASS.CONNECT_TO_SIGNAL_WITH_ID, TYPE),  OBJ_SIGNAL_PRIVATE_CONNECT_TO_S_W_I_PTR%& AS _OFFSET
+$CHECKING:ON
+$CHECKING:OFF
+_MEMPUT PARS__QB64__EMPTY_MEM, CLASS+ _OFFSET(OBJ_SIGNAL_CLASS.ADD_NEW_SIGNAL, TYPE),  OBJ_SIGNAL_PRIVATE_ADD_NEW_SIGNAL_PTR%& AS _OFFSET
+$CHECKING:ON
+$CHECKING:OFF
+_MEMPUT PARS__QB64__EMPTY_MEM, CLASS+ _OFFSET(OBJ_SIGNAL_CLASS.EMIT, TYPE),  OBJ_SIGNAL_PRIVATE_EMIT_PTR%& AS _OFFSET
 $CHECKING:ON
 
 END SUB
@@ -1004,7 +1230,8 @@ END SUB
 
 
 
-SUB OBJ_signal_clear (this as _OFFSET)
+
+SUB OBJ_signal_destroy (this as _OFFSET)
 OBJ_signal_clear_signals this
 
 END SUB
@@ -1014,17 +1241,17 @@ SUB OBJ_signal_clear_signals (this as _OFFSET)
 
 END SUB
 
-SUB OBJ_signal_disconnect (this as _OFFSET, id as _UNSIGNED LONG)
+SUB OBJ_signal_private_disconnect_signal (this as _OFFSET, id as _UNSIGNED LONG)
 
 
 END SUB
 
-SUB OBJ_connection_disconnect (this as _OFFSET, id as _UNSIGNED LONG)
+SUB OBJ_signal_private_disconnect_con (this as _OFFSET, id as _UNSIGNED LONG)
 
 
 END SUB
 
-FUNCTION OBJ_get_signal_id& (this as _OFFSET, n$)
+FUNCTION OBJ_signal_private_get_signal_id& (this as _OFFSET, n$)
 $CHECKING:OFF
 DIM sig as _OFFSET, m as MEM_string
 $CHECKING:OFF
@@ -1036,7 +1263,7 @@ M = _MEMGET(PARS__QB64__EMPTY_MEM, SIG + _OFFSET(OBJ_SIGNAL_NODE.SIGNAL_NAME, TY
 $CHECKING:ON
   if MEM_get_str$(m) = n$ then
 $CHECKING:OFF
-OBJ_GET_SIGNAL_ID& = _MEMGET(PARS__QB64__EMPTY_MEM, SIG + _OFFSET(OBJ_SIGNAL_NODE.ID, TYPE), LONG) 
+OBJ_SIGNAL_PRIVATE_GET_SIGNAL_ID& = _MEMGET(PARS__QB64__EMPTY_MEM, SIG + _OFFSET(OBJ_SIGNAL_NODE.ID, TYPE), LONG) 
 $CHECKING:ON
     exit function
   end if
@@ -1068,7 +1295,7 @@ END FUNCTION
 
 
 
-FUNCTION OBJ_signal_connect& (this as _OFFSET, n$, pro as _OFFSET, dat as _OFFSET)
+FUNCTION OBJ_signal_private_connect_to_signal& (this as _OFFSET, n$, pro as _OFFSET, dat as _OFFSET)
 $CHECKING:OFF
 DIM sig as _OFFSET, m as MEM_string
 $CHECKING:OFF
@@ -1079,7 +1306,7 @@ $CHECKING:OFF
 M = _MEMGET(PARS__QB64__EMPTY_MEM, SIG + _OFFSET(OBJ_SIGNAL_NODE.SIGNAL_NAME, TYPE), MEM_STRING) 
 $CHECKING:ON
   if MEM_get_str$(m) = n$ then
-    OBJ_signal_connect& = OBJ_signal_attach_to_signal&(this, sig, pro, dat)
+    OBJ_signal_private_connect& = OBJ_signal_private_attach_to_signal&(this, sig, pro, dat)
     exit function
   end if
 $CHECKING:OFF
@@ -1090,7 +1317,7 @@ $CHECKING:ON
 
 END FUNCTION
 
-FUNCTION OBJ_signal_connect_with_id& (this as _OFFSET, id as _UNSIGNED LONG, pro as _OFFSET, dat as _OFFSET)
+FUNCTION OBJ_signal_private_connect_to_s_w_i& (this as _OFFSET, id as _UNSIGNED LONG, pro as _OFFSET, dat as _OFFSET)
 $CHECKING:OFF
 DIM sig as _OFFSET, m as MEM_string
 $CHECKING:OFF
@@ -1100,7 +1327,7 @@ DO while sig <> 0
 $CHECKING:OFF
 IF _MEMGET(PARS__QB64__EMPTY_MEM, SIG + _OFFSET(OBJ_SIGNAL_NODE.ID, TYPE), LONG)  = ID THEN
 $CHECKING:ON
-    OBJ_signal_connect_with_id& = OBJ_signal_attach_to_signal&(this, sig, pro, dat)
+    OBJ_signal_private_connect_to_s_w_i& = OBJ_signal_private_attach_to_signal&(this, sig, pro, dat)
     exit function
   end if
 $CHECKING:OFF
@@ -1119,7 +1346,8 @@ END FUNCTION
 
 
 
-FUNCTION OBJ_signal_attach_to_signal& (this as _OFFSET, sig as _OFFSET, pro as _OFFSET, dat as _OFFSET)
+
+FUNCTION OBJ_signal_private_attach_to_signal& (this as _OFFSET, sig as _OFFSET, pro as _OFFSET, dat as _OFFSET)
 $CHECKING:OFF
 DIM new_connect AS _OFFSET
 new_connect = MEM_MALLOC%&(LEN(OBJ_signal_connection_node, TYPE))
@@ -1142,14 +1370,14 @@ $CHECKING:OFF
 _MEMPUT PARS__QB64__EMPTY_MEM, THIS+ _OFFSET(OBJ_SIGNAL.NEXT_CONNECTION_ID, TYPE),  _MEMGET(PARS__QB64__EMPTY_MEM, THIS + _OFFSET(OBJ_SIGNAL.NEXT_CONNECTION_ID, TYPE), LONG)  + 1 AS LONG
 $CHECKING:ON
 $CHECKING:OFF
-OBJ_SIGNAL_ATTACH_TO_SIGNAL& = _MEMGET(PARS__QB64__EMPTY_MEM, NEW_CONNECT + _OFFSET(OBJ_SIGNAL_CONNECTION_NODE.ID, TYPE), LONG) 
+OBJ_SIGNAL_PRIVATE_ATTACH_TO_SIGNAL& = _MEMGET(PARS__QB64__EMPTY_MEM, NEW_CONNECT + _OFFSET(OBJ_SIGNAL_CONNECTION_NODE.ID, TYPE), LONG) 
 $CHECKING:ON
 $CHECKING:ON
 
 END FUNCTION
 
 
-FUNCTION OBJ_signal_add_new_signal& (this as _OFFSET, n$)
+FUNCTION OBJ_signal_private_add_new_signal& (this as _OFFSET, n$)
 DIM sig as _OFFSET, m as MEM_string, last as _OFFSET
 sig = MEM_MALLOC%&(LEN(OBJ_signal, TYPE))
 MEM_put_str m, n$
@@ -1172,12 +1400,12 @@ $CHECKING:OFF
 _MEMPUT PARS__QB64__EMPTY_MEM, THIS+ _OFFSET(OBJ_SIGNAL.FIRST_SIGNAL, TYPE),  SIG
 $CHECKING:ON
 $CHECKING:OFF
-OBJ_SIGNAL_ADD_NEW_SIGNAL& = _MEMGET(PARS__QB64__EMPTY_MEM, SIG + _OFFSET(OBJ_SIGNAL_NODE.ID, TYPE), LONG) 
+OBJ_SIGNAL_PRIVATE_ADD_NEW_SIGNAL& = _MEMGET(PARS__QB64__EMPTY_MEM, SIG + _OFFSET(OBJ_SIGNAL_NODE.ID, TYPE), LONG) 
 $CHECKING:ON
 
 END FUNCTION
 
-SUB OBJ_signal_emit (this as _OFFSET, n$)
+SUB OBJ_signal_private_emit (this as _OFFSET, n$)
 $CHECKING:OFF
 DIM of as _OFFSET, m as MEM_string
 DIM off2 AS _OFFSET, pro as _OFFSET
@@ -1220,6 +1448,23 @@ END SUB
 
 
 
+FUNCTION GUI_EVENT_INTERFACE_get_type& ()
+  STATIC itype AS LONG
+  DIM i as OBJ_type_interface
+  if itype = 0 then
+    i.size = LEN(GUI_event_interface, TYPE)
+    itype = OBJ_type_register_interface&(i)
+  end if
+  GUI_EVENT_INTERFACE_get_type& = itype
+
+END FUNCTION
+
+FUNCTION GUI_IS_INSTANCE_OF_GUI_EVENT_IFACE& (this as _OFFSET)
+  GUI_IS_INSTANCE_OF_GUI_EVENT_IFACE& = OBJ_is_instance_of_interface&(this, GUI_EVENT_INTERFACE_get_type&)
+
+END FUNCTION
+
+
 
 
 
@@ -1251,24 +1496,6 @@ END SUB
 
 
 
-  SUB GUI_put_image (row AS LONG, col AS LONG, src as LONG, dest AS LONG)
-  $CHECKING:OFF
-  DIM img1 AS _MEM, img2 AS _MEM, x as LONG, wid1 AS LONG, wid2 AS LONG, hei AS LONG
-  img1 = _MEMIMAGE(src)
-  img2 = _MEMIMAGE(dest)
-  wid1 = _WIDTH(src)
-  wid2 = _WIDTH(dest)
-  hei  = _HEIGHT(src)
-  FOR x = 0 to hei - 1
-    _MEMCOPY img1, img1.OFFSET + (x * wid1) * 2, wid1 * 2 TO img2, img2.OFFSET + ((x + row - 1) * wid2) * 2 + (col - 1) * 2
-  NEXT x
-  _MEMFREE img1
-  _MEMFREE img2
-  $CHECKING:ON
-
-  END SUB
-  
-
 
 
 
@@ -1290,6 +1517,7 @@ $CHECKING:OFF
     t.destroy = GUI_ELEMENT_DESTROY_ptr%&
 $CHECKING:ON
     t.parent = OBJ_ref_Object_get_type&
+    t.flags = OBJ_TYPE_INFO_FLAG_ABSTRACT
     added = OBJ_type_register_type&(t)
   end if
   GUI_element_get_type& = added
@@ -1330,6 +1558,12 @@ _MEMPUT PARS__QB64__EMPTY_MEM, CLASS+ _OFFSET(GUI_ELEMENT_CLASS.SET_SIZE, TYPE),
 $CHECKING:ON
 $CHECKING:OFF
 _MEMPUT PARS__QB64__EMPTY_MEM, CLASS+ _OFFSET(GUI_ELEMENT_CLASS.CREATE_IMAGE, TYPE),  GUI_ELEMENT_PRIVATE_CREATE_IMAGE_PTR%& AS _OFFSET
+$CHECKING:ON
+$CHECKING:OFF
+_MEMPUT PARS__QB64__EMPTY_MEM, CLASS+ _OFFSET(GUI_ELEMENT_CLASS.GET_NAME, TYPE),  GUI_ELEMENT_PRIVATE_GET_NAME_PTR%& AS _OFFSET
+$CHECKING:ON
+$CHECKING:OFF
+_MEMPUT PARS__QB64__EMPTY_MEM, CLASS+ _OFFSET(GUI_ELEMENT_CLASS.SET_NAME, TYPE),  GUI_ELEMENT_PRIVATE_SET_NAME_PTR%& AS _OFFSET
 $CHECKING:ON
   
 $CHECKING:OFF
@@ -1377,6 +1611,28 @@ $CHECKING:ON
   
 
 END SUB
+
+FUNCTION GUI_element_private_get_name$ (this as _OFFSET)
+  DIM m as MEM_String
+$CHECKING:OFF
+M = _MEMGET(PARS__QB64__EMPTY_MEM, THIS + _OFFSET(GUI_ELEMENT.NAM, TYPE), MEM_STRING) 
+$CHECKING:ON
+  GUI_element_private_get_name$ = MEM_get_str$(m)
+
+END FUNCTION
+
+SUB GUI_element_private_set_name (this as _OFFSET, s as STRING)
+  DIM m as MEM_String
+$CHECKING:OFF
+M = _MEMGET(PARS__QB64__EMPTY_MEM, THIS + _OFFSET(GUI_ELEMENT.NAM, TYPE), MEM_STRING) 
+$CHECKING:ON
+  MEM_put_str m, s
+$CHECKING:OFF
+_MEMPUT PARS__QB64__EMPTY_MEM, THIS+ _OFFSET(GUI_ELEMENT.NAM, TYPE),  M
+$CHECKING:ON
+
+END SUB
+
 
 
 FUNCTION GUI_element_private_get_width& (this as _OFFSET)
@@ -1866,6 +2122,24 @@ SUB GUI_element_window_clear (this as _OFFSET)
 END SUB
 
 
+
+  SUB GUI_put_image (row AS LONG, col AS LONG, src as LONG, dest AS LONG)
+  $CHECKING:OFF
+  DIM img1 AS _MEM, img2 AS _MEM, x as LONG, wid1 AS LONG, wid2 AS LONG, hei AS LONG
+  img1 = _MEMIMAGE(src)
+  img2 = _MEMIMAGE(dest)
+  wid1 = _WIDTH(src)
+  wid2 = _WIDTH(dest)
+  hei  = _HEIGHT(src)
+  FOR x = 0 to hei - 1
+    _MEMCOPY img1, img1.OFFSET + (x * wid1) * 2, wid1 * 2 TO img2, img2.OFFSET + ((x + row - 1) * wid2) * 2 + (col - 1) * 2
+  NEXT x
+  _MEMFREE img1
+  _MEMFREE img2
+  $CHECKING:ON
+
+  END SUB
+  
 FUNCTION OBJ_REF_OBJECT_get_ref%&(A AS _OFFSET)
 DIM class as _OFFSET, pro as _OFFSET: class = OBJ_Object_get_class%&(A)
 $CHECKING:OFF
@@ -1882,6 +2156,106 @@ $CHECKING:OFF
 pro = _MEMGET(PARS__QB64__EMPTY_MEM, class + _OFFSET(OBJ_REF_OBJECT_class.release_ref, TYPE), _OFFSET)
 IF pro <> OBJ_NULL THEN
   c__OFFSET pro,A
+END IF
+$CHECKING:ON
+END SUB
+
+SUB OBJ_SIGNAL_disconnect_signal(A AS _OFFSET, B AS  LONG)
+DIM class as _OFFSET, pro AS _OFFSET: class = OBJ_Object_get_class%&(A)
+$CHECKING:OFF
+pro = _MEMGET(PARS__QB64__EMPTY_MEM, class + _OFFSET(OBJ_SIGNAL_class.disconnect_signal, TYPE), _OFFSET)
+IF pro <> OBJ_NULL THEN
+  c__OFFSET_LONG pro,A,B
+END IF
+$CHECKING:ON
+END SUB
+
+SUB OBJ_SIGNAL_disconnect_connection(A AS _OFFSET, B AS  LONG)
+DIM class as _OFFSET, pro AS _OFFSET: class = OBJ_Object_get_class%&(A)
+$CHECKING:OFF
+pro = _MEMGET(PARS__QB64__EMPTY_MEM, class + _OFFSET(OBJ_SIGNAL_class.disconnect_connection, TYPE), _OFFSET)
+IF pro <> OBJ_NULL THEN
+  c__OFFSET_LONG pro,A,B
+END IF
+$CHECKING:ON
+END SUB
+
+FUNCTION OBJ_SIGNAL_get_signal_id&(A AS _OFFSET, B AS  STRING)
+DIM class as _OFFSET, pro as _OFFSET: class = OBJ_Object_get_class%&(A)
+$CHECKING:OFF
+pro = _MEMGET(PARS__QB64__EMPTY_MEM, class + _OFFSET(OBJ_SIGNAL_class.get_signal_id, TYPE), _OFFSET)
+IF pro <> OBJ_NULL THEN
+OBJ_SIGNAL_get_signal_id& = fc_LONG__OFFSET_STRING (pro,A,B)
+END IF
+$CHECKING:ON
+END SUB
+
+FUNCTION OBJ_SIGNAL_connect_to_signal&(A AS _OFFSET, B AS  STRING, C AS  _OFFSET, D AS  _OFFSET)
+DIM class as _OFFSET, pro as _OFFSET: class = OBJ_Object_get_class%&(A)
+$CHECKING:OFF
+pro = _MEMGET(PARS__QB64__EMPTY_MEM, class + _OFFSET(OBJ_SIGNAL_class.connect_to_signal, TYPE), _OFFSET)
+IF pro <> OBJ_NULL THEN
+OBJ_SIGNAL_connect_to_signal& = fc_LONG__OFFSET_STRING__OFFSET__OFFSET (pro,A,B,C,D)
+END IF
+$CHECKING:ON
+END SUB
+
+FUNCTION OBJ_SIGNAL_connect_to_signal_with_id&(A AS _OFFSET, B AS  LONG, C AS  _OFFSET, D AS  _OFFSET)
+DIM class as _OFFSET, pro as _OFFSET: class = OBJ_Object_get_class%&(A)
+$CHECKING:OFF
+pro = _MEMGET(PARS__QB64__EMPTY_MEM, class + _OFFSET(OBJ_SIGNAL_class.connect_to_signal_with_id, TYPE), _OFFSET)
+IF pro <> OBJ_NULL THEN
+OBJ_SIGNAL_connect_to_signal_with_id& = fc_LONG__OFFSET_LONG__OFFSET__OFFSET (pro,A,B,C,D)
+END IF
+$CHECKING:ON
+END SUB
+
+FUNCTION OBJ_SIGNAL_add_new_signal&(A AS _OFFSET, B AS  STRING)
+DIM class as _OFFSET, pro as _OFFSET: class = OBJ_Object_get_class%&(A)
+$CHECKING:OFF
+pro = _MEMGET(PARS__QB64__EMPTY_MEM, class + _OFFSET(OBJ_SIGNAL_class.add_new_signal, TYPE), _OFFSET)
+IF pro <> OBJ_NULL THEN
+OBJ_SIGNAL_add_new_signal& = fc_LONG__OFFSET_STRING (pro,A,B)
+END IF
+$CHECKING:ON
+END SUB
+
+SUB OBJ_SIGNAL_emit(A AS _OFFSET, B AS  STRING)
+DIM class as _OFFSET, pro AS _OFFSET: class = OBJ_Object_get_class%&(A)
+$CHECKING:OFF
+pro = _MEMGET(PARS__QB64__EMPTY_MEM, class + _OFFSET(OBJ_SIGNAL_class.emit, TYPE), _OFFSET)
+IF pro <> OBJ_NULL THEN
+  c__OFFSET_STRING pro,A,B
+END IF
+$CHECKING:ON
+END SUB
+
+SUB GUI_EVENT_INTERFACE_proc1(A AS _OFFSET)
+DIM iface AS _OFFSET, pro as _OFFSET: iface = OBJ_Object_get_interface%&(A, GUI_EVENT_INTERFACE_get_type&)
+$CHECKING:OFF
+pro = _MEMGET(PARS__QB64__EMPTY_MEM, iface + _OFFSET(GUI_EVENT_INTERFACE.proc1, TYPE), _OFFSET)
+IF pro <> OBJ_NULL THEN
+  c__OFFSET pro,A
+END IF
+$CHECKING:ON
+END SUB
+
+SUB GUI_EVENT_INTERFACE_proc2(A AS _OFFSET, B AS  _OFFSET)
+DIM iface AS _OFFSET, pro as _OFFSET: iface = OBJ_Object_get_interface%&(A, GUI_EVENT_INTERFACE_get_type&)
+$CHECKING:OFF
+pro = _MEMGET(PARS__QB64__EMPTY_MEM, iface + _OFFSET(GUI_EVENT_INTERFACE.proc2, TYPE), _OFFSET)
+IF pro <> OBJ_NULL THEN
+  c__OFFSET__OFFSET pro,A,B
+END IF
+$CHECKING:ON
+END SUB
+
+FUNCTION GUI_EVENT_INTERFACE_proc3&(A AS _OFFSET, B AS  LONG)
+DIM iface AS _OFFSET, pro as _OFFSET: iface = OBJ_Object_get_interface%&(A, GUI_EVENT_INTERFACE_get_type&)
+$CHECKING:OFF
+pro = _MEMGET(PARS__QB64__EMPTY_MEM, iface + _OFFSET(GUI_EVENT_INTERFACE.proc3, TYPE), _OFFSET)
+IF pro <> OBJ_NULL THEN
+GUI_EVENT_INTERFACE_proc3& = fc_LONG__OFFSET_LONG (pro,A,B)
 END IF
 $CHECKING:ON
 END SUB
@@ -2150,23 +2524,24 @@ DECLARE CUSTOMTYPE LIBRARY "oop_ex_OUTPUT"
   FUNCTION MEM_FREE_STRING_ARRAY_ptr%& ()
   FUNCTION MEM_FREE_ARRAY_ptr%& ()
   FUNCTION MEM_FREE_STRING_ptr%& ()
-  FUNCTION OBJ_TYPE_DESTROY_ptr%& ()
+  FUNCTION OBJ_OBJECT_DESTROY_ptr%& ()
   FUNCTION OBJ_REF_OBJECT_INIT_ptr%& ()
   FUNCTION OBJ_REF_OBJECT_CLASS_INIT_ptr%& ()
   FUNCTION OBJ_REF_OBJECT_PRIVATE_RELEASE_REF_ptr%& ()
   FUNCTION OBJ_REF_OBJECT_DESTROY_ptr%& ()
   FUNCTION OBJ_SIGNAL_INIT_ptr%& ()
-  FUNCTION OBJ_SIGNAL_CLEAR_ptr%& ()
+  FUNCTION OBJ_SIGNAL_INIT_CLASS_ptr%& ()
+  FUNCTION OBJ_SIGNAL_DESTROY_ptr%& ()
   FUNCTION OBJ_SIGNAL_CLEAR_SIGNALS_ptr%& ()
-  FUNCTION OBJ_SIGNAL_DISCONNECT_ptr%& ()
-  FUNCTION OBJ_CONNECTION_DISCONNECT_ptr%& ()
-  FUNCTION OBJ_SIGNAL_EMIT_ptr%& ()
+  FUNCTION OBJ_SIGNAL_PRIVATE_DISCONNECT_SIGNAL_ptr%& ()
+  FUNCTION OBJ_SIGNAL_PRIVATE_DISCONNECT_CON_ptr%& ()
+  FUNCTION OBJ_SIGNAL_PRIVATE_EMIT_ptr%& ()
   FUNCTION GUI_EVENT_INIT_ptr%& ()
   FUNCTION GUI_EVENT_DESTROY_ptr%& ()
-  FUNCTION GUI_PUT_IMAGE_ptr%& ()
   FUNCTION GUI_ELEMENT_INIT_ptr%& ()
   FUNCTION GUI_ELEMENT_CLASS_INIT_ptr%& ()
   FUNCTION GUI_ELEMENT_DESTROY_ptr%& ()
+  FUNCTION GUI_ELEMENT_PRIVATE_SET_NAME_ptr%& ()
   FUNCTION GUI_ELEMENT_PRIVATE_SET_WIDTH_ptr%& ()
   FUNCTION GUI_ELEMENT_PRIVATE_SET_HEIGHT_ptr%& ()
   FUNCTION GUI_ELEMENT_PRIVATE_SET_VISIBLE_ptr%& ()
@@ -2196,7 +2571,13 @@ DECLARE CUSTOMTYPE LIBRARY "oop_ex_OUTPUT"
   FUNCTION GUI_ELEMENT_WINDOW_DRAW_ptr%& ()
   FUNCTION GUI_ELEMENT_WINDOW_DELETE_ptr%& ()
   FUNCTION GUI_ELEMENT_WINDOW_CLEAR_ptr%& ()
+  FUNCTION GUI_PUT_IMAGE_ptr%& ()
   FUNCTION OBJ_REF_OBJECT_RELEASE_REF_ptr%& ()
+  FUNCTION OBJ_SIGNAL_DISCONNECT_SIGNAL_ptr%& ()
+  FUNCTION OBJ_SIGNAL_DISCONNECT_CONNECTION_ptr%& ()
+  FUNCTION OBJ_SIGNAL_EMIT_ptr%& ()
+  FUNCTION GUI_EVENT_INTERFACE_PROC1_ptr%& ()
+  FUNCTION GUI_EVENT_INTERFACE_PROC2_ptr%& ()
   FUNCTION GUI_ELEMENT_DRW_ptr%& ()
   FUNCTION GUI_ELEMENT_CREATE_IMAGE_ptr%& ()
   FUNCTION GUI_ELEMENT_SET_VISIBLE_ptr%& ()
@@ -2222,28 +2603,37 @@ DECLARE CUSTOMTYPE LIBRARY "oop_ex_OUTPUT"
   FUNCTION MEM_INT64_FROM_OFF_ptr%& ()
   FUNCTION MEM_MALLOC0_ptr%& ()
   FUNCTION OBJ_IS_INSTANCE_OF_ptr%& ()
+  FUNCTION OBJ_IS_INSTANCE_OF_INTERFACE_ptr%& ()
   FUNCTION OBJ_TYPE_REGISTER_TYPE_ptr%& ()
+  FUNCTION OBJ_TYPE_REGISTER_INTERFACE_ptr%& ()
   FUNCTION OBJ_TYPE_GET_CLASS_SIZE_ptr%& ()
   FUNCTION OBJ_TYPE_GET_BASE_SIZE_ptr%& ()
   FUNCTION OBJ_TYPE_GET_INIT_ptr%& ()
   FUNCTION OBJ_TYPE_GET_DESTROY_ptr%& ()
   FUNCTION OBJ_TYPE_GET_PARENT_ptr%& ()
   FUNCTION OBJ_TYPE_ALLOCATE_NEW_ptr%& ()
+  FUNCTION OBJ_TYPE_ADD_INTERFACE_TO_CLASS_ptr%& ()
+  FUNCTION OBJ_TYPE_GET_INTERFACE_ptr%& ()
   FUNCTION OBJ_TYPE_GET_CLASS_ptr%& ()
   FUNCTION OBJ_TYPE_GET_PARENT_CLASS_ptr%& ()
   FUNCTION OBJ_OBJECT_GET_TYPE_ptr%& ()
   FUNCTION OBJ_OBJECT_GET_CLASS_ptr%& ()
+  FUNCTION OBJ_OBJECT_GET_INTERFACE_ptr%& ()
   FUNCTION OBJ_OBJECT_GET_PARENT_CLASS_ptr%& ()
+  FUNCTION OBJ_CLASS_GET_TYPE_ptr%& ()
   FUNCTION OBJ_REF_OBJECT_GET_TYPE_ptr%& ()
   FUNCTION OBJ_REF_OBJECT_PRIVATE_GET_REF_ptr%& ()
   FUNCTION OBJ_SIGNAL_GET_TYPE_ptr%& ()
-  FUNCTION OBJ_GET_SIGNAL_ID_ptr%& ()
-  FUNCTION OBJ_SIGNAL_CONNECT_ptr%& ()
-  FUNCTION OBJ_SIGNAL_CONNECT_WITH_ID_ptr%& ()
-  FUNCTION OBJ_SIGNAL_ATTACH_TO_SIGNAL_ptr%& ()
-  FUNCTION OBJ_SIGNAL_ADD_NEW_SIGNAL_ptr%& ()
+  FUNCTION OBJ_SIGNAL_PRIVATE_GET_SIGNAL_ID_ptr%& ()
+  FUNCTION OBJ_SIGNAL_PRIVATE_CONNECT_TO_SIGNAL_ptr%& ()
+  FUNCTION OBJ_SIGNAL_PRIVATE_CONNECT_TO_S_W_I_ptr%& ()
+  FUNCTION OBJ_SIGNAL_PRIVATE_ATTACH_TO_SIGNAL_ptr%& ()
+  FUNCTION OBJ_SIGNAL_PRIVATE_ADD_NEW_SIGNAL_ptr%& ()
+  FUNCTION GUI_EVENT_INTERFACE_GET_TYPE_ptr%& ()
+  FUNCTION GUI_IS_INSTANCE_OF_GUI_EVENT_IFACE_ptr%& ()
   FUNCTION GUI_EVENT_GET_TYPE_ptr%& ()
   FUNCTION GUI_ELEMENT_GET_TYPE_ptr%& ()
+  FUNCTION GUI_ELEMENT_PRIVATE_GET_NAME_ptr%& ()
   FUNCTION GUI_ELEMENT_PRIVATE_GET_WIDTH_ptr%& ()
   FUNCTION GUI_ELEMENT_PRIVATE_GET_HEIGHT_ptr%& ()
   FUNCTION GUI_ELEMENT_PRIVATE_IS_VISIBLE_ptr%& ()
@@ -2262,6 +2652,11 @@ DECLARE CUSTOMTYPE LIBRARY "oop_ex_OUTPUT"
   FUNCTION GUI_ELEMENT_WINDOW_NEW_SIZE_ptr%& ()
   FUNCTION GUI_ELEMENT_WINDOW_NEW_S_TITLE_ptr%& ()
   FUNCTION OBJ_REF_OBJECT_GET_REF_ptr%& ()
+  FUNCTION OBJ_SIGNAL_GET_SIGNAL_ID_ptr%& ()
+  FUNCTION OBJ_SIGNAL_CONNECT_TO_SIGNAL_ptr%& ()
+  FUNCTION OBJ_SIGNAL_CONNECT_TO_SIGNAL_WITH_ID_ptr%& ()
+  FUNCTION OBJ_SIGNAL_ADD_NEW_SIGNAL_ptr%& ()
+  FUNCTION GUI_EVENT_INTERFACE_PROC3_ptr%& ()
   FUNCTION GUI_ELEMENT_IS_VISIBLE_ptr%& ()
   FUNCTION GUI_ELEMENT_IS_ACTIVE_ptr%& ()
   FUNCTION GUI_ELEMENT_GET_CAN_FOCUS_ptr%& ()
@@ -2284,10 +2679,10 @@ DECLARE CUSTOMTYPE LIBRARY "oop_ex_OUTPUT"
   SUB c_MEM_STRING( BYVAL va AS _OFFSET, A AS MEM_STRING)
   SUB c__OFFSET_LONG( BYVAL va AS _OFFSET, A AS _OFFSET, B AS LONG)
   SUB c__OFFSET_STRING( BYVAL va AS _OFFSET, A AS _OFFSET, B AS STRING)
-  SUB c_LONG_LONG_LONG_LONG( BYVAL va AS _OFFSET, A AS LONG, B AS LONG, C AS LONG, D AS LONG)
   SUB c__OFFSET_GUI_DIMENSION( BYVAL va AS _OFFSET, A AS _OFFSET, B AS GUI_DIMENSION)
   SUB c__OFFSET_LONG_LONG_LONG_LONG( BYVAL va AS _OFFSET, A AS _OFFSET, B AS LONG, C AS LONG, D AS LONG, E AS LONG)
   SUB c__OFFSET_SINGLE_SINGLE( BYVAL va AS _OFFSET, A AS _OFFSET, B AS SINGLE, C AS SINGLE)
+  SUB c_LONG_LONG_LONG_LONG( BYVAL va AS _OFFSET, A AS LONG, B AS LONG, C AS LONG, D AS LONG)
   SUB c_SINGLE( BYVAL va AS _OFFSET, A AS SINGLE)
   SUB c_SINGLE_SINGLE( BYVAL va AS _OFFSET, A AS SINGLE, B AS SINGLE)
   SUB c_SINGLE_SINGLE_SINGLE( BYVAL va AS _OFFSET, A AS SINGLE, B AS SINGLE, C AS SINGLE)
@@ -2303,17 +2698,21 @@ DECLARE CUSTOMTYPE LIBRARY "oop_ex_OUTPUT"
   FUNCTION fc_SINGLE_LONG!( BYVAL va AS _OFFSET, A AS LONG)
   FUNCTION fc_LONG__OFFSET_LONG&( BYVAL va AS _OFFSET, A AS _OFFSET, B AS LONG)
   FUNCTION fc_LONG_OBJ_TYPE_INFO&( BYVAL va AS _OFFSET, A AS OBJ_TYPE_INFO)
+  FUNCTION fc_LONG_OBJ_TYPE_INTERFACE&( BYVAL va AS _OFFSET, A AS OBJ_TYPE_INTERFACE)
   FUNCTION fc_LONG_LONG&( BYVAL va AS _OFFSET, A AS LONG)
   FUNCTION fc_LONG_SINGLE&( BYVAL va AS _OFFSET, A AS SINGLE)
   FUNCTION fc__OFFSET__OFFSET%&( BYVAL va AS _OFFSET, A AS _OFFSET)
-  FUNCTION fc_LONG__OFFSET_STRING%&( BYVAL va AS _OFFSET, A AS _OFFSET, B AS STRING)
+  FUNCTION fc_LONG__OFFSET_STRING&( BYVAL va AS _OFFSET, A AS _OFFSET, B AS STRING)
   FUNCTION fc_LONG__OFFSET_STRING__OFFSET__OFFSET&( BYVAL va AS _OFFSET, A AS _OFFSET, B AS STRING, C AS _OFFSET, D AS _OFFSET)
-  FUNCTION fc_LONG__OFFSET_LONG__OFFSET__OFFSET%&( BYVAL va AS _OFFSET, A AS _OFFSET, B AS LONG, C AS _OFFSET, D AS _OFFSET)
-  FUNCTION fc_LONG__OFFSET__OFFSET__OFFSET__OFFSET%&( BYVAL va AS _OFFSET, A AS _OFFSET, B AS _OFFSET, C AS _OFFSET, D AS _OFFSET)
+  FUNCTION fc_LONG__OFFSET_LONG__OFFSET__OFFSET&( BYVAL va AS _OFFSET, A AS _OFFSET, B AS LONG, C AS _OFFSET, D AS _OFFSET)
+  FUNCTION fc_LONG__OFFSET__OFFSET__OFFSET__OFFSET&( BYVAL va AS _OFFSET, A AS _OFFSET, B AS _OFFSET, C AS _OFFSET, D AS _OFFSET)
+  FUNCTION fc_STRING__OFFSET$( BYVAL va AS _OFFSET, A AS _OFFSET)
   FUNCTION fc__OFFSET_SINGLE%&( BYVAL va AS _OFFSET, A AS SINGLE)
-  FUNCTION fc__OFFSET_STRING&( BYVAL va AS _OFFSET, A AS STRING)
+  FUNCTION fc__OFFSET_STRING%&( BYVAL va AS _OFFSET, A AS STRING)
   FUNCTION fc__OFFSET_LONG_LONG%&( BYVAL va AS _OFFSET, A AS LONG, B AS LONG)
   FUNCTION fc__OFFSET_LONG_LONG_STRING%&( BYVAL va AS _OFFSET, A AS LONG, B AS LONG, C AS STRING)
-  FUNCTION fc_STRING_SINGLE&( BYVAL va AS _OFFSET, A AS SINGLE)
+  FUNCTION fc_LONG_SINGLE_SINGLE&( BYVAL va AS _OFFSET, A AS SINGLE, B AS SINGLE)
+  FUNCTION fc_LONG_SINGLE_SINGLE_SINGLE_SINGLE&( BYVAL va AS _OFFSET, A AS SINGLE, B AS SINGLE, C AS SINGLE, D AS SINGLE)
+  FUNCTION fc_STRING_SINGLE$( BYVAL va AS _OFFSET, A AS SINGLE)
 END DECLARE
 SUB DEBUG_PRINT (s$): d& = _DEST: _DEST _CONSOLE: PRINT s$: _DEST d&: END SUB

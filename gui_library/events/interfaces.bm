@@ -1,0 +1,21 @@
+
+!!if not defined __GUI_EVENTS_INTERFACES_BM__
+!!define __GUI_EVENTS_INTERFACES_BM__
+
+FUNCTION GUI_EVENT_INTERFACE_get_type& ()
+  STATIC itype AS LONG
+  DIM i as OBJ_type_interface
+  if itype = 0 then
+    i.size = LEN(GUI_event_interface, TYPE)
+    itype = OBJ_type_register_interface&(i)
+  end if
+  GUI_EVENT_INTERFACE_get_type& = itype
+END FUNCTION
+
+FUNCTION GUI_IS_INSTANCE_OF_GUI_EVENT_IFACE& (this as _OFFSET)
+  GUI_IS_INSTANCE_OF_GUI_EVENT_IFACE& = OBJ_is_instance_of_interface&(this, GUI_EVENT_INTERFACE_get_type&)
+END FUNCTION
+
+
+!!endif
+

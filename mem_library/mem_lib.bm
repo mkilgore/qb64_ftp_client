@@ -6,6 +6,9 @@
 'of the Do What You Want Public License, Version 1, as published by Matt Kilgore
 'See file COPYING that should have been included with this source.
 
+!!if not defined __MEM_LIBRARY_MEM_LIB_BM__
+!!define __MEM_LIBRARY_MEM_LIB_BM__
+
 FUNCTION MEM_get_str$ (s AS MEM_string)
 $CHECKING:OFF
 IF s.is_allocated <> 0 AND s.length > 0 THEN
@@ -192,3 +195,5 @@ o = MEM_MALLOC%&(bytes)
 MEM_MEMSET o, 0, bytes
 $CHECKING:ON
 END FUNCTION
+
+!!endif

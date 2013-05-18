@@ -21,8 +21,10 @@ IF added = 0 then
   t.class_size = LEN(OBJ_signal_class, TYPE)
   t.base_size = LEN(OBJ_signal, TYPE)
   t.init = @SUB(OBJ_signal_init)
+  t.class_init = @SUB(OBJ_signal_init_class)
   t.destroy = @SUB(OBJ_signal_destroy)
   t.parent = OBJ_ref_object_get_type&
+  t.flags = OBJ_TYPE_INFO_FLAG_ABSTRACT
   added = OBJ_type_register_type&(t)
 end if
 OBJ_signal_get_type& = added
@@ -34,9 +36,20 @@ END FUNCTION
 '@param[in] _OFFSET to the OBJ_signal object to initalize 
 '@@
 SUB OBJ_signal_init (this as _OFFSET)
-@(this, OBJ_Signal.next_connection_id) = 1 AS LONG
-@(this, OBJ_Signal.next_signal_id) = 1 AS LONG
+'@(this, OBJ_Signal.next_connection_id) = 1 AS LONG
+'@(this, OBJ_Signal.next_signal_id) = 1 AS LONG
 END SUB
+
+SUB OBJ_signal_init_class (class as _OFFSET)
+@(class, OBJ_signal_class.disconnect_signal) = @SUB(OBJ_signal_private_disconnect_signal) AS @PROC
+@(class, OBJ_signal_class.disconnect_connection) = @SUB(OBJ_signal_private_disconnect_con) AS @PROC
+@(class, OBJ_signal_class.get_signal_id) = @FUNCTION(OBJ_signal_private_get_signal_id&) AS @PROC
+@(class, OBJ_signal_class.connect_to_signal) = @FUNCTION(OBJ_signal_private_connect_to_signal&) AS @PROC
+@(class, OBJ_signal_class.connect_to_signal_with_id) = @FUNCTION(OBJ_signal_private_connect_to_s_w_i&) AS @PROC
+@(class, OBJ_signal_class.add_new_signal) = @FUNCTION(OBJ_signal_private_add_new_signal&) AS @PROC
+@(class, OBJ_signal_class.emit) = @SUB(OBJ_signal_private_emit) AS @PROC
+END SUB
+
 
 '@@
 '@Brief Clears a OBJ_signal object and prepares it to be deleted
@@ -47,7 +60,7 @@ END SUB
 '@param[in] _OFFSET to the OBJ_signal object to clear
 '@@
 
-SUB OBJ_signal_clear (this as _OFFSET)
+SUB OBJ_signal_destroy (this as _OFFSET)
 OBJ_signal_clear_signals this
 END SUB
 
@@ -55,22 +68,22 @@ SUB OBJ_signal_clear_signals (this as _OFFSET)
 
 END SUB
 
-SUB OBJ_signal_disconnect (this as _OFFSET, id as _UNSIGNED LONG)
+SUB OBJ_signal_private_disconnect_signal (this as _OFFSET, id as _UNSIGNED LONG)
 
 END SUB
 
-SUB OBJ_connection_disconnect (this as _OFFSET, id as _UNSIGNED LONG)
+SUB OBJ_signal_private_disconnect_con (this as _OFFSET, id as _UNSIGNED LONG)
 
 END SUB
 
-FUNCTION OBJ_get_signal_id& (this as _OFFSET, n$)
+FUNCTION OBJ_signal_private_get_signal_id& (this as _OFFSET, n$)
 $CHECKING:OFF
 DIM sig as _OFFSET, m as MEM_string
 sig = @(this, OBJ_Signal.first_signal, _OFFSET)
 DO WHILE sig <> 0
   m = @(sig, OBJ_Signal_node.signal_name, MEM_String)
   if MEM_get_str$(m) = n$ then
-    OBJ_get_signal_id& = @(sig, OBJ_Signal_node.id, LONG)
+    OBJ_signal_private_get_signal_id& = @(sig, OBJ_Signal_node.id, LONG)
     exit function
   end if
   sig = @(sig, OBJ_Signal_node.next_signal, _OFFSET)
@@ -98,14 +111,14 @@ END FUNCTION
 '        returns the ID number of the connection to this object
 '@@
 
-FUNCTION OBJ_signal_connect& (this as _OFFSET, n$, pro as @PROC, dat as _OFFSET)
+FUNCTION OBJ_signal_private_connect_to_signal& (this as _OFFSET, n$, pro as @PROC, dat as _OFFSET)
 $CHECKING:OFF
 DIM sig as _OFFSET, m as MEM_string
 sig = @(this, OBJ_Signal.first_signal, _OFFSET)
 DO while sig <> 0
   m = @(sig, OBJ_signal_node.signal_name, MEM_string)
   if MEM_get_str$(m) = n$ then
-    OBJ_signal_connect& = OBJ_signal_attach_to_signal&(this, sig, pro, dat)
+    OBJ_signal_private_connect& = OBJ_signal_private_attach_to_signal&(this, sig, pro, dat)
     exit function
   end if
   sig = @(sig, OBJ_signal_node.next_signal, _OFFSET)
@@ -113,13 +126,13 @@ loop
 $CHECKING:ON
 END FUNCTION
 
-FUNCTION OBJ_signal_connect_with_id& (this as _OFFSET, id as _UNSIGNED LONG, pro as @PROC, dat as _OFFSET)
+FUNCTION OBJ_signal_private_connect_to_s_w_i& (this as _OFFSET, id as _UNSIGNED LONG, pro as @PROC, dat as _OFFSET)
 $CHECKING:OFF
 DIM sig as _OFFSET, m as MEM_string
 sig = @(this, OBJ_Signal.first_signal, _OFFSET)
 DO while sig <> 0
   if @(sig, OBJ_signal_node.id, LONG) = id then
-    OBJ_signal_connect_with_id& = OBJ_signal_attach_to_signal&(this, sig, pro, dat)
+    OBJ_signal_private_connect_to_s_w_i& = OBJ_signal_private_attach_to_signal&(this, sig, pro, dat)
     exit function
   end if
   sig = @(sig, OBJ_signal_node.next_signal, _OFFSET)
@@ -128,6 +141,7 @@ $CHECKING:ON
 END FUNCTION
 
 '@@
+'@Private
 '@Brief Creates a new OBJ_signal_connection_node, initalizes it, and attaches it to 'sig'
 '
 'Allocates memory for a new OBJ_signal_connection_node and assigns it its @PROC (pro),
@@ -135,7 +149,7 @@ END FUNCTION
 '
 '@@
 
-FUNCTION OBJ_signal_attach_to_signal& (this as _OFFSET, sig as _OFFSET, pro as @PROC, dat as _OFFSET)
+FUNCTION OBJ_signal_private_attach_to_signal& (this as _OFFSET, sig as _OFFSET, pro as @PROC, dat as _OFFSET)
 $CHECKING:OFF
 DIM new_connect AS _OFFSET
 new_connect = MEM_MALLOC%&(LEN(OBJ_signal_connection_node, TYPE))
@@ -145,12 +159,12 @@ new_connect = MEM_MALLOC%&(LEN(OBJ_signal_connection_node, TYPE))
 @(new_connect, OBJ_signal_connection_node.next_connection) = @(sig, OBJ_signal_node.first_connection, _OFFSET) AS _OFFSET
 @(sig, OBJ_signal_node.first_connection) = new_connect
 @(this, OBJ_Signal.next_connection_id) = @(this, OBJ_Signal.next_connection_id, LONG) + 1 AS LONG
-OBJ_Signal_attach_to_signal& = @(new_connect, OBJ_signal_connection_node.id, LONG)
+OBJ_Signal_private_attach_to_signal& = @(new_connect, OBJ_signal_connection_node.id, LONG)
 $CHECKING:ON
 END FUNCTION
 
 
-FUNCTION OBJ_signal_add_new_signal& (this as _OFFSET, n$)
+FUNCTION OBJ_signal_private_add_new_signal& (this as _OFFSET, n$)
 DIM sig as _OFFSET, m as MEM_string, last as _OFFSET
 sig = MEM_MALLOC%&(LEN(OBJ_signal, TYPE))
 MEM_put_str m, n$
@@ -160,10 +174,10 @@ MEM_put_str m, n$
 @(sig, OBJ_signal_node.id) = @(this, OBJ_Signal.next_signal_id, LONG) AS LONG
 @(sig, OBJ_signal_node.next_signal) = @(this, OBJ_Signal.first_signal, _OFFSET) AS _OFFSET
 @(this, OBJ_signal.first_signal) = sig
-OBJ_signal_add_new_signal& = @(sig, OBJ_signal_node.id, LONG)
+OBJ_signal_private_add_new_signal& = @(sig, OBJ_signal_node.id, LONG)
 END FUNCTION
 
-SUB OBJ_signal_emit (this as _OFFSET, n$)
+SUB OBJ_signal_private_emit (this as _OFFSET, n$)
 $CHECKING:OFF
 DIM of as _OFFSET, m as MEM_string
 DIM off2 AS _OFFSET, pro as @PROC
