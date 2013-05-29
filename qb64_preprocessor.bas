@@ -57,43 +57,43 @@ TYPE FILE_Data
 END TYPE
 
 TYPE source_line
-  l as MEM_String
+  l AS MEM_String
 END TYPE
 
 TYPE const_type
-  nam AS MEM_String
+  nam   AS MEM_String
   value AS MEM_String
 END TYPE
 
 TYPE main_type_node
-  type_nam AS MEM_String
+  type_nam        AS MEM_String
   first_type_node AS _OFFSET
-  members AS LONG
-  full_size AS LONG
+  members         AS LONG
+  full_size       AS LONG
 END TYPE
 
 TYPE sub_type_node
-  member_nam AS MEM_String
-  next_node AS _OFFSET
-  size AS LONG
+  member_nam     AS MEM_String
+  next_node      AS _OFFSET
+  size           AS LONG
   size_to_member AS LONG
 END TYPE
 
 TYPE SUB_FUNC
   subfunc AS LONG
-  nam AS MEM_String
-  typ AS LONG
-  source AS MEM_String
+  nam     AS MEM_String
+  typ     AS LONG
+  source  AS MEM_String
 END TYPE
 
 TYPE OBJECT
-  nam as MEM_String
+  nam      AS MEM_String
   abstract AS LONG
-  traits AS MEM_Array
-  inherit AS LONG
-  flags as MEM_Array
-  public AS MEM_Array
-  private AS MEM_Array
+  traits   AS MEM_Array
+  inherit  AS LONG
+  flags    AS MEM_Array
+  public   AS MEM_Array
+  private  AS MEM_Array
 END TYPE
 
 TYPE trait
@@ -101,19 +101,19 @@ TYPE trait
 END TYPE
 
 TYPE declare_library
-  lib AS MEM_String
+  lib       AS MEM_String
   sub_funcs AS MEM_Array
 END TYPE
 
 TYPE SOURCE_copy
-  consts AS MEM_Array 'Array of const_type
+  consts      AS MEM_Array 'Array of const_type
   main_source AS MEM_Array 'Array of source_line
-  types AS MEM_Array 'Array of main_type_node
-  SUB_func AS MEM_Array 'Array of SUB_FUNC
-  Objects AS MEM_Array 'Array of OBJECT
-  Traits AS MEM_Array 'Array of TRAIT
-  libs AS MEM_Array 'Array of declare_library
-  header AS MEM_Array 'Array of MEM_Strings
+  types       AS MEM_Array 'Array of main_type_node
+  SUB_func    AS MEM_Array 'Array of SUB_FUNC
+  Objects     AS MEM_Array 'Array of OBJECT
+  Traits      AS MEM_Array 'Array of TRAIT
+  libs        AS MEM_Array 'Array of declare_library
+  header      AS MEM_Array 'Array of MEM_Strings
 END TYPE
 
 DIM SHARED QB64_SOURCE_FILE$
@@ -128,7 +128,6 @@ handle_command COMMAND$
 pre_process QB64_SOURCE_FILE$, source$()
 
 init_source orig_source
-
 load_source source$(), orig_source
 
 handle_objects orig_source
