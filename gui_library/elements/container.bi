@@ -10,8 +10,11 @@ TYPE GUI_element_container
   flags as _UNSIGNED LONG
 END TYPE
 
-TYPE GUI_element_container_class
+TYPE GUI_element_container_class @class
   parent  AS GUI_element_class
+  add     AS @SUB(_OFFSET, _OFFSET)
+  remove  AS @SUB(_OFFSET, _OFFSET)
+  get_ele AS @FUNCTION(_OFFSET) AS _OFFSET
 END TYPE
 
 !!endif

@@ -1,0 +1,6 @@
+
+!!if not defined __OBJ_IFACE_TEST_BM__
+!!define __OBJ_IFACE_TEST_BM__
+
+!!endif
+

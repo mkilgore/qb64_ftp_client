@@ -38,7 +38,7 @@ handle_id = OBJ_signal_connect_to_signal&(button, "pressed1", @SUB(Test_signal1)
 print handle_id
 sleep
 
-PRINT @call((_OFFSET, LONG, LONG) AS _OFFSET, test, (arg1, arg2, arg3)) 
+'PRINT @call((_OFFSET, LONG, LONG) AS _OFFSET, test, (arg1, arg2, arg3)) 
 
 DO
   _LIMIT 60

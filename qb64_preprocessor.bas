@@ -1,13 +1,166 @@
-'MEM Library
-'Copyright Matt Kilgore -- 2011/2013
 
-'This program is free software, without any warranty of any kind.
-'You are free to edit, copy, modify, and redistribute it under the terms
-'of the Do What You Want Public License, Version 1, as published by Matt Kilgore
-'See file COPYING that should have been included with this source.
+$SCREENHIDE
+$CONSOLE
 
-!!if not defined __MEM_LIBRARY_MEM_LIB_BM__
-!!define __MEM_LIBRARY_MEM_LIB_BM__
+CONST PRE_PROCESS_VERSION$ = ".10"
+
+DIM SHARED MEM_FAKEMEM AS _MEM
+
+DECLARE CUSTOMTYPE LIBRARY
+  FUNCTION MEM_MALLOC%& alias malloc (BYVAL bytes as LONG)
+  FUNCTION MEM_REALLOC%& ALIAS realloc (BYVAL src as _OFFSET, BYVAL size as LONG)
+  SUB MEM_FREE ALIAS free (BYVAL off as _OFFSET)
+  SUB MEM_MEMCPY ALIAS memcpy (BYVAL dest as _OFFSET, BYVAL src as _OFFSET, BYVAL bytes as LONG)
+  SUB MEM_MEMSET ALIAS memset (BYVAL dest as _OFFSET, BYVAL value as LONG, BYVAL bytes as LONG)
+  SUB MEM_MEMMOVE ALIAS memmove (BYVAL dest as _OFFSET, BYVAL src AS _OFFSET, BYVAL bytes AS LONG)
+END DECLARE
+
+TYPE MEM_String
+  mem as _OFFSET
+  length AS LONG
+  allocated AS LONG
+  is_allocated AS _BYTE
+END TYPE
+
+TYPE MEM_Array
+  mem AS _OFFSET
+  length AS LONG
+  allocated AS LONG
+  is_allocatd AS _BYTE
+  element_size AS INTEGER
+END TYPE
+
+DECLARE LIBRARY "unistd"
+  SUB getcwd(s as STRING, BYVAL l as LONG)
+END DECLARE
+
+CONST BYTE_TYPE = 1
+CONST INTEGER_TYPE = 2
+CONST LONG_TYPE = 3
+CONST SINGLE_TYPE = 4
+CONST DOUBLE_TYPE = 5
+CONST INTEGER64_TYPE = 6
+CONST STRING_TYPE = 8
+CONST OFFSET_TYPE = 9
+CONST FLOAT_TYPE = 10
+
+CONST MAKE_TYPE   = &H0000000007F
+CONST IS_UNSIGNED = &H00000000080 
+CONST IS_UDT      = &H000000FFF00
+CONST MAKE_UDT    = &H00000000100
+CONST STRING_SIZE = &HFFFFFF00000
+CONST MAKE_STRING = &H00000100000
+
+
+TYPE FILE_Data
+  dat AS MEM_Array
+END TYPE
+
+TYPE source_line
+  l as MEM_String
+END TYPE
+
+TYPE const_type
+  nam AS MEM_String
+  value AS MEM_String
+END TYPE
+
+TYPE main_type_node
+  type_nam AS MEM_String
+  first_type_node AS _OFFSET
+  members AS LONG
+  full_size AS LONG
+END TYPE
+
+TYPE sub_type_node
+  member_nam AS MEM_String
+  next_node AS _OFFSET
+  size AS LONG
+  size_to_member AS LONG
+END TYPE
+
+TYPE SUB_FUNC
+  subfunc AS LONG
+  nam AS MEM_String
+  typ AS LONG
+  source AS MEM_String
+END TYPE
+
+TYPE OBJECT
+  nam as MEM_String
+  abstract AS LONG
+  traits AS MEM_Array
+  inherit AS LONG
+  flags as MEM_Array
+  public AS MEM_Array
+  private AS MEM_Array
+END TYPE
+
+TYPE trait
+  nam as MEM_String
+END TYPE
+
+TYPE declare_library
+  lib AS MEM_String
+  sub_funcs AS MEM_Array
+END TYPE
+
+TYPE SOURCE_copy
+  consts AS MEM_Array 'Array of const_type
+  main_source AS MEM_Array 'Array of source_line
+  types AS MEM_Array 'Array of main_type_node
+  SUB_func AS MEM_Array 'Array of SUB_FUNC
+  Objects AS MEM_Array 'Array of OBJECT
+  Traits AS MEM_Array 'Array of TRAIT
+  libs AS MEM_Array 'Array of declare_library
+  header AS MEM_Array 'Array of MEM_Strings
+END TYPE
+
+DIM SHARED QB64_SOURCE_FILE$
+DIM SHARED orig_source AS SOURCE_Copy
+REDIM SHARED source$()
+
+'Beginning of program
+handle_command COMMAND$
+
+
+
+pre_process QB64_SOURCE_FILE$, source$()
+
+init_source orig_source
+
+load_source source$(), orig_source
+
+handle_objects orig_source
+
+handle_at_commands orig_source
+
+
+
+SUB handle_command (c$)
+  
+END SUB
+
+SUB pre_process (file$, source$())
+
+END SUB
+
+SUB init_source (src AS SOURCE_copy)
+
+END SUB
+
+SUB load_source (source$(), src AS SOURCE_copy)
+
+END SUB
+
+SUB handle_objects (src AS SOURCE_copy)
+
+END SUB
+
+SUB handle_at_commands (src AS SOURCE_copy)
+
+END SUB
+
 
 FUNCTION MEM_get_str$ (s AS MEM_string)
 $CHECKING:OFF
@@ -59,14 +212,6 @@ MEM_MEMCPY a.mem + array_number * MEM_SIZEOF_MEM_STRING, _OFFSET(st), MEM_SIZEOF
 
 $CHECKING:ON
 END SUB
-
-'SUB get_filedir_type_array (a AS array_type, array_number, f AS filedir_type)
-'DIM m AS _MEM
-''$CHECKING:OFF
-'m = _MEM(f)
-'_MEMCOPY a.mem, a.mem.OFFSET + array_number * LEN(f), LEN(f) TO m, m.OFFSET
-''$CHECKING:ON
-'END SUB
 
 SUB MEM_allocate_array (a AS MEM_array, number_of_elements, element_size)
 $CHECKING:OFF
@@ -194,7 +339,5 @@ DIM o as _OFFSET
 o = MEM_MALLOC%&(bytes)
 MEM_MEMSET o, 0, bytes
 $CHECKING:ON
-MEM_MALLOC0%& = o
 END FUNCTION
 
-!!endif

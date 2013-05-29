@@ -1,18 +1,17 @@
 
-
-!!if not defined __OBJ_OBJECTS_TEXT_BI__
-!!define __OBJ_OBJECTS_TEXT_BI__
+!!include once
 
 TYPE OBJ_TEXT
-  parent    AS OBJ_ref_Object
+  parent    AS OBJ_Object
   length    AS LONG
   allocated AS LONG
   s         AS _OFFSET
 END TYPE
 
 TYPE OBJ_TEXT_class @class
-  parent_class AS OBJ_ref_object_class
+  parent_class AS OBJ_Object_Class
 END TYPE
 
-!!endif
+DECLARE FUNCTION OBJ_T_get$(this AS _OFFSET)
+DECLARE FUNCTION OBJ_T_set (this AS _OFFSET, n AS STRING)
 

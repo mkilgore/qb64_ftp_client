@@ -1,0 +1,10 @@
+QB64 Object Library
+===================
+
+
+
+The Library works on defining Objects via a part common to every object (Mostly the vtable) and parts specefic to every object (So, variables and etc.). These parts are created via seperate TYPE structures.
+
+Traits allow for a more multiple-interitance type of setup. To get around the diamond problem, traits are always virtual and traits can't inherit from one another. Instead of direct inheritance, traits define what other traits they require the object to have so they can work (IE. They define a list of traits they inherit). The difference is that the inheritance is not direct, and no matter how many traits you add that all require another trait, only one of any type of trait will be added to your object. So, if trait 'B' require trait 'A', and trait 'C' also requires trait 'A', then an object that uses trait 'B' and trait 'C' will have one copy of trait 'A', 'B', and 'C'. When trait 'B' or 'C' need trait A, they will use the same copy.
+
+

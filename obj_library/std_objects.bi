@@ -1,6 +1,5 @@
 
-!!if not defined __OBJ_OBJECTS_STD_OBJECTS_BI__
-!!define __OBJ_OBJECTS_STD_OBJECTS_BI__
+!!include once
 
 CONST OBJ_NULL = 0
 
@@ -10,7 +9,7 @@ CONST OBJ_NULL = 0
 
 '$include:'ref_object.bi'
 '$include:'signal_object.bi'
+'$include:'text.bi'
 ''$include:'event_object.bi'
 ''$include:'gui_element.bi'
 
-!!endif

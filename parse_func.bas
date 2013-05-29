@@ -76,11 +76,82 @@ REDIM SHARED func_names(500) AS STRING, func_args(500) AS STRING, func_number(50
 REDIM SHARED func_type(500) AS STRING, function_count AS LONG
 REDIM SHARED func_diff_args AS LONG, func_diff_arg_list(500) AS STRING, func_diff_arg_type(500) AS STRING
 
+REDIM SHARED included_files(100) AS STRING, included_file_count AS LONG
+
 REDIM SHARED sub_data$, in_sub, in_type, in_declare, in_class_declare, class_nam$
-REDIM SHARED in_interface_declare
+REDIM SHARED in_interface_declare, add_type_to_statement&&, in_checking_off
 
 DIM SHARED var_prefix$, mem_nam$, call_prefix$
 DIM SHARED ptrs_file$, call_func_prefix$
+
+
+CONST BYTE_TYPE = 1
+CONST INTEGER_TYPE = 2
+CONST LONG_TYPE = 3
+CONST SINGLE_TYPE = 4
+CONST DOUBLE_TYPE = 5
+CONST INTEGER64_TYPE = 6
+CONST STRING_TYPE = 8
+CONST OFFSET_TYPE = 9
+CONST FLOAT_TYPE = 10
+
+CONST MAKE_TYPE   = &H0000000007F
+CONST IS_UNSIGNED = &H00000000080 
+CONST IS_UDT      = &H000000FFF00
+CONST MAKE_UDT    = &H00000000100
+CONST STRING_SIZE = &HFFFFFF00000
+CONST MAKE_STRING = &H00000100000
+
+
+'UDT
+'names
+REDIM SHARED last_type AS LONG
+REDIM SHARED udt_xname(1000) AS STRING
+REDIM SHARED udt_xnext(1000) AS LONG
+'elements
+REDIM SHARED last_type_element AS LONG
+REDIM SHARED udt_ename(1000) AS STRING
+REDIM SHARED udt_etype(1000) AS _INTEGER64
+REDIM SHARED udt_enext(1000) AS LONG
+
+last_type = last_type + 1
+udt_xname(last_type) = "_MEM"
+last_type_element = last_type_element +1
+udt_xnext(last_type) = last_type_element
+
+udt_ename(last_type_element) = "OFFSET"
+udt_etype(last_type_element) = OFFSET_TYPE
+last_type_element = last_type_element + 1
+udt_enext(last_type_element - 1) = last_type_element
+
+udt_ename(last_type_element) = "SIZE"
+udt_etype(last_type_element) = OFFSET_TYPE
+last_type_element = last_Type_element + 1
+udt_enext(last_type_element - 1) = last_type_element
+
+udt_ename(last_type_element) = "$_LOCK_ID"
+udt_etype(last_type_element) = INTEGER64_TYPE 
+last_type_element = last_Type_element + 1
+udt_enext(last_type_element - 1) = last_type_element
+
+udt_ename(last_type_element) = "$_LOCK_OFFSET"
+udt_etype(last_type_element) = OFFSET_TYPE 
+last_type_element = last_Type_element + 1
+udt_enext(last_type_element - 1) = last_type_element
+
+udt_ename(last_type_element) = "TYPE"
+udt_etype(last_type_element) = LONG_TYPE 
+last_type_element = last_Type_element + 1
+udt_enext(last_type_element - 1) = last_type_element
+
+udt_ename(last_type_element) = "ELEMENTSIZE"
+udt_etype(last_type_element) = OFFSET_TYPE 
+last_type_element = last_Type_element + 1
+udt_enext(last_type_element - 1) = last_type_element
+
+
+
+
 
 'var_prefix$ = "PARS__"
 mem_nam$ = "PARS__QB64__EMPTY_MEM"
@@ -138,12 +209,14 @@ OPEN nam$ + "_OUTPUT." + ex$ FOR OUTPUT AS #255
 
 load_file fi$
 
+collect_type_information
 
 'print "GOT HERE!"
 'print "lines:"; next_line
 'INPUT "sleep"; sleep_sleep$
 
 FOR x = 1 TO next_line
+  add_type_to_statement&& = 0
   source(x) = replace_with_case$(source(x), "@PROC", "_OFFSET")
   n$ = strip_line$(UCASE$(source(x))) 'MEM_get_str$(source(x)))
   'PRINT "LOOP"
@@ -174,6 +247,9 @@ FOR x = 1 TO next_line
   IF LEFT$(n$, 7) = "DECLARE" THEN
     in_declare = -1
   END IF
+
+  if left$(n$, len("$CHECKING:OFF")) = "$CHECKING:OFF" then in_checking_off = -1
+  if left$(n$, len("$CHECKING:ON")) = "$CHECKING:ON" then in_checking_on = 0
 
   IF (LEFT$(n$, 7) = "END SUB" OR LEFT$(n$, 13) = "END FUNCTION") AND NOT in_declare THEN
     in_sub = 0
@@ -295,6 +371,7 @@ FOR x = 1 TO next_line
       next k
       func$ = func$ + ")"
       func$ = func$ + line_end$ + "END IF" + line_end$
+      
       func$ = func$ + "$CHECKING:ON" + line_end$
       func$ = func$ + "END SUB" + line_end$
       add_func func$
@@ -460,6 +537,7 @@ FOR x = 1 TO next_line
         checking_off = -1
         add_flag = -1
         'add_src_line "$CHECKING:OFF", new_length, new_source()
+        print "N:"; n$
         IF LEFT$(n$, 2) = "@(" THEN
           lef$ = MID$(n$, 1, INSTR(n$, "=") + 1)
           rit$ = MID$(n$, INSTR(n$, "=") + 1)
@@ -477,9 +555,13 @@ FOR x = 1 TO next_line
       end if
     LOOP until changed_flag = 0
     if add_flag then
-      if checking_off then add_src_line "$CHECKING:OFF", new_length, new_source()
-      add_src_line source(x), new_length, new_source()
-      if checking_off then add_src_line "$CHECKING:ON", new_length, new_source()
+      if checking_off and in_checking_off = 0 then add_src_line "$CHECKING:OFF", new_length, new_source()
+      if add_type_to_statement&& = 0 then 
+        add_src_line source(x), new_length, new_source()
+      else
+        add_src_line source(x) + " AS " + get_type_from_type_flag$(add_type_to_statement&&), new_length, new_source()
+      end if
+      if checking_off and in_checking_off = 0 then add_src_line "$CHECKING:ON", new_length, new_source()
     END IF
   ELSE
     add_src_line source(x), new_length, new_source()
@@ -522,6 +604,41 @@ CLOSE #255
 
 SYSTEM
 
+SUB collect_type_information ()
+
+in_type = 0
+FOR x = 1 to next_line
+  sn$ = UCASE$(strip_line$(source(x)))
+  IF left$(sn$, 5) = "TYPE " then
+    in_type = -1
+    if instr(sn$, "@") then 
+      tn$ = mid$(sn$, 5, instr(sn$, "@") - 6)
+      ident$ = mid$(sn$, instr(sn$, "@") + 1)
+    else
+      tn$ = mid$(sn$, 5)
+      ident$ = ""
+    end if
+    last_type = last_type + 1
+    udt_xname(last_type) = strip_line$(tn$)
+    udt_xnext(last_type) = last_type_element
+  end if
+  if left$(sn$, 8) = "END TYPE" then
+    in_type = 0
+  end if
+  if in_type then
+    if instr(sn$, " AS ") then
+      en$ = mid$(sn$, 1, instr(sn$, " AS "))
+      t$ = mid$(sn$, instr(sn$, " AS ") + 4)
+      udt_ename(last_type_element) = en$
+      udt_etype(last_type_element) = get_type_flag_from_type&&(t$)
+      udt_enext(last_type_element) = last_type_element + 1
+      last_type_element = last_type_element + 1
+      'PRINT "Parameter: "; en$; " AS "; get_type_from_type_flag$(udt_etype(last_type_element-1));
+    end if
+  end if
+NEXT x
+
+END SUB
 
 SUB add_const (c$, v$)
 const_count = const_count + 1
@@ -724,7 +841,16 @@ DO
         v$ = ""
       END IF
       add_define d$, v$
+    elseif left$(cmd$, 8) = "INCLUDE " then
+      if instr(cmd$, " ONCE") then
+        if file_already_included(file$) then
+          EXIT DO
+        else
+          add_included_file file$
+        end if
+      end if
     end if
+
     if left$(cmd$, 5) = "ENDIF" then if_count = if_count - 1
   end if
   IF process_line and not cmd_flag and not include_flag then ' AND LEFT$(cmd$, 6) <> "ENDIF " AND LEFT$(cmd$, 5) <> "ELSE " THEN
@@ -796,6 +922,23 @@ LOOP until instr(f2$, slash$) = 0
 get_file$ = f2$
 END FUNCTION
 
+FUNCTION get_string_to_matching_paren$(l$)
+count = 0
+for x = 1 to len(l$)
+  if mid$(l$, x, 1) = "(" then count = count + 1: if count = 1 then begin = x
+  if mid$(l$, x, 1) = ")" then count = count - 1: if count = 0 then get_string_to_matching_paren$ = mid$(l$, begin, x - begin): exit function
+next x
+END FUNCTION
+
+FUNCTION get_string_to_next_delim$(l$, d$)
+count = 0
+FOR x = 1 to len(l$)
+  if mid$(l$, x, 1) = d$ then if count = 0 then get_string_to_next_delim$ = mid$(l$, 1, x -1 ): exit function
+  if mid$(l$, x, 1) = "(" then count = count + 1
+  if mid$(l$, x, 1) = ")" then count = count - 1
+next x
+END FUNCTION
+
 FUNCTION make_deref_into_func$ (s$)
 'STATIC loop_count
 if instr(s$, "@(") = 0 then make_deref_into_func$ = s$: exit function
@@ -804,37 +947,57 @@ if instr(s$, "@(") = 0 then make_deref_into_func$ = s$: exit function
 rit$ = s$
 
 DO WHILE instr(rit$, "@(")
+  print "Beginning line:"; rit$
   l$ = mid$(rit$, 1, instr(rit$, "@(") - 1)
+
+  c$ = mid$(rit$, instr(rit$, "@(") + 1)
+  c$ = get_string_to_matching_paren$(c$)
+  'c$ = mid$(rit$, instr(rit$, "@(") + 2)
+  'c$ = mid$(c$, 1, instr(c$, ")") - 1)
   
-  c$ = mid$(rit$, instr(rit$, "@(") + 2)
-  c$ = mid$(c$, 1, instr(c$, ")") - 1)
-  
-  'ex$ = mid$(rit$, instr(rit$, "@(") + 2)
-  'ex$ = mid$(ex$, instr(ex$, ")") + 1)
-  'ex$ = ltrim$(rtrim$(mid$(ex$, 1, instr(ex$, " ") - 1)))
-  
-  r$ = mid$(rit$, instr(rit$, "@(") + 2)
-  r$ = mid$(r$, instr(r$, ")") + 1)
-  
-  off$ = ltrim$(rtrim$(mid$(c$, instr(c$, "@(") + 1)))
-  off$ = ltrim$(rtrim$(mid$(off$, 1, instr(off$, ",") - 1)))
+  r$ = mid$(rit$, instr(rit$, "@(") + 1)
+  r$ = mid$(r$, len(get_string_to_matching_paren$(r$)) + 1)
+  print "C:"; c$
+  c$ = mid$(c$, 2)
+
+  off$ = get_string_to_next_delim$(c$, ",")
+
+  c$ = mid$(c$, len(off$) + 2)
+  'off$ = ltrim$(rtrim$(mid$(c$, instr(c$, "@(") + 1)))
+  'off$ = ltrim$(rtrim$(mid$(off$, 1, instr(off$, ",") - 1)))
   'off$ = make_deref_into_func$(off$)
-  ele$ = ltrim$(rtrim$(mid$(c$, instr(c$, ",") + 1))) 
-  ele$ = rtrim$(mid$(ele$, 1, instr(ele$, ",") - 1))
-  
-  typ$ = ltrim$(rtrim$(mid$(c$, instr(c$, ",") + 1)))
-  typ$ = rtrim$(ltrim$(mid$(typ$, instr(typ$, ",") + 1)))
-  
-  'print "off:"; off$
-  'print "ele:"; ele$
-  'print "typ:"; typ$
-  'print "R:"; r$
-  'print "l:"; l$
+   
+    'ele$ = ltrim$(rtrim$(mid$(c$, instr(c$, ",") + 1))) 
+  'ele$ = rtrim$(mid$(ele$, 1, instr(ele$, ",") - 1))
+ 
+
+  if instr(c$, ",") then
+    ele$ = get_string_to_next_delim$(c$, ",") 
+    typ$ = ltrim$(rtrim$(mid$(c$, instr(c$, ",") + 1)))
+    typ$ = rtrim$(ltrim$(mid$(typ$, instr(typ$, ",") + 1)))
+  else
+    ele$ = strip_line$(c$)
+    print " calling func to get type ELE:"; ele$
+    typ$ = get_type_from_type_flag$(get_type_flag_from_type&&(ele$))
+  end if
+
+
+  print "off:"; off$
+  print "ele:"; ele$
+  print "typ:"; typ$
+  print "R:"; r$
+  print "l:"; l$
+  input "?"; x$
   'add_func_var var_prefix$  + off$ + "_" + typ$, typ$
   'add_src_line "$CHECKING:OFF" + line_end$ + "_MEMGET " + mem_nam$ + ", " + off$ + ", " + var_prefix$ + off$ + "_" + typ$ + line_end$ + "$CHECKING:ON" + line_end$, new_length, new_source()
   'add_src_line , new_length, new_source()
   'add_src_line , new_length, new_source()
-  rit$ = l$ + "_MEMGET(" + mem_nam$ + ", " + off$ + " + _OFFSET(" + ele$ + ", TYPE), " + typ$ + ") " + r$
+
+  rit$ = l$ + "_MEMGET(" + mem_nam$ + ", " + off$
+  if instr(ele$, ".") then
+    rit$ = rit$ + " + _OFFSET(" + ele$ + ", TYPE)"
+  end if
+  rit$ = rit$ + "," + typ$ + r$
 
 LOOP
 'loop_count = loop_count - 1
@@ -852,6 +1015,8 @@ if left$(lef$, 2) = "@(" then
   off$ = ltrim$(rtrim$(mid$(lef$, 3, instr(lef$, ",") - 3)))
   ele$ = ltrim$(rtrim$(mid$(lef$, instr(lef$, ",") + 1)))
   ele$ =  mid$(ele$, 1, instr(ele$, ")") - 1)
+  typ&& = get_type_flag_from_type&&(ele$)
+  add_type_to_statement&& = typ&&
   'lef$ = mid$(lef$, instr(lef$, ",") + 1)
   'typ$ = mid$(lef$, 1, instr(lef$, ",") - 1)
   
@@ -872,19 +1037,19 @@ make_deref_into_sub$ = lef$
 END FUNCTION
 
 SUB add_func_var (n$, t$) ', m$)
-FOR x = 1 to new_func_vars
-  if new_func_vars(x) = n$ then exit sub
-NEXT x
-new_func_vars_count = new_func_vars_count + 1
-if new_func_vars_count >= UBOUND(new_func_vars) then
-  REDIM _PRESERVE new_func_vars(UBOUND(new_func_vars)+ 100) AS STRING
-  REDIM _PRESERVE new_func_types(UBOUND(new_func_vars) + 100) AS STRING
-  'REDIM _PRESERVE mem_get_line(UBOUND(new_func_vars) + 100) AS STRING
-end if
-new_func_vars(new_func_vars_count) = n$
-new_func_types(new_func_vars_count) = t$
-'mem_get_line(new_func_vars_count) = m$
-end sub
+  FOR x = 1 to new_func_vars
+    if new_func_vars(x) = n$ then exit sub
+  NEXT x
+  new_func_vars_count = new_func_vars_count + 1
+  if new_func_vars_count >= UBOUND(new_func_vars) then
+    REDIM _PRESERVE new_func_vars(UBOUND(new_func_vars)+ 100) AS STRING
+    REDIM _PRESERVE new_func_types(UBOUND(new_func_vars) + 100) AS STRING
+    'REDIM _PRESERVE mem_get_line(UBOUND(new_func_vars) + 100) AS STRING
+  end if
+  new_func_vars(new_func_vars_count) = n$
+  new_func_types(new_func_vars_count) = t$
+  'mem_get_line(new_func_vars_count) = m$
+END SUB
 
 SUB clear_func_vars
 new_func_vars_count = 0
@@ -1230,6 +1395,90 @@ if s2$ = "STRING"  then get_c_type_from_qb_type$ = "char*"  : exit function
 get_c_type_from_qb_type$ = "float"
 END FUNCTION
 
+FUNCTION get_type_flag_from_type&& (t$)
+  DIM f as _INTEGER64
+  t2$ = ucase$(strip_line$(t$))
+  if left$(t2$, LEN("_UNSIGNED")) = "_UNSIGNED" then f = f OR IS_UNSIGNED: t2$ = strip_line$(mid$(t2$, LEN("_UNSIGNED") + 1))
+  if t2$ = "_BYTE"          then f = f OR BYTE_TYPE
+  if t2$ = "INTEGER"        then f = f or INTEGER_TYPE 
+  if t2$ = "LONG"           then f = f OR LONG_TYPE
+  if t2$ = "SINGLE"         then f = f OR SINGLE_TYPE
+  if t2$ = "DOUBLE"         then f = f or DOUBLE_TYPE
+  if t2$ = "INTEGER64"      then f = f OR INTEGER64_TYPE
+  'if t2$ = "_MEM"           then f = f OR MEM_TYPE
+  if instr(t2$, "STRING")   then f = f OR STRING_TYPE: f = f OR (MAKE_STRING * VAL(MID$(t2$, instr(t2$, "*") + 1)))
+  if t2$ = "_OFFSET"        then f = f OR OFFSET_TYPE
+  if t2$ = "_FLOAT"         then f = f OR FLOAT_TYPE
+  if t2$ = "@PROC"          then f = f OR OFFSET_TYPE
+  if instr(t2$, "@FUNCTION") or instr(t2$, "@SUB") then f = f OR OFFSET_TYPE
+  if f = 0 then
+    f = recurse_get_flag_from_type&&(t$)  
+  end if
+  get_type_flag_from_type&& = f
+END FUNCTION
+
+FUNCTION recurse_get_flag_from_type&& (t$)
+STATIC l_type&&
+if t$ > "" then
+  if instr(t$, ".") then
+    tn$ = strip_line$(mid$(t$, 1, instr(t$, ".") - 1))
+    tl$ = strip_line$(mid$(t$, instr(t$, ".") + 1))
+  else
+    tn$ = strip_line$(t$)
+    tl$ = ""
+  end if
+  if l_type&& > 0 then
+    n = udt_xnext((l_type&& AND IS_UDT) / MAKE_UDT)
+    DO while n
+      print "Looping..."
+      print "Tn:"; tn$; "    ename:";ucase$(udt_ename(n))
+      if ucase$(strip_line$(udt_ename(n))) = ucase$(tn$) then
+        l_type&& = udt_etype(n)
+        print "recursing: "; tl$
+        recurse_get_flag_from_type&& = recurse_get_flag_from_type&&(tl$)
+        exit do
+      end if
+      n = udt_enext(n)
+    loop
+  else
+    FOR x = 1 to last_type
+      if ucase$(udt_xname(x)) = ucase$(tn$) then
+        print "Recursing."
+        l_type&& = MAKE_UDT * x
+        recurse_get_flag_from_type&& = recurse_get_flag_from_type&&(tl$)
+        exit for
+      end if
+    NEXT x
+  end if
+else
+  recurse_get_flag_from_type&& = l_type&&
+  l_type&& = 0
+end if
+END FUNCTION
+
+FUNCTION get_type_from_type_flag$ (t AS _INTEGER64)
+DIM tn AS _INTEGER64
+tn = t AND MAKE_TYPE
+if t AND IS_UDT then get_type_from_type_flag$ = udt_xname((t AND IS_UDT) / MAKE_UDT)
+if t AND STRING_TYPE then
+  t$ = "STRING"
+  if (t AND STRING_SIZE) > 0 then
+    t$ = t$ + " * " + strip_line$(str$(t AND STRING_SIZE))
+  end if
+  get_type_from_type_flag$ = t$
+end if
+if t AND IS_UNSIGNED then u$ = "_UNSIGNED "
+if tn = BYTE_TYPE then get_type_from_type_flag$ = u$ + "_BYTE"
+if tn = INTEGER_TYPE then get_type_from_type_flag$ = u$ + "INTEGER"
+if tn = LONG_TYPE then get_type_from_type_flag$ = u$ + "LONG"
+if tn = SINGLE_TYPE THEN get_type_from_type_flag$ = u$ + "SINGLE"
+if tn = DOUBLE_TYPE then get_type_from_type_flag$ = u$ + "DOUBLE"
+if tn = INTEGER64_TYPE then get_type_from_type_flag$ = u$ + "INTEGER64"
+if tn = OFFSET_TYPE then get_type_from_type_flag$ = u$ + "_OFFSET"
+if tn = FLOAT_TYPE then get_type_from_type_flag$ = u$ + "_FLOAT" 
+
+END FUNCTION
+
 FUNCTION qq$(s$)
 qq$ = chr$(34) + s$ + chr$(34)
 END FUNCTION
@@ -1246,6 +1495,20 @@ else
   replace_with_case$ = s$
 end if
 END FUNCTION
+
+FUNCTION file_already_included (file$)
+  for x = 1 to included_file_count
+    if included_files(x) = file$ then file_already_included = -1: exit function
+  next x
+END FUNCTION
+
+SUB add_included_file (file$)
+  included_file_count = included_file_count + 1
+  if included_file_count >= UBOUND(included_files) then
+    REDIM _PRESERVE included_files(ubound(included_files) + 100) AS STRING
+  end if
+  included_files(included_file_count) = file$
+END SUB
 
 FUNCTION MEM_get_str$ (s AS MEM_string)
 $CHECKING:OFF
@@ -1297,14 +1560,6 @@ MEM_MEMCPY a.mem + array_number * MEM_SIZEOF_MEM_STRING, _OFFSET(st), MEM_SIZEOF
 
 $CHECKING:ON
 END SUB
-
-'SUB get_filedir_type_array (a AS array_type, array_number, f AS filedir_type)
-'DIM m AS _MEM
-''$CHECKING:OFF
-'m = _MEM(f)
-'_MEMCOPY a.mem, a.mem.OFFSET + array_number * LEN(f), LEN(f) TO m, m.OFFSET
-''$CHECKING:ON
-'END SUB
 
 SUB MEM_allocate_array (a AS MEM_array, number_of_elements, element_size)
 $CHECKING:OFF

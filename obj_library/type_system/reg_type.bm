@@ -1,81 +1,48 @@
 
-!!if not defined __OBJ_OBJECTS_TYPE_SYSTEM_REG_TYPE_BM__
-!!define __OBJ_OBJECTS_TYPE_SYSTEM_REG_TYPE_BM__
+!!include once
 
-FUNCTION OBJ_is_instance_of& (this as _OFFSET, t as LONG)
-  otype = @(this, OBJ_Object.otype, LONG)
-  DO
-    if otype = t then OBJ_is_instance_of& = -1: exit function
-    otype = OBJ_type_list(otype).parent
-  LOOP until otype = 0
-END FUNCTION
+FUNCTION OBJ_is_instance_of& (this as _OFFSET, t as LONG) 
+  IF OBJ_type_list(t).flags AND (OBJ_TYPE_INFO_FLAG_IS_OBJECT OR OBJ_TYPE_INFO_FLAG_IS_ABSTRACT) then
+    otype = @(this, OBJ_Object.otype)
+    DO
+      if otype = t then OBJ_is_instance_of& = -1: exit function
+      otype = OBJ_type_list(otype).parent
+    LOOP until otype = 0
+  elseif OBJ_type_list(t).flags AND OBJ_TYPE_INFO_FLAG_IS_TRAIT then
+    
+  end if
+END FUNCTION 
 
-FUNCTION OBJ_is_instance_of_interface& (this as _OFFSET, t as LONG)
-  DIM class as _OFFSET, otype AS LONG
-  otype = @(this, OBJ_Object.otype, LONG)
-  if OBJ_type_list(otype).interface_count = 0 then exit function
-  
-  class = @(this, OBJ_Object.vtable, _OFFSET) + OBJ_type_list(otype).class_size
-  DO
-    if @(class, OBJ_type_interface_node.iface, LONG) = t then OBJ_is_instance_of_interface& = -1: exit function
-    class = class + LEN(OBJ_type_interface_node, TYPE)
-  LOOP until otype = 0
-END FUNCTION
-
-FUNCTION OBJ_type_register_type& (t as OBJ_type_info)
+FUNCTION OBJ_type_register_type& (t as OBJ_type_info) 
   OBJ_type_count = OBJ_type_count + 1
   if OBJ_type_count > UBOUND(OBJ_type_list) then
     REDIM _PRESERVE OBJ_type_list(UBOUND(OBJ_type_list) + 100) AS OBJ_type_info
   end if
-  
+
   OBJ_type_list(OBJ_type_count) = t
-  OBJ_type_list(OBJ_type_count).class_copy = MEM_MALLOC0%&(t.class_size)
-  OBJ_type_list(OBJ_type_count).allocated_bytes = t.class_size
-  
-  if t.parent > 0 then
-    MEM_MEMCPY OBJ_type_list(OBJ_type_count).class_copy, OBJ_type_list(t.parent).class_copy, OBJ_type_list(t.parent).class_size
+  OBJ_type_list(OBJ_type_count).vtable = MEM_MALLOC0%&(t.class_size)
+  OBJ_type_list(OBJ_type_count).vtable_size = t.class_size
+
+  if t.flags AND (OBJ_TYPE_INFO_FLAG_IS_ABSTRACT OR OBJ_TYPE_INFO_FLAG_IS_OBJECT) THEN
+    if t.parent > 0 then
+      MEM_MEMCPY OBJ_type_list(OBJ_type_count).vtable, OBJ_type_list(t.parent).vtable, OBJ_type_list(t.parent).class_size
+      MEM_MEMMOVE OBJ_type_list(OBJ_type_count).vtable + OBJ_type_list(OBJ_type_count).class_size, OBJ_type_list(t.parent).vtable _
+        + OBJ_type_list(t.parent).class_size, OBJ_type_list(t.parent).vtable_size - OBJ_type_list(t.parent).class_size
+    end if
+    @(OBJ_type_list(OBJ_type_count).vtable, OBJ_Object_class.otype) = OBJ_type_count
+    @(OBJ_type_list(OBJ_type_count).vtable, OBJ_object_class.toff) = OBJ_type_list(OBJ_type_count).vtable + OBJ_type_list(OBJ_type_count).class_size
+    if OBJ_type_list(OBJ_type_count).class_init <> OBJ_NULL then
+      @call(_OFFSET) OBJ_type_list(OBJ_type_count).class_init, OBJ_type_list(OBJ_type_count).vtable
+    end if
+  elseif t.flags AND OBJ_TYPE_INFO_FLAG_IS_TRAIT then
+    @(OBJ_type_list(OBJ_type_count).vtable, OBJ_trait_class.ttype) = OBJ_type_count
+    @call(_OFFSET) OBJ_type_list(OBJ_type_count).class_init, OBJ_type_list(OBJ_type_count).vtable
   end if
-  
-  @(OBJ_type_list(Obj_type_count).class_copy, OBJ_object_class.otype) = OBJ_type_count
-  @(OBJ_type_list(OBJ_type_count).class_copy, OBJ_object_class.iface_off) = OBJ_type_list(OBJ_type_count).class_copy + OBJ_type_list(OBJ_type_count).class_size as _OFFSET
-  
-  @call(_OFFSET) OBJ_type_list(OBJ_type_count).class_init, OBJ_type_list(OBJ_type_count).class_copy
-  
+
   OBJ_type_register_type& = OBJ_type_count
-END FUNCTION
+END FUNCTION 
 
-FUNCTION OBJ_type_register_interface& (i as OBJ_type_interface)
-  OBJ_type_interface_count = OBJ_type_interface_count + 1
-  if OBJ_type_interface_count > UBOUND(OBJ_type_interface_list) then
-    REDIM _PRESERVE OBJ_type_interface_list(UBOUND(OBJ_type_interface_list) + 100) AS OBJ_type_interface
-  end if
-  
-  OBJ_type_interface_list(OBJ_type_interface_count) = i
-  
-  OBJ_type_register_interface& = OBJ_type_interface_count
-END FUNCTION
-
-FUNCTION OBJ_type_get_class_size& (t AS LONG)
-  OBJ_type_get_class_size& = OBJ_type_list(t).class_size
-END FUNCTION
-
-FUNCTION OBJ_type_get_base_size& (t AS LONG)
-  OBJ_type_get_base_size& = OBJ_type_list(t).base_size
-END FUNCTION
-
-FUNCTION OBJ_type_get_init%& (t AS LONG)
-  OBJ_type_get_base_init%& = OBJ_type_list(t).init
-END FUNCTION
-
-FUNCTION OBJ_type_get_destroy%& (t as LONG)
-  OBJ_type_get_destroy%& = OBJ_type_list(t).destroy
-END FUNCTION
-
-FUNCTION OBJ_type_get_parent& (t as LONG)
-  OBJ_type_get_parent& = OBJ_type_list(t).parent
-END FUNCTION
-
-FUNCTION OBJ_type_allocate_new%& (t as LONG)
+FUNCTION OBJ_type_allocate_new%& (t as LONG) 
   DIM parent_list(OBJ_TYPE_PARENT_MAX) AS LONG, s_count AS LONG
   DIM this AS _OFFSET, class AS _OFFSET
   if (OBJ_type_list(t).flags AND OBJ_TYPE_INFO_FLAG_ABSTRACT) = 0 then
@@ -103,65 +70,33 @@ FUNCTION OBJ_type_allocate_new%& (t as LONG)
     @debug_print "Error: Can not instantiate type, abstract"
     OBJ_type_allocate_new%& = OBJ_NULL
   end if
-END FUNCTION
+END FUNCTION 
 
-FUNCTION OBJ_type_add_interface_to_class%& (class as _OFFSET, t AS LONG)
-  'First check that this class doesn't already have an interface of this type
-  DIM iface as _OFFSET, next_iface AS _OFFSET, otype AS LONG
-  
-  DIM old_size AS LONG, iface_size AS LONG, old AS _OFFSET, dest AS _OFFSET
-  
-  otype = @(class, OBJ_Object_class.otype, LONG)
-  iface = class + OBJ_type_list(otype).class_size 'Where our Interface nodes start, if we have any
-  
-  FOR x = 0 to OBJ_type_list(otype).interface_count - 1
-    next_iface = iface + x * LEN(OBJ_type_interface_node, TYPE)
-    if @(next_iface, OBJ_type_interface_node.iface, LONG) = t then
-      OBJ_type_add_interface_to_class%& = @(next_iface, OBJ_type_interface_node.iface_off, _OFFSET)
-      exit function
-    end if
-  next x
-  
-  OBJ_type_list(otype).interface_count = OBJ_type_list(otype).interface_count + 1
-  old_size = OBJ_type_list(otype).allocated_bytes
-  OBJ_type_list(otype).allocated_bytes = OBJ_type_list(otype).allocated_bytes + LEN(OBJ_type_interface_node, TYPE) + OBJ_type_interface_list(t).size
-  
-  class = MEM_REALLOC%&(class, OBJ_type_list(otype).allocated_bytes)
-  
-  if OBJ_type_list(otype).interface_count > 1 then
-    'Adjust our old interfaces
-    iface_size = old_size - OBJ_type_list(otype).class_size - (OBJ_type_list(otype).interface_count - 1) * LEN(OBJ_type_interface_node, TYPE)
-    old  = class + old_size
-    dest = old + LEN(OBJ_type_interface_node, TYPE)
-    MEM_MEMMOVE dest, old, iface_size
-  end if
-  
-  'adjust offsets
-  for x = 0 to OBJ_type_list(otype).interface_count - 2
-    next_iface = iface + x * LEN(OBJ_type_interface_node, TYPE)
-    @(next_iface, OBJ_type_interface_node.iface_off) = @(next_iface, OBJ_type_interface_node.iface_off, _OFFSET) + LEN(OBJ_type_interface_node, TYPE) AS _OFFSET
-  next x
-  
-  next_iface = iface + (OBJ_type_list(otype).interface_count - 1) * LEN(OBJ_type_interface_node, TYPE)
-  @(next_iface, OBJ_type_interface_node.iface) = t AS LONG
-  @(next_iface, OBJ_type_interface_node.iface_off) = class + OBJ_type_list(otype).allocated_bytes - OBJ_type_interface_list(t).size AS _OFFSET
-  
-  OBJ_type_add_interface_to_class%& = @(next_iface, OBJ_type_interface_node.iface_off, _OFFSET)
-END FUNCTION
+FUNCTION OBJ_type_new_trait_list%& (n as LONG) 
+  OBJ_type_new_trait_list%& = MEM_MALLOC0%&(n * 4 + 4)
+END FUNCTION 
 
-FUNCTION OBJ_type_get_interface%& (class as _OFFSET, t as LONG)
-  
-END FUNCTION
+FUNCTION OBJ_type_add_trait%& (list AS _OFFSET, t as LONG) 
+  DIM n as LONG
+  n = @(list, LONG)
+  @(list + 4 * t + 4, LONG) = t
+  @(list, LONG) = n + 1
+  OBJ_type_add_trait%& = list
+END FUNCTION 
 
-FUNCTION OBJ_type_get_class%& (t as LONG)
+FUNCTION OBJ_type_get_class%& (t as LONG) 
   OBJ_type_get_class%& = OBJ_type_list(t).class_copy
-END FUNCTION
+END FUNCTION 
 
-FUNCTION OBJ_type_get_parent_class%& (t as LONG)
+FUNCTION OBJ_type_get_parent_class%& (t as LONG) 
   OBJ_type_get_parent_class%& = OBJ_type_list(OBJ_type_list(t).parent).class_copy
-END FUNCTION
+END FUNCTION 
 
-FUNCTION OBJ_Object_get_type& ()
+FUNCTION OBJ_Object_cast_as_type%& (this as _OFFSET, t as LONG) 
+
+END FUNCTION 
+
+FUNCTION OBJ_Object_get_type& () 
   STATIC otype AS LONG, t as OBJ_type_info
   if otype = 0 then
     t.base_size = LEN(OBJ_Object, TYPE)
@@ -173,37 +108,22 @@ FUNCTION OBJ_Object_get_type& ()
     otype = OBJ_type_register_type&(t)
   end if
   OBJ_Object_get_type& = otype
-END FUNCTION
+END FUNCTION 
 
-FUNCTION OBJ_Object_get_class%& (this as _OFFSET)
+FUNCTION OBJ_Object_get_class%& (this as _OFFSET) 
   OBJ_Object_get_class%& = @(this, OBJ_Object.vtable, _OFFSET)
-END FUNCTION
+END FUNCTION 
 
-FUNCTION OBJ_Object_get_interface%& (this as _OFFSET, t as LONG)
-  DIM class as _OFFSET, otype AS LONG, iface AS _OFFSET
-  otype = @(this, OBJ_Object.otype, LONG)
-  class = @(this, OBJ_Object.vtable, _OFFSET)
-  iface = @(class, OBJ_Object_class.iface_off, _OFFSET)
-  
-  FOR x = 0 to OBJ_type_list(otype).interface_count - 1
-    if @(iface, OBJ_type_interface_node.iface, LONG) = t then
-      OBJ_Object_get_interface%& = @(iface, OBJ_type_interface_node.iface_off, _OFFSET)
-      exit function
-    end if
-    iface = iface + LEN(OBJ_type_interface_node, TYPE)
-  NEXT x
-END FUNCTION
+FUNCTION OBJ_Object_get_parent_class%& (this as _OFFSET) 
+  OBJ_Object_get_parent_class%& = OBJ_type_list(OBJ_type_list(@(this, OBJ_Object.otype)).parent).class_copy
+END FUNCTION 
 
-FUNCTION OBJ_Object_get_parent_class%& (this as _OFFSET)
-  OBJ_Object_get_parent_class%& = OBJ_type_list(OBJ_type_list(@(this, OBJ_Object.otype, LONG)).parent).class_copy
-END FUNCTION
-
-FUNCTION OBJ_Class_get_type& (class as _OFFSET)
-  OBJ_Class_get_type& = @(class, OBJ_Object_class.otype, LONG)
-END FUNCTION
+FUNCTION OBJ_Class_get_type& (class as _OFFSET) 
+  OBJ_Class_get_type& = @(class, OBJ_Object_class.otype)
+END FUNCTION 
 
 SUB OBJ_Object_destroy (this as _OFFSET)
-  otype = @(this, OBJ_Object.otype, LONG)
+  otype = @(this, OBJ_Object.otype)
   tn = otype
   DO
     if OBJ_type_list(tn).destroy then
@@ -212,6 +132,5 @@ SUB OBJ_Object_destroy (this as _OFFSET)
     tn = OBJ_type_list(tn).parent 
   LOOP Until tn = 0
   MEM_FREE this
-END SUB
+END SUB 
 
-!!endif

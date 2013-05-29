@@ -1,0 +1,38 @@
+
+!!include once
+
+FUNCTION _trait_get_type& ()
+  STATIC added
+  if added = 0 then
+    DIM t as OBJ_Type_info
+    t.base_size  = LEN(_trait, TYPE)
+    t.class_Size = LEN(_trait_class, TYPE)
+    t.base_init  = @SUB(_trait_init)
+    t.class_init = @SUB(_trait_class_init)
+    t.destroy    = @SUB(_trait_destroy)
+    
+    added = OBJ_type_register_type&(t)
+  end if
+  _trait_get_type& = added
+END FUNCTION
+
+SUB _trait_init (this as _OFFSET)
+
+END SUB 
+
+SUB _trait_class_init (class AS _OFFSET)
+
+END SUB
+
+SUB _trait_destroy (trait as _OFFSET)
+
+END SUB
+
+FUNCTION _trait_cast%& (this as _OFFSET)
+  _trait_cast%& = OBJ_Object_cast_as_type%&(this, _trait_get_type&)
+END FUNCTION
+
+FUNCTION _is_ _trait& (this as _OFFSET)
+  _is_ _trait& = OBJ_is_instance_of&(this, _trait_get_type&)
+END FUNCTION
+

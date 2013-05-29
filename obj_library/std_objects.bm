@@ -1,6 +1,5 @@
 
-!!if not defined __OBJ_OBJECTS_STD_OBJECTS_BM__
-!!define __OBJ_OBJECTS_STD_OBJECTS_BM__
+!!include once
 
 '$include:'../mem_library/mem_lib.bm'
 
@@ -8,7 +7,7 @@
 
 '$include:'ref_object.bm'
 '$include:'signal_object.bm'
+'$include:'text.bm'
 ''$include:'event_object.bm'
 ''$include:'gui_element.bm'
 
-!!endif

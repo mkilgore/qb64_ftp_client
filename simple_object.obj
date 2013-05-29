@@ -1,0 +1,72 @@
+
+CLASS ABSTRACT GUI_element INHERITS OBJ_Object USES OBJ_Signal, OBJ_REF
+  FLAGS
+    UPDATED
+    VISIBLE
+    ACTIVE
+    SKIP
+  END FLAGS
+
+  PRIVATE 
+    nam AS _OFFSET
+    dimension AS GUI_dimension
+    img AS LONG
+    parent_element AS _OFFSET
+  END PRIVATE
+
+  PUBLIC
+    ABSTRACT SUB drw ()
+    SUB create_image () 
+    SUB set_visible (LONG)
+    FUNCTION is_visible& ()
+    SUB set_active (LONG)
+    FUNCTION is_active& ()
+    SUB set_can_focus (LONG)
+    FUNCTION get_can_focus& ()
+    SUB sub_size (LONG, LONG)
+    FUNCTION get_image& ()
+    FUNCTION get_parent%& ()
+    SUB set_parent (_OFFSET)
+    SUB set_name (_OFFSET)
+    FUNCTION get_name%& (_OFFSET)
+    SUB set_location (LONG, LONG)
+    SUB set_dimension (LONG, LONG, LONG, LONG)
+    SUB set_dimension_d (GUI_dimension)
+    SUB set_width (LONG)
+    FUNCTION get_width& ()
+    SUB set_height (LONG)
+    FUNCTION get_height& ()
+
+!!if defined GUI_TEXT
+    SUB set_row (LONG)
+    SUB set_col (LONG)
+    FUNCTION get_row& ()
+    FUNCTION get_col& ()
+!!else
+    SUB set_x (LONG)
+    SUB set_y (LONG)
+    FUNCTION get_x& ()
+    FUNCTION get_y& ()
+!!endif
+
+  END PUBLIC
+END CLASS
+
+SUB GUI_element::init ()
+
+END SUB
+
+SUB GUI_element::init (s AS _OFFSET OBJ_TEXT)
+  this.nam = s@get_ref()
+END SUB
+
+SUB GUI_element::set_row (row AS LONG)
+this.dimension.row = row
+END SUB
+
+FUNCTION GUI_element::get_row& ()
+get_row& = this.dimension.row
+END FUNCTION
+
+
+
