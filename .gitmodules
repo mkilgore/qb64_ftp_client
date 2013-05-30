@@ -4,3 +4,6 @@
 [submodule "gui_library"]
 	path = gui_library
 	url = git://github.com/DSMan195276/qb64_gui_library.git
+[submodule "ftp_library"]
+	path = ftp_library
+	url = git://github.com/DSMan195276/qb64_ftp_library.git
