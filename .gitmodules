@@ -1,0 +1,3 @@
+[submodule "mem_library"]
+	path = mem_library
+	url = git://github.com/DSMan195276/qb64_mem_library.git
