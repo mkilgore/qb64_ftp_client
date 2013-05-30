@@ -1,7 +1,0 @@
-
-!!if not defined __GUI_OBJECTS_GRID_LAYOUT_BM__
-!!define __GUI_OBJECTS_GRID_LAYOUT_BM__
-
-
-
-!!endif

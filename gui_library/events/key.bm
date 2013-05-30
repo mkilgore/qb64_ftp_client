@@ -1,8 +1,0 @@
-
-!!if not defined __GUI_EVENTS_KEY_BM__
-!!define __GUI_EVENTS_KEY_BM__
-
-
-
-!!endif
-
