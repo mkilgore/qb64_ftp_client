@@ -10,3 +10,6 @@
 [submodule "file_library"]
 	path = file_library
 	url = git://github.com/DSMan195276/qb64_file_library.git
+[submodule "obj_library"]
+	path = obj_library
+	url = git://github.com/DSMan195276/qb64_obj_library.git
